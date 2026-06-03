@@ -200,6 +200,16 @@ def test_upload_zip_returns_422() -> None:
     assert response.status_code == 422
 
 
+def test_upload_mismatched_content_type_and_filename_returns_422() -> None:
+    response = client.post(
+        "/documents/upload",
+        files={"file": ("archive.zip", b"%PDF-1.7", "application/pdf")},
+        headers=auth_headers(),
+    )
+
+    assert response.status_code == 422
+
+
 def test_upload_empty_pdf_returns_422() -> None:
     response = client.post(
         "/documents/upload",

@@ -21,6 +21,7 @@ ALLOWED_UPLOAD_TYPES = {
     "application/pdf": "pdf",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
 }
+GENERIC_UPLOAD_CONTENT_TYPES = {"", "application/octet-stream"}
 
 
 def safe_upload_filename(filename: str) -> str:
@@ -59,11 +60,23 @@ def infer_upload_file_type(filename: str, content_type: str | None) -> str:
     if content_type in ALLOWED_UPLOAD_TYPES:
         return ALLOWED_UPLOAD_TYPES[content_type]
 
+    if content_type and content_type not in GENERIC_UPLOAD_CONTENT_TYPES:
+        raise HTTPException(status_code=422, detail="unsupported upload content type")
+
     extension = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
     if extension in {"pdf", "docx"}:
         return extension
 
     raise HTTPException(status_code=422, detail="unsupported upload file type")
+
+
+def validate_upload_filename_extension(filename: str, file_type: str) -> None:
+    expected_extension = f".{file_type}"
+    if not filename.lower().endswith(expected_extension):
+        raise HTTPException(
+            status_code=422,
+            detail="filename extension must match upload content type",
+        )
 
 
 @router.get("", response_model=list[DocumentResponse])
@@ -105,6 +118,7 @@ async def upload_document(
 ) -> DocumentResponse:
     filename = safe_upload_filename(file.filename or "")
     file_type = infer_upload_file_type(filename, file.content_type)
+    validate_upload_filename_extension(filename, file_type)
     content = await file.read()
 
     if not content:
