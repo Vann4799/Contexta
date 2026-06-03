@@ -1,6 +1,6 @@
 import Link from "next/link";
+import { AuthForm } from "@/components/auth/auth-form";
 import { ContextaLogo } from "@/components/contexta-logo";
-import { Button } from "@/components/ui/button";
 
 export default function ForgotPasswordPage() {
   return (
@@ -9,13 +9,7 @@ export default function ForgotPasswordPage() {
         <ContextaLogo />
         <h1 className="mt-8 font-heading text-2xl font-semibold">Reset password</h1>
         <p className="mt-2 text-sm text-subtle">Enter your email and Contexta will send a reset link.</p>
-        <div className="mt-6 space-y-3">
-          <label className="sr-only" htmlFor="reset-email">
-            Email
-          </label>
-          <input id="reset-email" className="h-11 w-full rounded border border-border px-3 text-sm outline-none focus:border-primary" placeholder="Email" />
-          <Button className="w-full">Send reset link</Button>
-        </div>
+        <AuthForm mode="reset" />
         <p className="mt-5 text-sm">
           <Link href="/login" className="text-primary hover:text-blue-700">
             Back to sign in
