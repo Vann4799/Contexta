@@ -1,10 +1,12 @@
 from fastapi import FastAPI, Response, status
 
 from app.core.config import get_settings
+from app.documents.routes import router as documents_router
 from app.services.qdrant_health import check_qdrant_health
 
 
 app = FastAPI(title="Contexta API", version="0.1.0")
+app.include_router(documents_router)
 
 
 @app.get("/health")
