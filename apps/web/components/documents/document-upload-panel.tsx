@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/status-pill";
 
 const allowedExtensions = new Set(["pdf", "docx"]);
+const maxUploadBytes = 50 * 1024 * 1024;
+const missingConfigMessage = "Document uploads are not configured yet. Please contact an administrator.";
 
 function statusForPill(status: DocumentStatus) {
   return status === "uploaded" ? "processing" : status;
@@ -31,6 +33,18 @@ function formatBytes(bytes: number) {
 
 function getExtension(filename: string) {
   return filename.split(".").pop()?.toLowerCase() || "";
+}
+
+function uploadErrorMessage(error: unknown, fallback: string) {
+  if (!(error instanceof Error)) {
+    return fallback;
+  }
+
+  if (error.message.includes("NEXT_PUBLIC_SUPABASE_")) {
+    return missingConfigMessage;
+  }
+
+  return error.message;
 }
 
 export function DocumentUploadPanel() {
@@ -61,7 +75,7 @@ export function DocumentUploadPanel() {
 
       setDocuments(await listDocuments(accessToken));
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Unable to load documents.");
+      setError(uploadErrorMessage(loadError, "Unable to load documents."));
     } finally {
       setIsLoading(false);
     }
@@ -80,6 +94,16 @@ export function DocumentUploadPanel() {
       return;
     }
 
+    if (file.size === 0) {
+      setError("The selected file is empty.");
+      return;
+    }
+
+    if (file.size > maxUploadBytes) {
+      setError("Files must be 50 MB or smaller.");
+      return;
+    }
+
     setIsUploading(true);
 
     try {
@@ -93,7 +117,7 @@ export function DocumentUploadPanel() {
       setDocuments((currentDocuments) => [uploadedDocument, ...currentDocuments]);
       setSuccess(`${uploadedDocument.filename} uploaded.`);
     } catch (uploadError) {
-      setError(uploadError instanceof Error ? uploadError.message : "Unable to upload document.");
+      setError(uploadErrorMessage(uploadError, "Unable to upload document."));
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {
