@@ -27,29 +27,33 @@ curl http://localhost:6333/healthz
 
 Run shared RAG tests:
 
-```bash
-cd packages/rag
+```powershell
+Push-Location packages/rag
 python -m pytest
+Pop-Location
 ```
 
 Run API tests:
 
-```bash
-cd apps/api
+```powershell
+Push-Location apps/api
 python -m pytest
+Pop-Location
 ```
 
 Run worker tests:
 
-```bash
-cd apps/worker
+```powershell
+Push-Location apps/worker
 python -m pytest
+Pop-Location
 ```
 
 Run web dev server:
 
-```bash
-cd apps/web
+```powershell
+Push-Location apps/web
 npm install
 npm run dev
+Pop-Location
 ```
