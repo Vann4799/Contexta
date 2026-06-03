@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.auth.dependencies import get_current_user
 from app.auth.supabase_jwt import CurrentUser
@@ -15,16 +15,8 @@ def get_document_repository() -> DocumentRepository:
     return document_repository
 
 
-def require_authorization_header(
-    authorization: Annotated[str | None, Header()] = None,
-) -> None:
-    if authorization is None:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authenticated")
-
-
 @router.get("", response_model=list[DocumentResponse])
 def list_documents(
-    _: Annotated[None, Depends(require_authorization_header)],
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     repository: Annotated[DocumentRepository, Depends(get_document_repository)],
 ) -> list[DocumentResponse]:
@@ -38,8 +30,12 @@ def list_documents(
 )
 def create_document(
     document: DocumentCreate,
-    _: Annotated[None, Depends(require_authorization_header)],
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     repository: Annotated[DocumentRepository, Depends(get_document_repository)],
 ) -> DocumentResponse:
+    if not document.storage_path.startswith(f"{current_user.id}/"):
+        raise HTTPException(
+            status_code=422,
+            detail="storage_path must start with the authenticated user id",
+        )
     return repository.create_document(current_user.id, document)

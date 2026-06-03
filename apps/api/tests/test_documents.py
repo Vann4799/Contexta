@@ -1,14 +1,25 @@
 from datetime import datetime, timedelta, timezone
 
 import jwt
+import pytest
 from fastapi.testclient import TestClient
 
+from app.documents.repository import InMemoryDocumentRepository
 from app.main import app
+from app.documents.routes import get_document_repository
 
 
 USER_ID = "user-documents-123"
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def document_repository_override() -> None:
+    repository = InMemoryDocumentRepository()
+    app.dependency_overrides[get_document_repository] = lambda: repository
+    yield
+    app.dependency_overrides.clear()
 
 
 def auth_headers(user_id: str = USER_ID) -> dict[str, str]:
@@ -28,10 +39,10 @@ def auth_headers(user_id: str = USER_ID) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-def test_list_documents_without_auth_returns_403() -> None:
+def test_list_documents_without_auth_returns_401() -> None:
     response = client.get("/documents")
 
-    assert response.status_code == 403
+    assert response.status_code == 401
 
 
 def test_create_document_metadata_then_list_documents() -> None:
@@ -78,6 +89,77 @@ def test_create_document_with_unsupported_file_type_returns_422() -> None:
             "file_type": "zip",
             "file_size": 1200,
             "storage_path": f"{USER_ID}/archive.zip",
+        },
+        headers=auth_headers(),
+    )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize(
+    "storage_path",
+    [
+        "other-user/file.pdf",
+        f"{USER_ID}/../secret.pdf",
+    ],
+)
+def test_create_document_with_invalid_storage_path_returns_422(storage_path: str) -> None:
+    response = client.post(
+        "/documents",
+        json={
+            "filename": "policy.pdf",
+            "file_type": "pdf",
+            "file_size": 1200,
+            "storage_path": storage_path,
+        },
+        headers=auth_headers(),
+    )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize(
+    ("filename", "file_type", "storage_path"),
+    [
+        ("folder/policy.pdf", "pdf", f"{USER_ID}/policy.pdf"),
+        ("folder\\policy.pdf", "pdf", f"{USER_ID}/policy.pdf"),
+        ("../policy.pdf", "pdf", f"{USER_ID}/policy.pdf"),
+        ("policy.pdf", "docx", f"{USER_ID}/policy.pdf"),
+        ("policy.docx", "pdf", f"{USER_ID}/policy.docx"),
+        ("policy.pdf", "pdf", f"/{USER_ID}/policy.pdf"),
+        ("policy.pdf", "pdf", f"{USER_ID}//policy.pdf"),
+        ("policy.pdf", "pdf", f"{USER_ID}\\policy.pdf"),
+        ("policy.pdf", "pdf", f"{USER_ID}/policy.docx"),
+    ],
+)
+def test_create_document_with_invalid_metadata_returns_422(
+    filename: str,
+    file_type: str,
+    storage_path: str,
+) -> None:
+    response = client.post(
+        "/documents",
+        json={
+            "filename": filename,
+            "file_type": file_type,
+            "file_size": 1200,
+            "storage_path": storage_path,
+        },
+        headers=auth_headers(),
+    )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize("file_size", [0, 50 * 1024 * 1024 + 1])
+def test_create_document_with_invalid_file_size_returns_422(file_size: int) -> None:
+    response = client.post(
+        "/documents",
+        json={
+            "filename": "policy.pdf",
+            "file_type": "pdf",
+            "file_size": file_size,
+            "storage_path": f"{USER_ID}/policy.pdf",
         },
         headers=auth_headers(),
     )
