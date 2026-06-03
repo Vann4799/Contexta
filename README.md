@@ -93,3 +93,14 @@ SUPABASE_SERVICE_ROLE_KEY
 SUPABASE_JWT_SECRET
 SUPABASE_STORAGE_BUCKET
 ```
+
+## Phase 2 Verification
+
+Phase 2 is healthy when:
+
+- Supabase migration contract tests pass.
+- API auth and document metadata tests pass.
+- Existing worker and RAG tests still pass.
+- Web lint and build pass.
+
+Manual Supabase verification requires real project credentials in `.env` files and applying `infra/supabase/migrations/0001_initial_schema.sql` in the Supabase SQL editor.
