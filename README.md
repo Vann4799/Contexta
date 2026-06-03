@@ -104,3 +104,13 @@ Phase 2 is healthy when:
 - Web lint and build pass.
 
 Manual Supabase verification requires real project credentials in `.env` files and applying `infra/supabase/migrations/0001_initial_schema.sql` in the Supabase SQL editor.
+
+## Phase 3 Verification
+
+Phase 3 is healthy when:
+
+- API upload tests pass.
+- Web lint and build pass.
+- A signed-in user can upload a PDF or DOCX from `/documents`.
+- Supabase Storage receives the file under `contexta-documents/<user_id>/...`.
+- Supabase `documents` receives a metadata row with status `processing`.
