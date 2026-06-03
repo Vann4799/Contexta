@@ -57,3 +57,13 @@ npm install
 npm run dev
 Pop-Location
 ```
+
+## Verification
+
+Phase 1 is considered healthy when:
+
+- Qdrant responds at `http://localhost:6333/healthz`.
+- `packages/rag` tests pass.
+- `apps/api` tests pass.
+- `apps/worker` tests pass.
+- `apps/web` lint and build pass.
