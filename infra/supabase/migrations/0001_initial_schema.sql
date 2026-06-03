@@ -29,18 +29,21 @@ create table if not exists public.documents (
   error_message text,
   chunk_count integer not null default 0 check (chunk_count >= 0),
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  constraint documents_storage_path_owner_folder check (storage_path like user_id::text || '/%'),
+  unique (id, user_id)
 );
 
 create table if not exists public.document_chunks (
   id uuid primary key default gen_random_uuid(),
-  document_id uuid not null references public.documents(id) on delete cascade,
+  document_id uuid not null,
   user_id uuid not null references auth.users(id) on delete cascade,
   chunk_index integer not null check (chunk_index >= 0),
   text text not null,
   page_number integer check (page_number is null or page_number > 0),
   qdrant_point_id text not null,
   created_at timestamptz not null default now(),
+  foreign key (document_id, user_id) references public.documents(id, user_id) on delete cascade,
   unique (document_id, chunk_index),
   unique (qdrant_point_id)
 );
@@ -50,26 +53,30 @@ create table if not exists public.chat_sessions (
   user_id uuid not null references auth.users(id) on delete cascade,
   title text not null default 'New chat',
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  unique (id, user_id)
 );
 
 create table if not exists public.chat_session_documents (
-  session_id uuid not null references public.chat_sessions(id) on delete cascade,
-  document_id uuid not null references public.documents(id) on delete cascade,
+  session_id uuid not null,
+  document_id uuid not null,
   user_id uuid not null references auth.users(id) on delete cascade,
   created_at timestamptz not null default now(),
+  foreign key (session_id, user_id) references public.chat_sessions(id, user_id) on delete cascade,
+  foreign key (document_id, user_id) references public.documents(id, user_id) on delete cascade,
   primary key (session_id, document_id)
 );
 
 create table if not exists public.chat_messages (
   id uuid primary key default gen_random_uuid(),
-  session_id uuid not null references public.chat_sessions(id) on delete cascade,
+  session_id uuid not null,
   user_id uuid not null references auth.users(id) on delete cascade,
   role text not null check (role in ('user', 'assistant')),
   content text not null,
   citations jsonb not null default '[]'::jsonb,
   metadata jsonb not null default '{}'::jsonb,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  foreign key (session_id, user_id) references public.chat_sessions(id, user_id) on delete cascade
 );
 
 create index if not exists idx_documents_user_status on public.documents (user_id, status, created_at desc);

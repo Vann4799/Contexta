@@ -82,3 +82,21 @@ def test_initial_migration_checks_parent_ownership_on_child_inserts():
         "exists (select 1 from public.documents d "
         "where d.id = document_id and d.user_id = auth.uid())"
     ) in chat_session_documents_policy
+
+
+def test_initial_migration_enforces_database_ownership_constraints():
+    sql = _normalized_sql()
+
+    assert (
+        "constraint documents_storage_path_owner_folder "
+        "check (storage_path like user_id::text || '/%')"
+    ) in sql
+    assert "unique (id, user_id)" in sql
+    assert (
+        "foreign key (document_id, user_id) "
+        "references public.documents(id, user_id) on delete cascade"
+    ) in sql
+    assert (
+        "foreign key (session_id, user_id) "
+        "references public.chat_sessions(id, user_id) on delete cascade"
+    ) in sql
