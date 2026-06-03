@@ -1,5 +1,5 @@
 from typing import Annotated
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 
@@ -22,6 +22,7 @@ ALLOWED_UPLOAD_TYPES = {
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
 }
 GENERIC_UPLOAD_CONTENT_TYPES = {"", "application/octet-stream"}
+UPLOAD_READ_CHUNK_SIZE = 1024 * 1024
 
 
 def safe_upload_filename(filename: str) -> str:
@@ -79,6 +80,45 @@ def validate_upload_filename_extension(filename: str, file_type: str) -> None:
         )
 
 
+def validate_document_storage_path(
+    storage_path: str,
+    user_id: str,
+    filename: str,
+) -> None:
+    segments = storage_path.split("/")
+    if len(segments) != 3:
+        raise HTTPException(
+            status_code=422,
+            detail="storage_path must match <user_id>/<uuid>/<filename>",
+        )
+    if segments[0] != user_id:
+        raise HTTPException(
+            status_code=422,
+            detail="storage_path must start with the authenticated user id",
+        )
+    try:
+        UUID(segments[1])
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail="storage_path document id must be a UUID",
+        ) from exc
+    if segments[2] != filename:
+        raise HTTPException(
+            status_code=422,
+            detail="storage_path filename must match document filename",
+        )
+
+
+async def read_upload_content(file: UploadFile) -> bytes:
+    content = bytearray()
+    while chunk := await file.read(UPLOAD_READ_CHUNK_SIZE):
+        content.extend(chunk)
+        if len(content) > MAX_UPLOAD_BYTES:
+            raise HTTPException(status_code=422, detail="uploaded file is too large")
+    return bytes(content)
+
+
 @router.get("", response_model=list[DocumentResponse])
 def list_documents(
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
@@ -97,11 +137,11 @@ def create_document(
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     repository: Annotated[DocumentRepository, Depends(get_document_repository)],
 ) -> DocumentResponse:
-    if not document.storage_path.startswith(f"{current_user.id}/"):
-        raise HTTPException(
-            status_code=422,
-            detail="storage_path must start with the authenticated user id",
-        )
+    validate_document_storage_path(
+        document.storage_path,
+        current_user.id,
+        document.filename,
+    )
     return repository.create_document(current_user.id, document)
 
 
@@ -119,12 +159,10 @@ async def upload_document(
     filename = safe_upload_filename(file.filename or "")
     file_type = infer_upload_file_type(filename, file.content_type)
     validate_upload_filename_extension(filename, file_type)
-    content = await file.read()
+    content = await read_upload_content(file)
 
     if not content:
         raise HTTPException(status_code=422, detail="uploaded file must not be empty")
-    if len(content) > MAX_UPLOAD_BYTES:
-        raise HTTPException(status_code=422, detail="uploaded file is too large")
 
     document_id = str(uuid4())
     storage_path = f"{current_user.id}/{document_id}/{filename}"

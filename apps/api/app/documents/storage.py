@@ -1,4 +1,5 @@
 from typing import Protocol
+from urllib.parse import quote
 
 import httpx
 
@@ -36,9 +37,12 @@ class SupabaseDocumentStorage:
             "Content-Type": content_type,
             "x-upsert": "false",
         }
+        encoded_storage_path = "/".join(
+            quote(segment, safe="") for segment in storage_path.split("/")
+        )
         url = (
             f"{self._supabase_url}/storage/v1/object/"
-            f"{self._bucket}/{storage_path}"
+            f"{self._bucket}/{encoded_storage_path}"
         )
         async with httpx.AsyncClient() as client:
             response = await client.post(url, content=content, headers=headers)

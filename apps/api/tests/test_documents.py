@@ -1,16 +1,19 @@
 from datetime import datetime, timedelta, timezone
+from uuid import uuid4
 
 import jwt
 import pytest
 from fastapi.testclient import TestClient
 
+from app.documents import routes as document_routes
 from app.documents.repository import InMemoryDocumentRepository
 from app.main import app
 from app.documents.routes import get_document_repository, get_document_storage
-from app.documents.storage import InMemoryDocumentStorage
+from app.documents.storage import InMemoryDocumentStorage, SupabaseDocumentStorage
 
 
 USER_ID = "user-documents-123"
+DOCUMENT_ID = "11111111-1111-4111-8111-111111111111"
 
 client = TestClient(app)
 
@@ -53,7 +56,7 @@ def test_create_document_metadata_then_list_documents() -> None:
         "filename": "policy.pdf",
         "file_type": "pdf",
         "file_size": 1200,
-        "storage_path": f"{USER_ID}/policy.pdf",
+        "storage_path": f"{USER_ID}/{DOCUMENT_ID}/policy.pdf",
     }
 
     create_response = client.post(
@@ -70,7 +73,7 @@ def test_create_document_metadata_then_list_documents() -> None:
         "filename": "policy.pdf",
         "file_type": "pdf",
         "file_size": 1200,
-        "storage_path": f"{USER_ID}/policy.pdf",
+        "storage_path": f"{USER_ID}/{DOCUMENT_ID}/policy.pdf",
         "status": "processing",
         "error_message": None,
         "chunk_count": 0,
@@ -91,7 +94,7 @@ def test_create_document_with_unsupported_file_type_returns_422() -> None:
             "filename": "archive.zip",
             "file_type": "zip",
             "file_size": 1200,
-            "storage_path": f"{USER_ID}/archive.zip",
+            "storage_path": f"{USER_ID}/{DOCUMENT_ID}/archive.zip",
         },
         headers=auth_headers(),
     )
@@ -104,6 +107,10 @@ def test_create_document_with_unsupported_file_type_returns_422() -> None:
     [
         "other-user/file.pdf",
         f"{USER_ID}/../secret.pdf",
+        f"{USER_ID}/policy.pdf",
+        f"{USER_ID}/not-a-uuid/policy.pdf",
+        f"{USER_ID}/{DOCUMENT_ID}/other.pdf",
+        f"{USER_ID}/{DOCUMENT_ID}/policy.pdf/extra",
     ],
 )
 def test_create_document_with_invalid_storage_path_returns_422(storage_path: str) -> None:
@@ -124,15 +131,15 @@ def test_create_document_with_invalid_storage_path_returns_422(storage_path: str
 @pytest.mark.parametrize(
     ("filename", "file_type", "storage_path"),
     [
-        ("folder/policy.pdf", "pdf", f"{USER_ID}/policy.pdf"),
-        ("folder\\policy.pdf", "pdf", f"{USER_ID}/policy.pdf"),
-        ("../policy.pdf", "pdf", f"{USER_ID}/policy.pdf"),
-        ("policy.pdf", "docx", f"{USER_ID}/policy.pdf"),
-        ("policy.docx", "pdf", f"{USER_ID}/policy.docx"),
-        ("policy.pdf", "pdf", f"/{USER_ID}/policy.pdf"),
-        ("policy.pdf", "pdf", f"{USER_ID}//policy.pdf"),
-        ("policy.pdf", "pdf", f"{USER_ID}\\policy.pdf"),
-        ("policy.pdf", "pdf", f"{USER_ID}/policy.docx"),
+        ("folder/policy.pdf", "pdf", f"{USER_ID}/{DOCUMENT_ID}/policy.pdf"),
+        ("folder\\policy.pdf", "pdf", f"{USER_ID}/{DOCUMENT_ID}/policy.pdf"),
+        ("../policy.pdf", "pdf", f"{USER_ID}/{DOCUMENT_ID}/policy.pdf"),
+        ("policy.pdf", "docx", f"{USER_ID}/{DOCUMENT_ID}/policy.pdf"),
+        ("policy.docx", "pdf", f"{USER_ID}/{DOCUMENT_ID}/policy.docx"),
+        ("policy.pdf", "pdf", f"/{USER_ID}/{DOCUMENT_ID}/policy.pdf"),
+        ("policy.pdf", "pdf", f"{USER_ID}//{DOCUMENT_ID}/policy.pdf"),
+        ("policy.pdf", "pdf", f"{USER_ID}\\{DOCUMENT_ID}\\policy.pdf"),
+        ("policy.pdf", "pdf", f"{USER_ID}/{DOCUMENT_ID}/policy.docx"),
     ],
 )
 def test_create_document_with_invalid_metadata_returns_422(
@@ -162,7 +169,7 @@ def test_create_document_with_invalid_file_size_returns_422(file_size: int) -> N
             "filename": "policy.pdf",
             "file_type": "pdf",
             "file_size": file_size,
-            "storage_path": f"{USER_ID}/policy.pdf",
+            "storage_path": f"{USER_ID}/{DOCUMENT_ID}/policy.pdf",
         },
         headers=auth_headers(),
     )
@@ -218,3 +225,66 @@ def test_upload_empty_pdf_returns_422() -> None:
     )
 
     assert response.status_code == 422
+
+
+def test_upload_oversized_pdf_returns_422_before_storage(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    storage = InMemoryDocumentStorage()
+    app.dependency_overrides[get_document_storage] = lambda: storage
+    monkeypatch.setattr(document_routes, "MAX_UPLOAD_BYTES", 8)
+
+    response = client.post(
+        "/documents/upload",
+        files={"file": ("policy.pdf", b"%PDF-1.7\n", "application/pdf")},
+        headers=auth_headers(),
+    )
+
+    assert response.status_code == 422
+    assert storage.objects == {}
+
+
+@pytest.mark.asyncio
+async def test_supabase_storage_url_encodes_path_segments(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, str] = {}
+
+    class FakeResponse:
+        def raise_for_status(self) -> None:
+            return None
+
+    class FakeAsyncClient:
+        async def __aenter__(self) -> "FakeAsyncClient":
+            return self
+
+        async def __aexit__(self, *args: object) -> None:
+            return None
+
+        async def post(
+            self,
+            url: str,
+            content: bytes,
+            headers: dict[str, str],
+        ) -> FakeResponse:
+            captured["url"] = url
+            return FakeResponse()
+
+    monkeypatch.setattr("app.documents.storage.httpx.AsyncClient", FakeAsyncClient)
+
+    storage = SupabaseDocumentStorage(
+        "https://example.supabase.co",
+        "service-role-key",
+        "documents",
+    )
+
+    await storage.upload_document(
+        f"{USER_ID}/{uuid4()}/policy #1.pdf",
+        b"pdf",
+        "application/pdf",
+    )
+
+    assert "/documents/user-documents-123/" in captured["url"]
+    assert "policy #1.pdf" not in captured["url"]
+    assert "%23" in captured["url"]
+    assert "policy%20%231.pdf" in captured["url"]
