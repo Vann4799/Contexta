@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Response, status
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
 from app.documents.routes import router as documents_router
@@ -6,6 +7,13 @@ from app.services.qdrant_health import check_qdrant_health
 
 
 app = FastAPI(title="Contexta API", version="0.1.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=get_settings().cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.include_router(documents_router)
 
 

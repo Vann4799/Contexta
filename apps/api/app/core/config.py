@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     supabase_jwt_secret: str = "test-secret"
     supabase_jwks_url: str = ""
     supabase_storage_bucket: str = "contexta-documents"
+    api_cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
@@ -32,6 +33,14 @@ class Settings(BaseSettings):
         if self.supabase_url:
             return f"{self.supabase_url.rstrip('/')}/auth/v1/.well-known/jwks.json"
         return ""
+
+    @property
+    def cors_origins(self) -> list[str]:
+        return [
+            origin.strip()
+            for origin in self.api_cors_origins.split(",")
+            if origin.strip()
+        ]
 
 
 @lru_cache
