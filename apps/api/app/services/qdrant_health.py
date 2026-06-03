@@ -6,7 +6,8 @@ async def check_qdrant_health(qdrant_url: str) -> dict[str, str]:
 
     try:
         async with httpx.AsyncClient(timeout=2.0) as client:
-            await client.get(health_url)
+            response = await client.get(health_url)
+            response.raise_for_status()
     except httpx.HTTPError:
         return {"status": "unavailable", "service": "qdrant"}
 

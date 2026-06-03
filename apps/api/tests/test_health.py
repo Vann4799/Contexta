@@ -1,7 +1,9 @@
 from fastapi.testclient import TestClient
+import httpx
 import app.main as main
 
 from app.main import app
+from app.services.qdrant_health import check_qdrant_health
 
 
 client = TestClient(app)
@@ -36,3 +38,17 @@ def test_vector_health_returns_unavailable_status(monkeypatch) -> None:
 
     assert response.status_code == 503
     assert response.json() == {"status": "unavailable", "service": "qdrant"}
+
+
+async def test_qdrant_health_non_2xx_returns_unavailable(monkeypatch) -> None:
+    transport = httpx.MockTransport(lambda request: httpx.Response(500))
+    async_client_class = httpx.AsyncClient
+
+    def async_client(*args, **kwargs) -> httpx.AsyncClient:
+        return async_client_class(transport=transport, *args, **kwargs)
+
+    monkeypatch.setattr("app.services.qdrant_health.httpx.AsyncClient", async_client)
+
+    response = await check_qdrant_health("http://qdrant.example")
+
+    assert response == {"status": "unavailable", "service": "qdrant"}
