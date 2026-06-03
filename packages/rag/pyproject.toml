@@ -1,15 +1,17 @@
 [project]
 name = "contexta-rag"
 version = "0.1.0"
+description = "Shared RAG utilities for Contexta"
 requires-python = ">=3.11"
+dependencies = []
 
 [project.optional-dependencies]
 dev = [
-    "pytest",
+  "pytest>=8.2.0",
 ]
 
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools>=69.0.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]

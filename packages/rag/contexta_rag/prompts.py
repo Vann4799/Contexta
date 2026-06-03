@@ -15,20 +15,29 @@ def build_rag_prompt(question: str, contexts: list[CitationContext]) -> str:
         source_blocks.append(
             "\n".join(
                 [
-                    f"Source {index}: {context['document_name']} ({page_label})",
+                    f"[Source {index}]",
+                    f"Document: {context['document_name']}",
+                    page_label,
+                    "Content:",
                     context["text"],
                 ]
             )
         )
 
-    sources = "\n\n".join(source_blocks) if source_blocks else "No sources provided."
+    sources = "\n\n".join(source_blocks) if source_blocks else "No sources were retrieved."
 
-    return "\n\n".join(
+    instructions = "\n".join(
         [
-            "Answer the question using only the sources below.",
-            "If the sources do not contain enough information, say you do not know based on the provided sources.",
-            f"Question: {question}",
-            "Sources:",
-            sources,
+            "You are Contexta, a careful document analysis assistant.",
+            "Answer only from the provided sources.",
+            "If the sources do not contain enough information, say that the document context is insufficient.",
+            "Cite the source numbers that support the answer.",
         ]
+    )
+
+    return (
+        f"{instructions}\n\n"
+        f"Sources:\n{sources}\n\n"
+        f"Question:\n{question}\n\n"
+        "Answer:"
     )
