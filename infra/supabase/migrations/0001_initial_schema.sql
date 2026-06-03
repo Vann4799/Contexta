@@ -120,7 +120,13 @@ create policy "documents_delete_own" on public.documents for delete using (auth.
 drop policy if exists "document_chunks_select_own" on public.document_chunks;
 create policy "document_chunks_select_own" on public.document_chunks for select using (auth.uid() = user_id);
 drop policy if exists "document_chunks_insert_own" on public.document_chunks;
-create policy "document_chunks_insert_own" on public.document_chunks for insert with check (auth.uid() = user_id);
+create policy "document_chunks_insert_own" on public.document_chunks for insert with check (
+  auth.uid() = user_id
+  and exists (select 1
+    from public.documents d
+    where d.id = document_id
+      and d.user_id = auth.uid())
+);
 drop policy if exists "document_chunks_delete_own" on public.document_chunks;
 create policy "document_chunks_delete_own" on public.document_chunks for delete using (auth.uid() = user_id);
 
@@ -136,14 +142,30 @@ create policy "chat_sessions_delete_own" on public.chat_sessions for delete usin
 drop policy if exists "chat_session_documents_select_own" on public.chat_session_documents;
 create policy "chat_session_documents_select_own" on public.chat_session_documents for select using (auth.uid() = user_id);
 drop policy if exists "chat_session_documents_insert_own" on public.chat_session_documents;
-create policy "chat_session_documents_insert_own" on public.chat_session_documents for insert with check (auth.uid() = user_id);
+create policy "chat_session_documents_insert_own" on public.chat_session_documents for insert with check (
+  auth.uid() = user_id
+  and exists (select 1
+    from public.chat_sessions s
+    where s.id = session_id
+      and s.user_id = auth.uid())
+  and exists (select 1
+    from public.documents d
+    where d.id = document_id
+      and d.user_id = auth.uid())
+);
 drop policy if exists "chat_session_documents_delete_own" on public.chat_session_documents;
 create policy "chat_session_documents_delete_own" on public.chat_session_documents for delete using (auth.uid() = user_id);
 
 drop policy if exists "chat_messages_select_own" on public.chat_messages;
 create policy "chat_messages_select_own" on public.chat_messages for select using (auth.uid() = user_id);
 drop policy if exists "chat_messages_insert_own" on public.chat_messages;
-create policy "chat_messages_insert_own" on public.chat_messages for insert with check (auth.uid() = user_id);
+create policy "chat_messages_insert_own" on public.chat_messages for insert with check (
+  auth.uid() = user_id
+  and exists (select 1
+    from public.chat_sessions s
+    where s.id = session_id
+      and s.user_id = auth.uid())
+);
 
 insert into storage.buckets (id, name, public)
 values ('contexta-documents', 'contexta-documents', false)
