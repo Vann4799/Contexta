@@ -27,7 +27,7 @@ export function AppShell({ title, children }: { title: string; children: ReactNo
               <ContextaLogo compact />
             </div>
             <h1 className="min-w-0 flex-1 truncate font-heading text-xl font-semibold md:flex-none">{title}</h1>
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-xs font-semibold text-subtle" aria-label="User menu">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-border bg-muted text-xs font-semibold text-subtle" aria-label="User menu">
               CT
             </div>
           </div>

@@ -14,7 +14,7 @@ const labels: Record<Status, string> = {
 
 export function StatusPill({ status }: { status: Status }) {
   return (
-    <span className={`inline-flex whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-medium ${styles[status]}`}>
+    <span className={`inline-flex whitespace-nowrap rounded border px-2 py-0.5 text-xs font-medium ${styles[status]}`}>
       {labels[status]}
     </span>
   );
