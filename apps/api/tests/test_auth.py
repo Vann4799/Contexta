@@ -1,5 +1,6 @@
 import jwt
 import pytest
+from cryptography.hazmat.primitives.asymmetric import ec
 from datetime import datetime, timedelta, timezone
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.testclient import TestClient
@@ -35,6 +36,47 @@ def test_valid_hs256_jwt_with_authenticated_audience_returns_current_user() -> N
     assert user == CurrentUser(
         id="user-123",
         email="user@example.com",
+        role="authenticated",
+    )
+
+
+def test_valid_es256_jwt_with_jwks_returns_current_user(monkeypatch: pytest.MonkeyPatch) -> None:
+    private_key = ec.generate_private_key(ec.SECP256R1())
+    public_key = private_key.public_key()
+    token = jwt.encode(
+        {
+            "sub": "ecc-user-123",
+            "email": "ecc@example.com",
+            "role": "authenticated",
+            "aud": "authenticated",
+            "exp": future_timestamp(),
+        },
+        private_key,
+        algorithm="ES256",
+        headers={"kid": "current-key"},
+    )
+
+    class FakeSigningKey:
+        key = public_key
+
+    class FakePyJWKClient:
+        def __init__(self, url: str) -> None:
+            assert url == "https://project.supabase.co/auth/v1/.well-known/jwks.json"
+
+        def get_signing_key_from_jwt(self, jwt_token: str) -> FakeSigningKey:
+            assert jwt_token == token
+            return FakeSigningKey()
+
+    monkeypatch.setattr(jwt, "PyJWKClient", FakePyJWKClient)
+
+    user = decode_supabase_jwt(
+        token,
+        jwks_url="https://project.supabase.co/auth/v1/.well-known/jwks.json",
+    )
+
+    assert user == CurrentUser(
+        id="ecc-user-123",
+        email="ecc@example.com",
         role="authenticated",
     )
 
@@ -132,3 +174,20 @@ def test_validate_security_rejects_default_secret_outside_development_or_test() 
 
 def test_validate_security_allows_default_secret_in_test() -> None:
     Settings(environment="test", supabase_jwt_secret="test-secret").validate_security()
+
+
+def test_validate_security_allows_jwks_url_in_production() -> None:
+    Settings(
+        environment="production",
+        supabase_jwt_secret="test-secret",
+        supabase_jwks_url="https://project.supabase.co/auth/v1/.well-known/jwks.json",
+    ).validate_security()
+
+
+def test_settings_derives_jwks_url_from_supabase_url() -> None:
+    settings = Settings(supabase_url="https://project.supabase.co")
+
+    assert (
+        settings.resolved_supabase_jwks_url
+        == "https://project.supabase.co/auth/v1/.well-known/jwks.json"
+    )

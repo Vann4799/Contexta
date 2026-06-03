@@ -11,8 +11,23 @@ class CurrentUser:
     role: str
 
 
-def decode_supabase_jwt(token: str, jwt_secret: str) -> CurrentUser:
+def decode_supabase_jwt(
+    token: str,
+    jwt_secret: str = "",
+    jwks_url: str = "",
+) -> CurrentUser:
     try:
+        if jwks_url:
+            signing_key = jwt.PyJWKClient(jwks_url).get_signing_key_from_jwt(token)
+            payload = jwt.decode(
+                token,
+                signing_key.key,
+                algorithms=["ES256", "RS256"],
+                audience="authenticated",
+                options={"require": ["exp"]},
+            )
+            return _current_user_from_payload(payload)
+
         payload = jwt.decode(
             token,
             jwt_secret,
@@ -20,12 +35,15 @@ def decode_supabase_jwt(token: str, jwt_secret: str) -> CurrentUser:
             audience="authenticated",
             options={"require": ["exp"]},
         )
+        return _current_user_from_payload(payload)
     except jwt.PyJWTError as exc:
         raise HTTPException(
             status_code=401,
             detail="Invalid authentication token",
         ) from exc
 
+
+def _current_user_from_payload(payload: dict[str, object]) -> CurrentUser:
     subject = payload.get("sub")
     if not isinstance(subject, str) or not subject:
         raise HTTPException(status_code=401, detail="Invalid authentication token")

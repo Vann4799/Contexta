@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     supabase_anon_key: str = ""
     supabase_service_role_key: str = ""
     supabase_jwt_secret: str = "test-secret"
+    supabase_jwks_url: str = ""
     supabase_storage_bucket: str = "contexta-documents"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
@@ -18,10 +19,19 @@ class Settings(BaseSettings):
         if (
             self.environment not in {"development", "test"}
             and self.supabase_jwt_secret == "test-secret"
+            and not self.resolved_supabase_jwks_url
         ):
             raise ValueError(
-                "supabase_jwt_secret must be changed outside development or test"
+                "supabase_jwt_secret must be changed or supabase_jwks_url must be set outside development or test"
             )
+
+    @property
+    def resolved_supabase_jwks_url(self) -> str:
+        if self.supabase_jwks_url:
+            return self.supabase_jwks_url
+        if self.supabase_url:
+            return f"{self.supabase_url.rstrip('/')}/auth/v1/.well-known/jwks.json"
+        return ""
 
 
 @lru_cache
