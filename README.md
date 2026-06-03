@@ -67,3 +67,29 @@ Phase 1 is considered healthy when:
 - `apps/api` tests pass.
 - `apps/worker` tests pass.
 - `apps/web` lint and build pass.
+
+## Supabase Setup
+
+Phase 2 adds Supabase Auth and metadata schema. Apply the SQL in:
+
+```text
+infra/supabase/migrations/0001_initial_schema.sql
+```
+
+The frontend expects:
+
+```text
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+NEXT_PUBLIC_AUTH_CALLBACK_URL
+```
+
+The API expects:
+
+```text
+SUPABASE_URL
+SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY
+SUPABASE_JWT_SECRET
+SUPABASE_STORAGE_BUCKET
+```
