@@ -4,6 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    environment: str = "development"
     qdrant_url: str = "http://localhost:6333"
     supabase_url: str = ""
     supabase_anon_key: str = ""
@@ -13,7 +14,18 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
+    def validate_security(self) -> None:
+        if (
+            self.environment not in {"development", "test"}
+            and self.supabase_jwt_secret == "test-secret"
+        ):
+            raise ValueError(
+                "supabase_jwt_secret must be changed outside development or test"
+            )
+
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    settings = Settings()
+    settings.validate_security()
+    return settings

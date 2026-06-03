@@ -1,8 +1,20 @@
 import jwt
 import pytest
-from fastapi import HTTPException
+from datetime import datetime, timedelta, timezone
+from fastapi import Depends, FastAPI, HTTPException
+from fastapi.testclient import TestClient
 
+from app.auth.dependencies import get_current_user
 from app.auth.supabase_jwt import CurrentUser, decode_supabase_jwt
+from app.core.config import Settings, get_settings
+
+
+def future_timestamp() -> int:
+    return int((datetime.now(timezone.utc) + timedelta(minutes=5)).timestamp())
+
+
+def past_timestamp() -> int:
+    return int((datetime.now(timezone.utc) - timedelta(minutes=5)).timestamp())
 
 
 def test_valid_hs256_jwt_with_authenticated_audience_returns_current_user() -> None:
@@ -12,6 +24,7 @@ def test_valid_hs256_jwt_with_authenticated_audience_returns_current_user() -> N
             "email": "user@example.com",
             "role": "authenticated",
             "aud": "authenticated",
+            "exp": future_timestamp(),
         },
         "test-secret",
         algorithm="HS256",
@@ -28,7 +41,7 @@ def test_valid_hs256_jwt_with_authenticated_audience_returns_current_user() -> N
 
 def test_wrong_secret_raises_401() -> None:
     token = jwt.encode(
-        {"sub": "user-123", "aud": "authenticated"},
+        {"sub": "user-123", "aud": "authenticated", "exp": future_timestamp()},
         "test-secret",
         algorithm="HS256",
     )
@@ -41,7 +54,7 @@ def test_wrong_secret_raises_401() -> None:
 
 @pytest.mark.parametrize("subject", ["", None])
 def test_missing_or_empty_subject_raises_401(subject: str | None) -> None:
-    payload = {"aud": "authenticated"}
+    payload = {"aud": "authenticated", "exp": future_timestamp()}
     if subject is not None:
         payload["sub"] = subject
     token = jwt.encode(payload, "test-secret", algorithm="HS256")
@@ -50,3 +63,72 @@ def test_missing_or_empty_subject_raises_401(subject: str | None) -> None:
         decode_supabase_jwt(token, "test-secret")
 
     assert exc_info.value.status_code == 401
+
+
+def test_missing_expiration_raises_401() -> None:
+    token = jwt.encode(
+        {"sub": "user-123", "aud": "authenticated"},
+        "test-secret",
+        algorithm="HS256",
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        decode_supabase_jwt(token, "test-secret")
+
+    assert exc_info.value.status_code == 401
+
+
+def test_expired_token_raises_401() -> None:
+    token = jwt.encode(
+        {"sub": "user-123", "aud": "authenticated", "exp": past_timestamp()},
+        "test-secret",
+        algorithm="HS256",
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        decode_supabase_jwt(token, "test-secret")
+
+    assert exc_info.value.status_code == 401
+
+
+def test_get_current_user_uses_settings_dependency_override() -> None:
+    app = FastAPI()
+
+    @app.get("/me")
+    def me(user: CurrentUser = Depends(get_current_user)) -> dict[str, str | None]:
+        return {"id": user.id, "email": user.email, "role": user.role}
+
+    def override_settings() -> Settings:
+        return Settings(supabase_jwt_secret="override-secret")
+
+    app.dependency_overrides[get_settings] = override_settings
+    token = jwt.encode(
+        {
+            "sub": "user-123",
+            "email": "user@example.com",
+            "aud": "authenticated",
+            "exp": future_timestamp(),
+        },
+        "override-secret",
+        algorithm="HS256",
+    )
+
+    response = TestClient(app).get("/me", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "id": "user-123",
+        "email": "user@example.com",
+        "role": "authenticated",
+    }
+
+
+def test_validate_security_rejects_default_secret_outside_development_or_test() -> None:
+    settings = Settings(environment="production", supabase_jwt_secret="test-secret")
+
+    with pytest.raises(ValueError):
+        settings.validate_security()
+
+
+def test_validate_security_allows_default_secret_in_test() -> None:
+    Settings(environment="test", supabase_jwt_secret="test-secret").validate_security()

@@ -18,6 +18,7 @@ def decode_supabase_jwt(token: str, jwt_secret: str) -> CurrentUser:
             jwt_secret,
             algorithms=["HS256"],
             audience="authenticated",
+            options={"require": ["exp"]},
         )
     except jwt.PyJWTError as exc:
         raise HTTPException(
