@@ -56,7 +56,10 @@ export function apiBaseUrl() {
   return process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 }
 
-async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}, timeoutMs = 15000) {
+const DEFAULT_REQUEST_TIMEOUT_MS = 15000;
+const CHAT_ANSWER_TIMEOUT_MS = 120000;
+
+async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}, timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS) {
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
 
@@ -147,7 +150,7 @@ export async function queryChat(accessToken: string, question: string) {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({ question })
-  });
+  }, CHAT_ANSWER_TIMEOUT_MS);
 
   if (!response.ok) {
     throw new Error(await getErrorMessage(response, "Unable to answer question."));
@@ -211,7 +214,7 @@ export async function sendChatMessage(accessToken: string, sessionId: string, qu
       "Content-Type": "application/json"
     },
     body: JSON.stringify({ question })
-  });
+  }, CHAT_ANSWER_TIMEOUT_MS);
 
   if (!response.ok) {
     throw new Error(await getErrorMessage(response, "Unable to answer question."));
