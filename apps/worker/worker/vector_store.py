@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import math
+from uuid import NAMESPACE_URL, uuid5
 
 import httpx
 
@@ -52,9 +53,7 @@ class QdrantVectorStore:
         embeddings: list[list[float]],
     ) -> list[str]:
         self._ensure_collection()
-        point_ids = [
-            f"{chunk['document_id']}-{chunk['chunk_index']}" for chunk in chunks
-        ]
+        point_ids = [self._point_id(chunk) for chunk in chunks]
         points = [
             {
                 "id": point_id,
@@ -77,6 +76,14 @@ class QdrantVectorStore:
         )
         response.raise_for_status()
         return point_ids
+
+    def _point_id(self, chunk: ProcessingChunk) -> str:
+        return str(
+            uuid5(
+                NAMESPACE_URL,
+                f"contexta:{chunk['document_id']}:{chunk['chunk_index']}",
+            )
+        )
 
     def _ensure_collection(self) -> None:
         if self._collection_checked:

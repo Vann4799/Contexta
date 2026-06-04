@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from uuid import UUID
 
 import httpx
 
@@ -56,8 +57,8 @@ def test_qdrant_vector_store_creates_collection_and_upserts_chunks() -> None:
         embeddings=[[0.1, 0.2]],
     )
 
-    assert point_ids == ["doc-1-0"]
+    UUID(point_ids[0])
     assert [request.method for request in requests] == ["GET", "PUT", "PUT"]
     upsert_payload = json.loads(requests[2].content)
-    assert upsert_payload["points"][0]["id"] == "doc-1-0"
+    assert upsert_payload["points"][0]["id"] == point_ids[0]
     assert upsert_payload["points"][0]["payload"]["text"] == "hello"
