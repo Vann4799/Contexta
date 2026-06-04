@@ -13,8 +13,10 @@ from app.documents.routes import (
     get_document_answer_generator,
     get_document_repository,
     get_document_storage,
+    get_document_vector_cleanup,
 )
 from app.documents.storage import InMemoryDocumentStorage, SupabaseDocumentStorage
+from app.documents.vector_cleanup import NoopDocumentVectorCleanup
 from app.core.config import Settings, get_settings
 
 
@@ -39,6 +41,7 @@ def document_repository_override() -> None:
     storage = InMemoryDocumentStorage()
     app.dependency_overrides[get_document_repository] = lambda: repository
     app.dependency_overrides[get_document_storage] = lambda: storage
+    app.dependency_overrides[get_document_vector_cleanup] = lambda: NoopDocumentVectorCleanup()
     app.dependency_overrides[get_settings] = lambda: Settings(
         supabase_jwt_secret="test-secret",
         supabase_jwks_url="",
@@ -380,6 +383,89 @@ def test_upload_oversized_pdf_returns_422_before_storage(
 
     assert response.status_code == 422
     assert storage.objects == {}
+
+
+def test_delete_document_removes_owned_document_and_storage_object() -> None:
+    repository = InMemoryDocumentRepository()
+    storage = InMemoryDocumentStorage()
+    app.dependency_overrides[get_document_repository] = lambda: repository
+    app.dependency_overrides[get_document_storage] = lambda: storage
+    created = repository.create_document(
+        USER_ID,
+        DocumentCreate(
+            filename="policy.pdf",
+            file_type="pdf",
+            file_size=1200,
+            storage_path=f"{USER_ID}/{DOCUMENT_ID}/policy.pdf",
+        ),
+    )
+    storage.objects[created.storage_path] = b"%PDF"
+
+    response = client.delete(f"/documents/{created.id}", headers=auth_headers())
+
+    assert response.status_code == 204
+    assert repository.get_document(USER_ID, created.id) is None
+    assert created.storage_path not in storage.objects
+
+
+def test_delete_document_returns_404_for_other_user_document() -> None:
+    repository = InMemoryDocumentRepository()
+    app.dependency_overrides[get_document_repository] = lambda: repository
+    created = repository.create_document(
+        USER_ID,
+        DocumentCreate(
+            filename="policy.pdf",
+            file_type="pdf",
+            file_size=1200,
+            storage_path=f"{USER_ID}/{DOCUMENT_ID}/policy.pdf",
+        ),
+    )
+
+    response = client.delete(f"/documents/{created.id}", headers=auth_headers("other-user"))
+
+    assert response.status_code == 404
+    assert repository.get_document(USER_ID, created.id) is not None
+
+
+def test_retry_failed_document_resets_processing_state() -> None:
+    repository = InMemoryDocumentRepository()
+    app.dependency_overrides[get_document_repository] = lambda: repository
+    created = repository.create_document(
+        USER_ID,
+        DocumentCreate(
+            filename="policy.pdf",
+            file_type="pdf",
+            file_size=1200,
+            storage_path=f"{USER_ID}/{DOCUMENT_ID}/policy.pdf",
+        ),
+    )
+    repository.mark_failed(created.id, "Extraction failed")
+
+    response = client.post(f"/documents/{created.id}/retry", headers=auth_headers())
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "processing"
+    assert body["error_message"] is None
+    assert body["chunk_count"] == 0
+
+
+def test_retry_ready_document_returns_409() -> None:
+    repository = InMemoryDocumentRepository()
+    app.dependency_overrides[get_document_repository] = lambda: repository
+    created = repository.create_document(
+        USER_ID,
+        DocumentCreate(
+            filename="policy.pdf",
+            file_type="pdf",
+            file_size=1200,
+            storage_path=f"{USER_ID}/{DOCUMENT_ID}/policy.pdf",
+        ),
+    )
+
+    response = client.post(f"/documents/{created.id}/retry", headers=auth_headers())
+
+    assert response.status_code == 409
 
 
 @pytest.mark.asyncio

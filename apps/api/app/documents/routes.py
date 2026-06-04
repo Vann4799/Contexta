@@ -22,6 +22,10 @@ from app.documents.repository import (
     document_repository,
 )
 from app.documents.storage import DocumentStorage, SupabaseDocumentStorage
+from app.documents.vector_cleanup import (
+    DocumentVectorCleanup,
+    QdrantDocumentVectorCleanup,
+)
 
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -68,6 +72,15 @@ def get_document_repository(
             settings.supabase_service_role_key,
         )
     return document_repository
+
+
+def get_document_vector_cleanup(
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> DocumentVectorCleanup:
+    return QdrantDocumentVectorCleanup(
+        qdrant_url=settings.qdrant_url,
+        collection_name=settings.qdrant_collection,
+    )
 
 
 def get_document_answer_generator(
@@ -282,6 +295,53 @@ def generate_document_ai_brief(
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     return DocumentAIBriefResponse(document_id=document.id, brief=brief)
+
+
+@router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_document(
+    document_id: str,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    storage: Annotated[DocumentStorage, Depends(get_document_storage)],
+    repository: Annotated[DocumentRepository, Depends(get_document_repository)],
+    vector_cleanup: Annotated[DocumentVectorCleanup, Depends(get_document_vector_cleanup)],
+) -> None:
+    document = repository.get_document(current_user.id, document_id)
+    if not document:
+        raise HTTPException(status_code=404, detail="document not found")
+
+    try:
+        vector_cleanup.delete_document_vectors(current_user.id, document_id)
+        await storage.delete_document(document.storage_path)
+        repository.delete_document(current_user.id, document_id)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Unable to delete document.") from exc
+
+
+@router.post("/{document_id}/retry", response_model=DocumentResponse)
+def retry_document_processing(
+    document_id: str,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    repository: Annotated[DocumentRepository, Depends(get_document_repository)],
+    vector_cleanup: Annotated[DocumentVectorCleanup, Depends(get_document_vector_cleanup)],
+) -> DocumentResponse:
+    document = repository.get_document(current_user.id, document_id)
+    if not document:
+        raise HTTPException(status_code=404, detail="document not found")
+    if document.status != "failed":
+        raise HTTPException(
+            status_code=409,
+            detail="only failed documents can be retried",
+        )
+
+    try:
+        vector_cleanup.delete_document_vectors(current_user.id, document_id)
+        retried_document = repository.retry_failed_document(current_user.id, document_id)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Unable to retry document.") from exc
+
+    if not retried_document:
+        raise HTTPException(status_code=404, detail="document not found")
+    return retried_document
 
 
 @router.post(

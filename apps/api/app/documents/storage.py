@@ -13,6 +13,9 @@ class DocumentStorage(Protocol):
     ) -> None:
         ...
 
+    async def delete_document(self, storage_path: str) -> None:
+        ...
+
 
 class SupabaseDocumentStorage:
     def __init__(
@@ -48,6 +51,24 @@ class SupabaseDocumentStorage:
             response = await client.post(url, content=content, headers=headers)
             response.raise_for_status()
 
+    async def delete_document(self, storage_path: str) -> None:
+        headers = {
+            "apikey": self._service_role_key,
+            "Authorization": f"Bearer {self._service_role_key}",
+            "Content-Type": "application/json",
+        }
+        encoded_storage_path = "/".join(
+            quote(segment, safe="") for segment in storage_path.split("/")
+        )
+        url = f"{self._supabase_url}/storage/v1/object/{self._bucket}"
+        async with httpx.AsyncClient() as client:
+            response = await client.delete(
+                url,
+                json={"prefixes": [encoded_storage_path]},
+                headers=headers,
+            )
+            response.raise_for_status()
+
 
 class InMemoryDocumentStorage:
     def __init__(self) -> None:
@@ -62,3 +83,7 @@ class InMemoryDocumentStorage:
     ) -> None:
         self.objects[storage_path] = content
         self.content_types[storage_path] = content_type
+
+    async def delete_document(self, storage_path: str) -> None:
+        self.objects.pop(storage_path, None)
+        self.content_types.pop(storage_path, None)

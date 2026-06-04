@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { uploadDocument, listDocuments, type DocumentItem, type DocumentStatus } from "@/lib/api";
+import { deleteDocument, retryDocument, uploadDocument, listDocuments, type DocumentItem, type DocumentStatus } from "@/lib/api";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/status-pill";
@@ -53,6 +53,7 @@ export function DocumentUploadPanel() {
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
+  const [mutatingDocumentId, setMutatingDocumentId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -85,6 +86,19 @@ export function DocumentUploadPanel() {
   useEffect(() => {
     void loadDocuments();
   }, [loadDocuments]);
+
+  useEffect(() => {
+    const hasProcessingDocument = documents.some((document) => document.status === "uploaded" || document.status === "processing");
+    if (!hasProcessingDocument) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      void loadDocuments();
+    }, 5000);
+
+    return () => window.clearInterval(intervalId);
+  }, [documents, loadDocuments]);
 
   const handleUpload = async (file: File) => {
     setError(null);
@@ -127,6 +141,55 @@ export function DocumentUploadPanel() {
     }
   };
 
+  const handleDelete = async (document: DocumentItem) => {
+    setError(null);
+    setSuccess(null);
+
+    if (!window.confirm(`Delete "${document.filename}"? This removes its indexed chunks too.`)) {
+      return;
+    }
+
+    setMutatingDocumentId(document.id);
+
+    try {
+      const accessToken = await getAccessToken();
+      if (!accessToken) {
+        setError("Sign in to delete documents.");
+        return;
+      }
+
+      await deleteDocument(accessToken, document.id);
+      setDocuments((currentDocuments) => currentDocuments.filter((currentDocument) => currentDocument.id !== document.id));
+      setSuccess(`${document.filename} deleted.`);
+    } catch (deleteError) {
+      setError(uploadErrorMessage(deleteError, "Unable to delete document."));
+    } finally {
+      setMutatingDocumentId(null);
+    }
+  };
+
+  const handleRetry = async (document: DocumentItem) => {
+    setError(null);
+    setSuccess(null);
+    setMutatingDocumentId(document.id);
+
+    try {
+      const accessToken = await getAccessToken();
+      if (!accessToken) {
+        setError("Sign in to retry documents.");
+        return;
+      }
+
+      const retriedDocument = await retryDocument(accessToken, document.id);
+      setDocuments((currentDocuments) => currentDocuments.map((currentDocument) => (currentDocument.id === document.id ? retriedDocument : currentDocument)));
+      setSuccess(`${document.filename} queued for retry.`);
+    } catch (retryError) {
+      setError(uploadErrorMessage(retryError, "Unable to retry document."));
+    } finally {
+      setMutatingDocumentId(null);
+    }
+  };
+
   return (
     <section className="rounded-contexta border border-border bg-white">
       <div className="flex flex-col gap-4 border-b border-border p-5 sm:flex-row sm:items-center sm:justify-between">
@@ -135,6 +198,9 @@ export function DocumentUploadPanel() {
           <p className="mt-1 text-sm text-subtle">Upload PDF and DOCX documents for grounded chats.</p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+          <Button className="w-full sm:w-auto" disabled={isLoading || isUploading} onClick={() => void loadDocuments()} variant="secondary">
+            Refresh
+          </Button>
           <input
             ref={fileInputRef}
             className="block w-full rounded border border-border bg-white text-sm text-subtle file:mr-3 file:h-10 file:border-0 file:bg-muted file:px-3 file:text-sm file:font-medium file:text-ink hover:file:bg-border sm:w-72"
@@ -170,6 +236,7 @@ export function DocumentUploadPanel() {
               <th className="px-5 py-3">Type</th>
               <th className="px-5 py-3">Size</th>
               <th className="px-5 py-3">Status</th>
+              <th className="px-5 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -184,13 +251,40 @@ export function DocumentUploadPanel() {
                   <td className="px-5 py-3 uppercase text-subtle">{document.file_type}</td>
                   <td className="px-5 py-3 text-subtle">{formatBytes(document.file_size)}</td>
                   <td className="px-5 py-3">
-                    <StatusPill status={statusForPill(document.status)} />
+                    <div className="flex flex-col items-start gap-1">
+                      <StatusPill status={statusForPill(document.status)} />
+                      {document.status === "failed" && document.error_message ? (
+                        <span className="max-w-40 truncate text-xs text-red-700" title={document.error_message}>
+                          {document.error_message}
+                        </span>
+                      ) : null}
+                    </div>
+                  </td>
+                  <td className="px-5 py-3">
+                    <div className="flex justify-end gap-2">
+                      {document.status === "failed" ? (
+                        <Button
+                          disabled={mutatingDocumentId === document.id}
+                          onClick={() => void handleRetry(document)}
+                          variant="secondary"
+                        >
+                          Retry
+                        </Button>
+                      ) : null}
+                      <Button
+                        disabled={mutatingDocumentId === document.id}
+                        onClick={() => void handleDelete(document)}
+                        variant="ghost"
+                      >
+                        Delete
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td className="px-5 py-8 text-center text-subtle" colSpan={4}>
+                <td className="px-5 py-8 text-center text-subtle" colSpan={5}>
                   {isLoading ? "Loading documents..." : "No documents uploaded yet."}
                 </td>
               </tr>

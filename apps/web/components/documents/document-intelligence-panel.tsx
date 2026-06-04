@@ -128,10 +128,8 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
           throw new Error("Sign in to view this document.");
         }
 
-        const [loadedDocument, loadedIntelligence] = await Promise.all([
-          getDocument(accessToken, documentId),
-          getDocumentIntelligence(accessToken, documentId)
-        ]);
+        const loadedDocument = await getDocument(accessToken, documentId);
+        const loadedIntelligence = loadedDocument.status === "ready" ? await getDocumentIntelligence(accessToken, documentId) : null;
 
         if (!isMounted) {
           return;
@@ -156,6 +154,31 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
       isMounted = false;
     };
   }, [documentId, getAccessToken]);
+
+  useEffect(() => {
+    if (!document || (document.status !== "uploaded" && document.status !== "processing")) {
+      return;
+    }
+
+    const intervalId = window.setInterval(async () => {
+      try {
+        const accessToken = await getAccessToken();
+        if (!accessToken) {
+          return;
+        }
+
+        const refreshedDocument = await getDocument(accessToken, documentId);
+        setDocument(refreshedDocument);
+        if (refreshedDocument.status === "ready") {
+          setIntelligence(await getDocumentIntelligence(accessToken, documentId));
+        }
+      } catch {
+        return;
+      }
+    }, 5000);
+
+    return () => window.clearInterval(intervalId);
+  }, [document, documentId, getAccessToken]);
 
   const handleGenerateBrief = async () => {
     setIsGeneratingBrief(true);
@@ -194,7 +217,7 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
     return <section className="rounded-contexta border border-border bg-white p-5 text-sm text-subtle">Loading document intelligence...</section>;
   }
 
-  if (error || !document || !intelligence) {
+  if (error || !document) {
     return (
       <section className="rounded-contexta border border-border bg-white p-5">
         <p className="text-sm text-red-700">{error || "Document not found."}</p>
@@ -205,13 +228,15 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
     );
   }
 
+  const normalizedStatus = document.status === "uploaded" ? "processing" : document.status;
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Link className="text-sm text-primary hover:underline" href="/documents">
           Back to documents
         </Link>
-        <StatusPill status={document.status === "uploaded" ? "processing" : document.status} />
+        <StatusPill status={normalizedStatus} />
       </div>
 
       <section className="rounded-contexta border border-border bg-white p-5">
@@ -219,12 +244,36 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
           <div className="min-w-0">
             <h2 className="truncate font-heading text-xl font-semibold">{document.filename}</h2>
             <p className="mt-1 text-sm text-subtle">
-              {document.file_type.toUpperCase()} - {formatBytes(document.file_size)} - {intelligence.chunk_count} chunks
+              {document.file_type.toUpperCase()} - {formatBytes(document.file_size)} - {(intelligence?.chunk_count ?? document.chunk_count)} chunks
             </p>
           </div>
         </div>
       </section>
 
+      {normalizedStatus === "processing" ? (
+        <section className="rounded-contexta border border-blue-200 bg-blue-50 p-5">
+          <h3 className="font-heading text-lg font-semibold text-blue-700">Indexing in progress</h3>
+          <p className="mt-2 text-sm leading-6 text-blue-700">
+            Contexta is extracting text and creating searchable chunks. This page refreshes automatically every few seconds.
+          </p>
+        </section>
+      ) : null}
+
+      {document.status === "failed" ? (
+        <section className="rounded-contexta border border-red-200 bg-red-50 p-5">
+          <h3 className="font-heading text-lg font-semibold text-red-800">Processing failed</h3>
+          <p className="mt-2 text-sm leading-6 text-red-800">{document.error_message || "The worker could not process this document."}</p>
+          <Link className="mt-4 inline-block text-sm font-medium text-red-800 hover:underline" href="/documents">
+            Go back to Documents to retry or delete it.
+          </Link>
+        </section>
+      ) : null}
+
+      {document.status === "ready" && !intelligence ? (
+        <section className="rounded-contexta border border-border bg-white p-5 text-sm text-subtle">Loading processed document details...</section>
+      ) : null}
+
+      {document.status === "ready" && intelligence ? (
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4">
           <article className="rounded-contexta border border-border bg-white p-5">
@@ -289,14 +338,19 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
             <h3 className="font-heading text-lg font-semibold">Suggested Questions</h3>
             <div className="mt-3 space-y-2">
               {intelligence.suggested_questions.map((question) => (
-                <p key={question} className="rounded border border-border bg-muted px-3 py-2 text-sm text-ink">
+                <Link
+                  key={question}
+                  className="block rounded border border-border bg-muted px-3 py-2 text-sm text-ink hover:border-primary hover:bg-blue-50"
+                  href={`/chat?question=${encodeURIComponent(question)}&documentId=${encodeURIComponent(document.id)}`}
+                >
                   {question}
-                </p>
+                </Link>
               ))}
             </div>
           </article>
         </aside>
       </section>
+      ) : null}
     </div>
   );
 }

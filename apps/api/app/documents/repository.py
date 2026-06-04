@@ -29,6 +29,16 @@ class DocumentRepository(Protocol):
     ) -> list[DocumentChunkResponse]:
         ...
 
+    def delete_document(self, user_id: str, document_id: str) -> None:
+        ...
+
+    def retry_failed_document(
+        self,
+        user_id: str,
+        document_id: str,
+    ) -> DocumentResponse | None:
+        ...
+
 
 class InMemoryDocumentRepository:
     def __init__(self) -> None:
@@ -79,6 +89,55 @@ class InMemoryDocumentRepository:
 
     def add_chunks(self, chunks: list[dict[str, object]]) -> None:
         self._chunks.extend(DocumentChunkResponse.model_validate(chunk) for chunk in chunks)
+
+    def mark_failed(self, document_id: str, error_message: str) -> None:
+        for index, document in enumerate(self._documents):
+            if document.id == document_id:
+                self._documents[index] = document.model_copy(
+                    update={
+                        "status": "failed",
+                        "error_message": error_message,
+                        "updated_at": datetime.now(timezone.utc),
+                    }
+                )
+                return
+
+    def delete_document(self, user_id: str, document_id: str) -> None:
+        self._documents = [
+            document
+            for document in self._documents
+            if not (document.user_id == user_id and document.id == document_id)
+        ]
+        self._chunks = [
+            chunk
+            for chunk in self._chunks
+            if not (chunk.user_id == user_id and chunk.document_id == document_id)
+        ]
+
+    def retry_failed_document(
+        self,
+        user_id: str,
+        document_id: str,
+    ) -> DocumentResponse | None:
+        now = datetime.now(timezone.utc)
+        for index, document in enumerate(self._documents):
+            if document.user_id == user_id and document.id == document_id:
+                retried = document.model_copy(
+                    update={
+                        "status": "processing",
+                        "error_message": None,
+                        "chunk_count": 0,
+                        "updated_at": now,
+                    }
+                )
+                self._documents[index] = retried
+                self._chunks = [
+                    chunk
+                    for chunk in self._chunks
+                    if not (chunk.user_id == user_id and chunk.document_id == document_id)
+                ]
+                return retried
+        return None
 
 
 class SupabaseDocumentRepository:
@@ -168,6 +227,48 @@ class SupabaseDocumentRepository:
             DocumentChunkResponse.model_validate(chunk)
             for chunk in response.json()
         ]
+
+    def delete_document(self, user_id: str, document_id: str) -> None:
+        response = httpx.delete(
+            f"{self._supabase_url}/rest/v1/documents",
+            headers=self._headers,
+            params={
+                "id": f"eq.{document_id}",
+                "user_id": f"eq.{user_id}",
+            },
+        )
+        response.raise_for_status()
+
+    def retry_failed_document(
+        self,
+        user_id: str,
+        document_id: str,
+    ) -> DocumentResponse | None:
+        headers = {
+            **self._headers,
+            "Content-Type": "application/json",
+            "Prefer": "return=representation",
+        }
+        response = httpx.patch(
+            f"{self._supabase_url}/rest/v1/documents",
+            headers=headers,
+            params={
+                "id": f"eq.{document_id}",
+                "user_id": f"eq.{user_id}",
+                "status": "eq.failed",
+            },
+            json={
+                "status": "processing",
+                "error_message": None,
+                "chunk_count": 0,
+                "processing_started_at": None,
+            },
+        )
+        response.raise_for_status()
+        documents = response.json()
+        if not documents:
+            return None
+        return DocumentResponse.model_validate(documents[0])
 
 
 document_repository = InMemoryDocumentRepository()

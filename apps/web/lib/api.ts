@@ -206,6 +206,34 @@ export async function uploadDocument(accessToken: string, file: File) {
   return (await response.json()) as DocumentItem;
 }
 
+export async function deleteDocument(accessToken: string, documentId: string) {
+  const response = await fetchWithTimeout(`${apiBaseUrl()}/documents/${documentId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${accessToken}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to delete document."));
+  }
+}
+
+export async function retryDocument(accessToken: string, documentId: string) {
+  const response = await fetchWithTimeout(`${apiBaseUrl()}/documents/${documentId}/retry`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to retry document."));
+  }
+
+  return (await response.json()) as DocumentItem;
+}
+
 export async function queryChat(accessToken: string, question: string) {
   const response = await fetchWithTimeout(`${apiBaseUrl()}/chat/query`, {
     method: "POST",
@@ -270,14 +298,14 @@ export async function listChatMessages(accessToken: string, sessionId: string) {
   return (await response.json()) as ChatMessage[];
 }
 
-export async function sendChatMessage(accessToken: string, sessionId: string, question: string) {
+export async function sendChatMessage(accessToken: string, sessionId: string, question: string, documentIds?: string[]) {
   const response = await fetchWithTimeout(`${apiBaseUrl()}/chat/sessions/${sessionId}/messages`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({ question })
+    body: JSON.stringify({ question, document_ids: documentIds })
   }, CHAT_ANSWER_TIMEOUT_MS);
 
   if (!response.ok) {

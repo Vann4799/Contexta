@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import {
   createChatSession,
@@ -16,7 +18,9 @@ import { Button } from "@/components/ui/button";
 type VisibleMessage = Pick<ChatMessage, "role" | "content" | "citations">;
 
 export function ChatWorkspace() {
+  const searchParams = useSearchParams();
   const [question, setQuestion] = useState("");
+  const [scopedDocumentId, setScopedDocumentId] = useState<string | null>(null);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<VisibleMessage[]>([]);
@@ -90,6 +94,15 @@ export function ChatWorkspace() {
     };
   }, [getAccessToken, loadSessionMessages]);
 
+  useEffect(() => {
+    const suggestedQuestion = searchParams.get("question");
+    const documentId = searchParams.get("documentId");
+    if (suggestedQuestion) {
+      setQuestion(suggestedQuestion);
+    }
+    setScopedDocumentId(documentId);
+  }, [searchParams]);
+
   const handleSelectSession = async (sessionId: string) => {
     if (sessionId === activeSessionId) {
       return;
@@ -137,7 +150,7 @@ export function ChatWorkspace() {
         setActiveSessionId(sessionId);
       }
 
-      const response = await sendChatMessage(accessToken, sessionId, trimmedQuestion);
+      const response = await sendChatMessage(accessToken, sessionId, trimmedQuestion, scopedDocumentId ? [scopedDocumentId] : undefined);
       setMessages((current) => [
         ...current,
         { role: "assistant", content: response.answer, citations: response.citations }
@@ -196,6 +209,11 @@ export function ChatWorkspace() {
         </div>
 
         <form className="mt-auto flex flex-col gap-2 pt-4 sm:flex-row" onSubmit={handleSubmit}>
+          {scopedDocumentId ? (
+            <p className="rounded border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700 sm:mr-2 sm:self-center">
+              Asking one selected document
+            </p>
+          ) : null}
           <label className="sr-only" htmlFor="chat-question">
             Ask Contexta about your documents
           </label>
@@ -220,7 +238,9 @@ export function ChatWorkspace() {
             {citations.map((citation) => (
               <article key={`${citation.document_id}-${citation.chunk_index}`} className="rounded border border-border p-3">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="min-w-0 truncate text-sm font-medium">{citation.document_name}</p>
+                  <Link className="min-w-0 truncate text-sm font-medium text-primary hover:underline" href={`/documents/${citation.document_id}`}>
+                    {citation.document_name}
+                  </Link>
                   <span className="shrink-0 text-xs text-subtle">#{citation.source_number}</span>
                 </div>
                 <p className="mt-1 text-xs text-subtle">
