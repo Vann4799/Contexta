@@ -33,6 +33,14 @@ class ChatRepository(Protocol):
     ) -> ChatMessageResponse:
         ...
 
+    def update_session_activity(
+        self,
+        user_id: str,
+        session_id: str,
+        title: str | None = None,
+    ) -> ChatSessionResponse | None:
+        ...
+
 
 class InMemoryChatRepository:
     def __init__(self) -> None:
@@ -97,6 +105,25 @@ class InMemoryChatRepository:
         )
         self._messages.append(message)
         return message
+
+    def update_session_activity(
+        self,
+        user_id: str,
+        session_id: str,
+        title: str | None = None,
+    ) -> ChatSessionResponse | None:
+        now = datetime.now(timezone.utc).isoformat()
+        for index, session in enumerate(self._sessions):
+            if session.id == session_id and session.user_id == user_id:
+                updated = session.model_copy(
+                    update={
+                        "title": title or session.title,
+                        "updated_at": now,
+                    }
+                )
+                self._sessions[index] = updated
+                return updated
+        return None
 
 
 class SupabaseChatRepository:
@@ -199,6 +226,35 @@ class SupabaseChatRepository:
         if isinstance(created, list):
             created = created[0]
         return ChatMessageResponse.model_validate(created)
+
+    def update_session_activity(
+        self,
+        user_id: str,
+        session_id: str,
+        title: str | None = None,
+    ) -> ChatSessionResponse | None:
+        payload: dict[str, str] = {"updated_at": datetime.now(timezone.utc).isoformat()}
+        if title:
+            payload["title"] = title
+
+        response = httpx.patch(
+            f"{self._supabase_url}/rest/v1/chat_sessions",
+            headers={
+                **self._headers,
+                "Content-Type": "application/json",
+                "Prefer": "return=representation",
+            },
+            params={
+                "id": f"eq.{session_id}",
+                "user_id": f"eq.{user_id}",
+            },
+            json=payload,
+        )
+        response.raise_for_status()
+        sessions = response.json()
+        if not sessions:
+            return None
+        return ChatSessionResponse.model_validate(sessions[0])
 
 
 chat_repository = InMemoryChatRepository()

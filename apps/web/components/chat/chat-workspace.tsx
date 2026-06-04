@@ -121,6 +121,30 @@ export function ChatWorkspace() {
     }
   };
 
+  const handleNewChat = async () => {
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      const accessToken = await getAccessToken();
+      if (!accessToken) {
+        throw new Error("Sign in to create a chat.");
+      }
+
+      const createdSession = await createChatSession(accessToken);
+      setSessions((current) => [createdSession, ...current]);
+      setActiveSessionId(createdSession.id);
+      setMessages([]);
+      setCitations([]);
+      setQuestion("");
+      setScopedDocumentId(null);
+    } catch (chatError) {
+      setError(chatError instanceof Error ? chatError.message : "Unable to create a new chat.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const trimmedQuestion = question.trim();
@@ -156,6 +180,7 @@ export function ChatWorkspace() {
         { role: "assistant", content: response.answer, citations: response.citations }
       ]);
       setCitations(response.citations);
+      setSessions(await listChatSessions(accessToken));
     } catch (chatError) {
       setError(chatError instanceof Error ? chatError.message : "Unable to answer question.");
     } finally {
@@ -166,7 +191,12 @@ export function ChatWorkspace() {
   return (
     <div className="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)_360px]">
       <aside className="rounded-contexta border border-border bg-white p-4">
-        <h2 className="font-heading text-lg font-semibold">History</h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="font-heading text-lg font-semibold">History</h2>
+          <Button disabled={isLoading || isSending} onClick={() => void handleNewChat()} variant="secondary">
+            New chat
+          </Button>
+        </div>
         <div className="mt-3 space-y-2">
           {sessions.map((session) => (
             <button

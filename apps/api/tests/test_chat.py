@@ -166,3 +166,23 @@ def test_session_message_stores_user_and_assistant_messages() -> None:
     assert messages[1]["content"] == "Contexta is a grounded document chatbot. [Source 1]"
     assert messages[1]["citations"][0]["document_name"] == "overview.pdf"
     app.dependency_overrides.clear()
+
+
+def test_first_session_message_updates_new_chat_title() -> None:
+    repository = InMemoryChatRepository()
+    session = repository.create_session("user-chat-123", title="New chat")
+    app.dependency_overrides[get_current_user] = override_user
+    app.dependency_overrides[get_chat_repository] = lambda: repository
+    app.dependency_overrides[get_retriever] = lambda: FakeRetriever([])
+    app.dependency_overrides[get_answer_generator] = lambda: FakeAnswerGenerator()
+
+    response = client.post(
+        f"/chat/sessions/{session.id}/messages",
+        json={"question": "Ringkas isi dokumen creator track dalam 5 poin."},
+    )
+
+    assert response.status_code == 200
+    sessions_response = client.get("/chat/sessions")
+    assert sessions_response.status_code == 200
+    assert sessions_response.json()[0]["title"] == "Ringkas isi dokumen creator track dalam 5 poin."
+    app.dependency_overrides.clear()

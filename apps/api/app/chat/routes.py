@@ -38,6 +38,14 @@ from app.core.config import Settings, get_settings
 
 
 router = APIRouter(prefix="/chat", tags=["chat"])
+MAX_AUTO_SESSION_TITLE_CHARS = 80
+
+
+def build_auto_session_title(question: str) -> str:
+    title = " ".join(question.split())
+    if len(title) <= MAX_AUTO_SESSION_TITLE_CHARS:
+        return title
+    return f"{title[:MAX_AUTO_SESSION_TITLE_CHARS - 1].rstrip()}..."
 
 
 def get_chat_repository(
@@ -164,8 +172,17 @@ def create_chat_message(
     retriever: Annotated[QdrantRetriever, Depends(get_retriever)],
     answer_generator: Annotated[AnswerGenerator, Depends(get_answer_generator)],
 ) -> ChatSessionMessageResponse:
-    if not repository.get_session(current_user.id, session_id):
+    session = repository.get_session(current_user.id, session_id)
+    if not session:
         raise HTTPException(status_code=403, detail="chat session is not accessible")
+
+    existing_messages = repository.list_messages(current_user.id, session_id)
+    if session.title == "New chat" and not existing_messages:
+        repository.update_session_activity(
+            current_user.id,
+            session_id,
+            build_auto_session_title(payload.question),
+        )
 
     repository.create_message(
         current_user.id,
@@ -198,6 +215,7 @@ def create_chat_message(
         chat_response.answer,
         citations=chat_response.citations,
     )
+    repository.update_session_activity(current_user.id, session_id)
     return ChatSessionMessageResponse(
         session_id=session_id,
         answer=chat_response.answer,
