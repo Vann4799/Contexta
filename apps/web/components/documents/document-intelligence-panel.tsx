@@ -156,6 +156,13 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
               {document.file_type.toUpperCase()} - {formatBytes(document.file_size)} - {intelligence.chunk_count} chunks
             </p>
           </div>
+          <Button
+            className="w-full sm:w-auto"
+            disabled={isGeneratingBrief || document.status !== "ready"}
+            onClick={() => void handleGenerateBrief()}
+          >
+            {isGeneratingBrief ? "Generating..." : "Generate AI Brief"}
+          </Button>
         </div>
       </section>
 
