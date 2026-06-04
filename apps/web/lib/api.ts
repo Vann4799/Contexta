@@ -14,6 +14,21 @@ export type DocumentItem = {
   updated_at: string;
 };
 
+export type ChatCitation = {
+  source_number: number;
+  document_id: string;
+  document_name: string;
+  chunk_index: number;
+  page_number: number | null;
+  text: string;
+  score: number;
+};
+
+export type ChatQueryResponse = {
+  answer: string;
+  citations: ChatCitation[];
+};
+
 export function apiBaseUrl() {
   return process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 }
@@ -80,4 +95,21 @@ export async function uploadDocument(accessToken: string, file: File) {
   }
 
   return (await response.json()) as DocumentItem;
+}
+
+export async function queryChat(accessToken: string, question: string) {
+  const response = await fetch(`${apiBaseUrl()}/chat/query`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ question })
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to answer question."));
+  }
+
+  return (await response.json()) as ChatQueryResponse;
 }

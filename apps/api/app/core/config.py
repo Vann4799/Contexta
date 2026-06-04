@@ -6,6 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     environment: str = "development"
     qdrant_url: str = "http://localhost:6333"
+    qdrant_collection: str = "contexta_chunks"
     supabase_url: str = ""
     supabase_anon_key: str = ""
     supabase_service_role_key: str = ""
@@ -13,6 +14,9 @@ class Settings(BaseSettings):
     supabase_jwks_url: str = ""
     supabase_storage_bucket: str = "contexta-documents"
     api_cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
+    deepseek_api_key: str = ""
+    deepseek_model: str = "deepseek-chat"
+    embedding_dimensions: int = 384
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

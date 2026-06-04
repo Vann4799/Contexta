@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.chat.routes import router as chat_router
 from app.core.config import get_settings
 from app.documents.routes import router as documents_router
 from app.services.qdrant_health import check_qdrant_health
@@ -15,6 +16,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(documents_router)
+app.include_router(chat_router)
 
 
 @app.get("/health")
