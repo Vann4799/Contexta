@@ -19,7 +19,7 @@ class DeepSeekAnswerGenerator:
         client: httpx.Client | None = None,
     ) -> None:
         self._api_key = api_key
-        self._model = model
+        self._model = model.strip().lower()
         self._base_url = base_url.rstrip("/")
         self._client = client or httpx.Client(timeout=60)
 
@@ -41,6 +41,10 @@ class DeepSeekAnswerGenerator:
                 "temperature": 0.1,
             },
         )
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            detail = response.text[:500]
+            raise RuntimeError(f"DeepSeek API error {response.status_code}: {detail}") from exc
         body = response.json()
         return body["choices"][0]["message"]["content"]
