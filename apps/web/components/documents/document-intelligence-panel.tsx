@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import {
   generateDocumentAIBrief,
   getDocument,
@@ -48,6 +48,57 @@ function FieldList({ empty, items }: { empty: string; items: string[] }) {
   );
 }
 
+function renderInlineMarkdown(text: string) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+
+  return parts.map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return (
+        <strong key={`${part}-${index}`} className="font-semibold">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+
+    return <Fragment key={`${part}-${index}`}>{part.replace(/\*/g, "")}</Fragment>;
+  });
+}
+
+function FormattedBrief({ text }: { text: string }) {
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  return (
+    <div className="mt-3 space-y-3 text-sm leading-6 text-ink">
+      {lines.map((line, index) => {
+        const normalizedLine = line.replace(/^\*\s+/, "").trim();
+        const headingMatch = normalizedLine.match(/^\*\*(\d+\.\s+[^*]+)\*\*$/);
+
+        if (headingMatch) {
+          return (
+            <h5 key={`${line}-${index}`} className="pt-2 text-sm font-semibold text-ink">
+              {headingMatch[1]}
+            </h5>
+          );
+        }
+
+        if (line.startsWith("*")) {
+          return (
+            <div key={`${line}-${index}`} className="flex gap-2">
+              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+              <p>{renderInlineMarkdown(normalizedLine)}</p>
+            </div>
+          );
+        }
+
+        return <p key={`${line}-${index}`}>{renderInlineMarkdown(normalizedLine)}</p>;
+      })}
+    </div>
+  );
+}
+
 export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePanelProps) {
   const [document, setDocument] = useState<DocumentItem | null>(null);
   const [intelligence, setIntelligence] = useState<DocumentIntelligence | null>(null);
@@ -56,6 +107,7 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
   const [isGeneratingBrief, setIsGeneratingBrief] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [briefError, setBriefError] = useState<string | null>(null);
+  const [copyMessage, setCopyMessage] = useState<string | null>(null);
 
   const getAccessToken = useCallback(async () => {
     const supabase = createSupabaseBrowserClient();
@@ -108,6 +160,7 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
   const handleGenerateBrief = async () => {
     setIsGeneratingBrief(true);
     setBriefError(null);
+    setCopyMessage(null);
 
     try {
       const accessToken = await getAccessToken();
@@ -121,6 +174,19 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
       setBriefError(generateError instanceof Error ? generateError.message : "Unable to generate AI brief.");
     } finally {
       setIsGeneratingBrief(false);
+    }
+  };
+
+  const handleCopyBrief = async () => {
+    if (!aiBrief) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(aiBrief);
+      setCopyMessage("Brief copied.");
+    } catch {
+      setCopyMessage("Unable to copy brief.");
     }
   };
 
@@ -179,8 +245,14 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
             {briefError ? <p className="mt-3 text-sm text-red-700">{briefError}</p> : null}
             {aiBrief ? (
               <div className="mt-4 rounded border border-border bg-muted px-4 py-3">
-                <h4 className="text-sm font-semibold text-ink">AI Brief</h4>
-                <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-ink">{aiBrief}</p>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <h4 className="text-sm font-semibold text-ink">AI Brief</h4>
+                  <Button className="w-full sm:w-auto" onClick={() => void handleCopyBrief()}>
+                    Copy Brief
+                  </Button>
+                </div>
+                <FormattedBrief text={aiBrief} />
+                {copyMessage ? <p className="mt-3 text-xs text-subtle">{copyMessage}</p> : null}
               </div>
             ) : null}
           </article>
