@@ -7,8 +7,10 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 
 from app.auth.dependencies import get_current_user
 from app.auth.supabase_jwt import CurrentUser
+from app.chat.llm import AnswerGenerator, DeepSeekAnswerGenerator
 from app.core.config import Settings, get_settings
 from app.documents.models import (
+    DocumentAIBriefResponse,
     DocumentChunkResponse,
     DocumentCreate,
     DocumentIntelligenceResponse,
@@ -33,6 +35,7 @@ UPLOAD_READ_CHUNK_SIZE = 1024 * 1024
 EMAIL_PATTERN = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
 LINK_PATTERN = re.compile(r"https?://[^\s,)]+")
 NAME_PATTERN = re.compile(r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3}\b")
+MAX_AI_BRIEF_CONTEXT_CHARS = 14000
 
 
 def safe_upload_filename(filename: str) -> str:
@@ -65,6 +68,15 @@ def get_document_repository(
             settings.supabase_service_role_key,
         )
     return document_repository
+
+
+def get_document_answer_generator(
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> AnswerGenerator:
+    return DeepSeekAnswerGenerator(
+        api_key=settings.deepseek_api_key,
+        model=settings.deepseek_model,
+    )
 
 
 def infer_upload_file_type(filename: str, content_type: str | None) -> str:
@@ -177,6 +189,35 @@ def build_document_intelligence(
     )
 
 
+def build_ai_brief_prompt(
+    document: DocumentResponse,
+    chunks: list[DocumentChunkResponse],
+) -> str:
+    context_parts: list[str] = []
+    current_length = 0
+    for chunk in chunks:
+        page = f"page {chunk.page_number}" if chunk.page_number else "page unknown"
+        part = f"[Chunk {chunk.chunk_index}, {page}]\n{chunk.text.strip()}"
+        if current_length + len(part) > MAX_AI_BRIEF_CONTEXT_CHARS:
+            break
+        context_parts.append(part)
+        current_length += len(part)
+
+    context = "\n\n".join(context_parts)
+    return (
+        "Anda adalah analis dokumen untuk produk Contexta.\n"
+        "Buat brief bisnis yang rapi dalam Bahasa Indonesia berdasarkan konteks dokumen saja.\n"
+        "Format jawaban:\n"
+        "1. Ringkasan singkat\n"
+        "2. Insight utama\n"
+        "3. Pola yang terlihat\n"
+        "4. Rekomendasi pertanyaan lanjutan\n"
+        "Jika konteks tidak cukup, jelaskan batasannya.\n\n"
+        f"Nama dokumen: {document.filename}\n\n"
+        f"Konteks dokumen:\n{context}"
+    )
+
+
 async def read_upload_content(file: UploadFile) -> bytes:
     content = bytearray()
     while chunk := await file.read(UPLOAD_READ_CHUNK_SIZE):
@@ -218,6 +259,29 @@ def get_document_intelligence(
 
     chunks = repository.list_document_chunks(current_user.id, document_id)
     return build_document_intelligence(document, chunks)
+
+
+@router.post("/{document_id}/brief", response_model=DocumentAIBriefResponse)
+def generate_document_ai_brief(
+    document_id: str,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    repository: Annotated[DocumentRepository, Depends(get_document_repository)],
+    answer_generator: Annotated[AnswerGenerator, Depends(get_document_answer_generator)],
+) -> DocumentAIBriefResponse:
+    document = repository.get_document(current_user.id, document_id)
+    if not document:
+        raise HTTPException(status_code=404, detail="document not found")
+
+    chunks = repository.list_document_chunks(current_user.id, document_id)
+    if not chunks:
+        raise HTTPException(status_code=422, detail="document has no processed chunks")
+
+    try:
+        brief = answer_generator.generate_answer(build_ai_brief_prompt(document, chunks))
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    return DocumentAIBriefResponse(document_id=document.id, brief=brief)
 
 
 @router.post(

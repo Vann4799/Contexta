@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import {
+  generateDocumentAIBrief,
   getDocument,
   getDocumentIntelligence,
   type DocumentIntelligence,
@@ -10,6 +11,7 @@ import {
 } from "@/lib/api";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { StatusPill } from "@/components/ui/status-pill";
+import { Button } from "@/components/ui/button";
 
 type DocumentIntelligencePanelProps = {
   documentId: string;
@@ -49,8 +51,11 @@ function FieldList({ empty, items }: { empty: string; items: string[] }) {
 export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePanelProps) {
   const [document, setDocument] = useState<DocumentItem | null>(null);
   const [intelligence, setIntelligence] = useState<DocumentIntelligence | null>(null);
+  const [aiBrief, setAIBrief] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isGeneratingBrief, setIsGeneratingBrief] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [briefError, setBriefError] = useState<string | null>(null);
 
   const getAccessToken = useCallback(async () => {
     const supabase = createSupabaseBrowserClient();
@@ -100,6 +105,25 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
     };
   }, [documentId, getAccessToken]);
 
+  const handleGenerateBrief = async () => {
+    setIsGeneratingBrief(true);
+    setBriefError(null);
+
+    try {
+      const accessToken = await getAccessToken();
+      if (!accessToken) {
+        throw new Error("Sign in to generate an AI brief.");
+      }
+
+      const generated = await generateDocumentAIBrief(accessToken, documentId);
+      setAIBrief(generated.brief);
+    } catch (generateError) {
+      setBriefError(generateError instanceof Error ? generateError.message : "Unable to generate AI brief.");
+    } finally {
+      setIsGeneratingBrief(false);
+    }
+  };
+
   if (isLoading) {
     return <section className="rounded-contexta border border-border bg-white p-5 text-sm text-subtle">Loading document intelligence...</section>;
   }
@@ -138,8 +162,20 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4">
           <article className="rounded-contexta border border-border bg-white p-5">
-            <h3 className="font-heading text-lg font-semibold">Automatic Brief</h3>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h3 className="font-heading text-lg font-semibold">Automatic Brief</h3>
+              <Button disabled={isGeneratingBrief || document.status !== "ready"} onClick={() => void handleGenerateBrief()}>
+                {isGeneratingBrief ? "Generating..." : "Generate AI Brief"}
+              </Button>
+            </div>
             <p className="mt-3 text-sm leading-6 text-ink">{intelligence.summary}</p>
+            {briefError ? <p className="mt-3 text-sm text-red-700">{briefError}</p> : null}
+            {aiBrief ? (
+              <div className="mt-4 rounded border border-border bg-muted px-4 py-3">
+                <h4 className="text-sm font-semibold text-ink">AI Brief</h4>
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-ink">{aiBrief}</p>
+              </div>
+            ) : null}
           </article>
 
           <article className="rounded-contexta border border-border bg-white p-5">

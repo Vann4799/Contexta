@@ -9,7 +9,11 @@ from app.documents import routes as document_routes
 from app.documents.models import DocumentCreate
 from app.documents.repository import InMemoryDocumentRepository
 from app.main import app
-from app.documents.routes import get_document_repository, get_document_storage
+from app.documents.routes import (
+    get_document_answer_generator,
+    get_document_repository,
+    get_document_storage,
+)
 from app.documents.storage import InMemoryDocumentStorage, SupabaseDocumentStorage
 from app.core.config import Settings, get_settings
 
@@ -18,6 +22,15 @@ USER_ID = "user-documents-123"
 DOCUMENT_ID = "11111111-1111-4111-8111-111111111111"
 
 client = TestClient(app)
+
+
+class FakeAnswerGenerator:
+    def __init__(self) -> None:
+        self.prompt = ""
+
+    def generate_answer(self, prompt: str) -> str:
+        self.prompt = prompt
+        return "AI brief: creator responses are dominated by X/Twitter content."
 
 
 @pytest.fixture(autouse=True)
@@ -163,6 +176,53 @@ def test_get_document_intelligence_returns_summary_and_detected_fields() -> None
     assert "https://x.com/rifki" in body["links"]
     assert "Rifki Mardiyanto" in body["candidate_names"]
     assert body["suggested_questions"]
+
+
+def test_generate_document_ai_brief_uses_document_chunks() -> None:
+    repository = InMemoryDocumentRepository()
+    answer_generator = FakeAnswerGenerator()
+    app.dependency_overrides[get_document_repository] = lambda: repository
+    app.dependency_overrides[get_document_answer_generator] = lambda: answer_generator
+    created = repository.create_document(
+        USER_ID,
+        DocumentCreate(
+            filename="creator.pdf",
+            file_type="pdf",
+            file_size=1200,
+            storage_path=f"{USER_ID}/{DOCUMENT_ID}/creator.pdf",
+        ),
+    )
+    repository.add_chunks(
+        [
+            {
+                "document_id": created.id,
+                "user_id": USER_ID,
+                "chunk_index": 0,
+                "text": "Rifki Mardiyanto uploaded X Twitter content with 3000 views.",
+                "page_number": 1,
+                "qdrant_point_id": "point-1",
+            },
+            {
+                "document_id": created.id,
+                "user_id": USER_ID,
+                "chunk_index": 1,
+                "text": "Telegram appears in a smaller number of creator responses.",
+                "page_number": 2,
+                "qdrant_point_id": "point-2",
+            },
+        ]
+    )
+
+    response = client.post(f"/documents/{created.id}/brief", headers=auth_headers())
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body == {
+        "document_id": created.id,
+        "brief": "AI brief: creator responses are dominated by X/Twitter content.",
+    }
+    assert "creator.pdf" in answer_generator.prompt
+    assert "Rifki Mardiyanto uploaded X Twitter content" in answer_generator.prompt
 
 
 def test_create_document_with_unsupported_file_type_returns_422() -> None:

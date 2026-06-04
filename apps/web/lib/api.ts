@@ -28,6 +28,11 @@ export type DocumentIntelligence = {
   suggested_questions: string[];
 };
 
+export type DocumentAIBrief = {
+  document_id: string;
+  brief: string;
+};
+
 export type ChatCitation = {
   source_number: number;
   document_id: string;
@@ -165,6 +170,21 @@ export async function getDocumentIntelligence(accessToken: string, documentId: s
   }
 
   return (await response.json()) as DocumentIntelligence;
+}
+
+export async function generateDocumentAIBrief(accessToken: string, documentId: string) {
+  const response = await fetchWithTimeout(`${apiBaseUrl()}/documents/${documentId}/brief`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`
+    }
+  }, CHAT_ANSWER_TIMEOUT_MS);
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to generate AI brief."));
+  }
+
+  return (await response.json()) as DocumentAIBrief;
 }
 
 export async function uploadDocument(accessToken: string, file: File) {

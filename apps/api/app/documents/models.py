@@ -87,3 +87,8 @@ class DocumentIntelligenceResponse(BaseModel):
     candidate_names: list[str]
     top_pages: list[int]
     suggested_questions: list[str]
+
+
+class DocumentAIBriefResponse(BaseModel):
+    document_id: str
+    brief: str
