@@ -56,6 +56,25 @@ export function apiBaseUrl() {
   return process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 }
 
+async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}, timeoutMs = 15000) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(input, {
+      ...init,
+      signal: controller.signal
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("Request timed out. Please try again.");
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
 async function getErrorMessage(response: Response, fallback: string) {
   try {
     const body = (await response.json()) as { detail?: unknown; message?: unknown };
@@ -87,7 +106,7 @@ async function getErrorMessage(response: Response, fallback: string) {
 }
 
 export async function listDocuments(accessToken: string) {
-  const response = await fetch(`${apiBaseUrl()}/documents`, {
+  const response = await fetchWithTimeout(`${apiBaseUrl()}/documents`, {
     cache: "no-store",
     headers: {
       Authorization: `Bearer ${accessToken}`
@@ -105,7 +124,7 @@ export async function uploadDocument(accessToken: string, file: File) {
   const formData = new FormData();
   formData.append("file", file);
 
-  const response = await fetch(`${apiBaseUrl()}/documents/upload`, {
+  const response = await fetchWithTimeout(`${apiBaseUrl()}/documents/upload`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`
@@ -121,7 +140,7 @@ export async function uploadDocument(accessToken: string, file: File) {
 }
 
 export async function queryChat(accessToken: string, question: string) {
-  const response = await fetch(`${apiBaseUrl()}/chat/query`, {
+  const response = await fetchWithTimeout(`${apiBaseUrl()}/chat/query`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -138,7 +157,7 @@ export async function queryChat(accessToken: string, question: string) {
 }
 
 export async function listChatSessions(accessToken: string) {
-  const response = await fetch(`${apiBaseUrl()}/chat/sessions`, {
+  const response = await fetchWithTimeout(`${apiBaseUrl()}/chat/sessions`, {
     cache: "no-store",
     headers: {
       Authorization: `Bearer ${accessToken}`
@@ -153,7 +172,7 @@ export async function listChatSessions(accessToken: string) {
 }
 
 export async function createChatSession(accessToken: string, title = "New chat") {
-  const response = await fetch(`${apiBaseUrl()}/chat/sessions`, {
+  const response = await fetchWithTimeout(`${apiBaseUrl()}/chat/sessions`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -170,7 +189,7 @@ export async function createChatSession(accessToken: string, title = "New chat")
 }
 
 export async function listChatMessages(accessToken: string, sessionId: string) {
-  const response = await fetch(`${apiBaseUrl()}/chat/sessions/${sessionId}/messages`, {
+  const response = await fetchWithTimeout(`${apiBaseUrl()}/chat/sessions/${sessionId}/messages`, {
     cache: "no-store",
     headers: {
       Authorization: `Bearer ${accessToken}`
@@ -185,7 +204,7 @@ export async function listChatMessages(accessToken: string, sessionId: string) {
 }
 
 export async function sendChatMessage(accessToken: string, sessionId: string, question: string) {
-  const response = await fetch(`${apiBaseUrl()}/chat/sessions/${sessionId}/messages`, {
+  const response = await fetchWithTimeout(`${apiBaseUrl()}/chat/sessions/${sessionId}/messages`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,

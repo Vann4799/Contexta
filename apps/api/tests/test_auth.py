@@ -6,7 +6,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
 from app.auth.dependencies import get_current_user
-from app.auth.supabase_jwt import CurrentUser, decode_supabase_jwt
+from app.auth.supabase_jwt import CurrentUser, decode_supabase_jwt, get_jwks_client
 from app.core.config import Settings, get_settings
 
 
@@ -79,6 +79,23 @@ def test_valid_es256_jwt_with_jwks_returns_current_user(monkeypatch: pytest.Monk
         email="ecc@example.com",
         role="authenticated",
     )
+
+
+def test_jwks_client_is_cached_per_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    created_urls: list[str] = []
+
+    class FakePyJWKClient:
+        def __init__(self, url: str) -> None:
+            created_urls.append(url)
+
+    monkeypatch.setattr(jwt, "PyJWKClient", FakePyJWKClient)
+    get_jwks_client.cache_clear()
+
+    first = get_jwks_client("https://project.supabase.co/auth/v1/.well-known/jwks.json")
+    second = get_jwks_client("https://project.supabase.co/auth/v1/.well-known/jwks.json")
+
+    assert first is second
+    assert created_urls == ["https://project.supabase.co/auth/v1/.well-known/jwks.json"]
 
 
 def test_wrong_secret_raises_401() -> None:

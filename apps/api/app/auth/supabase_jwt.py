@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from functools import lru_cache
 
 import jwt
 from fastapi import HTTPException
@@ -18,7 +19,7 @@ def decode_supabase_jwt(
 ) -> CurrentUser:
     try:
         if jwks_url:
-            signing_key = jwt.PyJWKClient(jwks_url).get_signing_key_from_jwt(token)
+            signing_key = get_jwks_client(jwks_url).get_signing_key_from_jwt(token)
             payload = jwt.decode(
                 token,
                 signing_key.key,
@@ -41,6 +42,11 @@ def decode_supabase_jwt(
             status_code=401,
             detail="Invalid authentication token",
         ) from exc
+
+
+@lru_cache(maxsize=8)
+def get_jwks_client(jwks_url: str) -> jwt.PyJWKClient:
+    return jwt.PyJWKClient(jwks_url)
 
 
 def _current_user_from_payload(payload: dict[str, object]) -> CurrentUser:
