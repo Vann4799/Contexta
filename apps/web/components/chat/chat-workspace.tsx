@@ -1,24 +1,27 @@
 "use client";
 
-import { FormEvent, useCallback, useState } from "react";
-import { queryChat, type ChatCitation } from "@/lib/api";
+import { FormEvent, useCallback, useEffect, useState } from "react";
+import {
+  createChatSession,
+  listChatMessages,
+  listChatSessions,
+  sendChatMessage,
+  type ChatCitation,
+  type ChatMessage,
+  type ChatSession
+} from "@/lib/api";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 
-type ChatMessage = {
-  role: "user" | "assistant";
-  content: string;
-};
+type VisibleMessage = Pick<ChatMessage, "role" | "content" | "citations">;
 
 export function ChatWorkspace() {
   const [question, setQuestion] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      role: "assistant",
-      content: "Ask a question once your documents are ready."
-    }
-  ]);
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<VisibleMessage[]>([]);
   const [citations, setCitations] = useState<ChatCitation[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,6 +30,83 @@ export function ChatWorkspace() {
     const { data } = await supabase.auth.getSession();
     return data.session?.access_token ?? null;
   }, []);
+
+  const loadSessionMessages = useCallback(
+    async (sessionId: string, accessToken?: string) => {
+      const token = accessToken ?? (await getAccessToken());
+      if (!token) {
+        throw new Error("Sign in to load chat history.");
+      }
+
+      const loadedMessages = await listChatMessages(token, sessionId);
+      setMessages(loadedMessages);
+      const latestAssistant = [...loadedMessages].reverse().find((message) => message.role === "assistant");
+      setCitations(latestAssistant?.citations ?? []);
+    },
+    [getAccessToken]
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function bootstrapChat() {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const accessToken = await getAccessToken();
+        if (!accessToken) {
+          throw new Error("Sign in to load chat.");
+        }
+
+        let loadedSessions = await listChatSessions(accessToken);
+        if (loadedSessions.length === 0) {
+          const createdSession = await createChatSession(accessToken);
+          loadedSessions = [createdSession];
+        }
+
+        if (!isMounted) {
+          return;
+        }
+
+        setSessions(loadedSessions);
+        setActiveSessionId(loadedSessions[0].id);
+        await loadSessionMessages(loadedSessions[0].id, accessToken);
+      } catch (chatError) {
+        if (isMounted) {
+          setError(chatError instanceof Error ? chatError.message : "Unable to load chat.");
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    bootstrapChat();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [getAccessToken, loadSessionMessages]);
+
+  const handleSelectSession = async (sessionId: string) => {
+    if (sessionId === activeSessionId) {
+      return;
+    }
+
+    setActiveSessionId(sessionId);
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      await loadSessionMessages(sessionId);
+    } catch (chatError) {
+      setError(chatError instanceof Error ? chatError.message : "Unable to load chat messages.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -38,7 +118,10 @@ export function ChatWorkspace() {
     setError(null);
     setIsSending(true);
     setQuestion("");
-    setMessages((current) => [...current, { role: "user", content: trimmedQuestion }]);
+    setMessages((current) => [
+      ...current,
+      { role: "user", content: trimmedQuestion, citations: [] }
+    ]);
 
     try {
       const accessToken = await getAccessToken();
@@ -46,8 +129,19 @@ export function ChatWorkspace() {
         throw new Error("Sign in to ask questions.");
       }
 
-      const response = await queryChat(accessToken, trimmedQuestion);
-      setMessages((current) => [...current, { role: "assistant", content: response.answer }]);
+      let sessionId = activeSessionId;
+      if (!sessionId) {
+        const createdSession = await createChatSession(accessToken);
+        sessionId = createdSession.id;
+        setSessions((current) => [createdSession, ...current]);
+        setActiveSessionId(sessionId);
+      }
+
+      const response = await sendChatMessage(accessToken, sessionId, trimmedQuestion);
+      setMessages((current) => [
+        ...current,
+        { role: "assistant", content: response.answer, citations: response.citations }
+      ]);
       setCitations(response.citations);
     } catch (chatError) {
       setError(chatError instanceof Error ? chatError.message : "Unable to answer question.");
@@ -57,9 +151,35 @@ export function ChatWorkspace() {
   };
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+    <div className="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)_360px]">
+      <aside className="rounded-contexta border border-border bg-white p-4">
+        <h2 className="font-heading text-lg font-semibold">History</h2>
+        <div className="mt-3 space-y-2">
+          {sessions.map((session) => (
+            <button
+              key={session.id}
+              className={`w-full rounded border px-3 py-2 text-left text-sm transition ${
+                session.id === activeSessionId
+                  ? "border-primary bg-blue-50 text-primary"
+                  : "border-border bg-white text-ink hover:border-primary"
+              }`}
+              type="button"
+              onClick={() => void handleSelectSession(session.id)}
+            >
+              <span className="block truncate">{session.title}</span>
+            </button>
+          ))}
+        </div>
+      </aside>
+
       <section className="flex min-h-[560px] flex-col rounded-contexta border border-border bg-white p-5">
         <div className="space-y-3">
+          {isLoading ? <p className="text-sm text-subtle">Loading chat...</p> : null}
+          {!isLoading && messages.length === 0 ? (
+            <div className="max-w-[85%] rounded-contexta border border-border bg-muted px-4 py-3 text-sm leading-6 text-ink">
+              Ask a question once your documents are ready.
+            </div>
+          ) : null}
           {messages.map((message, index) => (
             <div
               key={`${message.role}-${index}`}
@@ -84,10 +204,10 @@ export function ChatWorkspace() {
             className="h-10 min-w-0 flex-1 rounded border border-border px-3 text-sm outline-none transition focus:border-primary"
             placeholder="Ask Contexta about your documents..."
             value={question}
-            disabled={isSending}
+            disabled={isSending || isLoading}
             onChange={(event) => setQuestion(event.target.value)}
           />
-          <Button className="w-full sm:w-auto" disabled={isSending || !question.trim()} type="submit">
+          <Button className="w-full sm:w-auto" disabled={isSending || isLoading || !question.trim()} type="submit">
             {isSending ? "Thinking..." : "Send"}
           </Button>
         </form>
@@ -104,7 +224,7 @@ export function ChatWorkspace() {
                   <span className="shrink-0 text-xs text-subtle">#{citation.source_number}</span>
                 </div>
                 <p className="mt-1 text-xs text-subtle">
-                  {citation.page_number ? `Page ${citation.page_number}` : "Page unknown"} · Score{" "}
+                  {citation.page_number ? `Page ${citation.page_number}` : "Page unknown"} - Score{" "}
                   {citation.score.toFixed(2)}
                 </p>
                 <p className="mt-2 line-clamp-5 text-sm leading-5 text-subtle">{citation.text}</p>

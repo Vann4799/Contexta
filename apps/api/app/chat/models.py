@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
 from typing import TypedDict
+
+from pydantic import BaseModel, Field
 
 
 class ChatQueryRequest(BaseModel):
@@ -31,3 +32,34 @@ class ChatCitation(BaseModel):
 class ChatQueryResponse(BaseModel):
     answer: str
     citations: list[ChatCitation]
+
+
+class ChatSessionCreate(BaseModel):
+    title: str = Field(default="New chat", min_length=1, max_length=120)
+
+
+class ChatSessionResponse(BaseModel):
+    id: str
+    user_id: str
+    title: str
+    created_at: str
+    updated_at: str
+
+
+class ChatMessageResponse(BaseModel):
+    id: str
+    session_id: str
+    user_id: str
+    role: str
+    content: str
+    citations: list[ChatCitation]
+    metadata: dict[str, object]
+    created_at: str
+
+
+class ChatSessionMessageRequest(ChatQueryRequest):
+    pass
+
+
+class ChatSessionMessageResponse(ChatQueryResponse):
+    session_id: str

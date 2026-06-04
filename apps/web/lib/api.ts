@@ -29,6 +29,29 @@ export type ChatQueryResponse = {
   citations: ChatCitation[];
 };
 
+export type ChatSession = {
+  id: string;
+  user_id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ChatMessage = {
+  id: string;
+  session_id: string;
+  user_id: string;
+  role: "user" | "assistant";
+  content: string;
+  citations: ChatCitation[];
+  metadata: Record<string, unknown>;
+  created_at: string;
+};
+
+export type ChatSessionMessageResponse = ChatQueryResponse & {
+  session_id: string;
+};
+
 export function apiBaseUrl() {
   return process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 }
@@ -112,4 +135,68 @@ export async function queryChat(accessToken: string, question: string) {
   }
 
   return (await response.json()) as ChatQueryResponse;
+}
+
+export async function listChatSessions(accessToken: string) {
+  const response = await fetch(`${apiBaseUrl()}/chat/sessions`, {
+    cache: "no-store",
+    headers: {
+      Authorization: `Bearer ${accessToken}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to load chat sessions."));
+  }
+
+  return (await response.json()) as ChatSession[];
+}
+
+export async function createChatSession(accessToken: string, title = "New chat") {
+  const response = await fetch(`${apiBaseUrl()}/chat/sessions`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ title })
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to create chat session."));
+  }
+
+  return (await response.json()) as ChatSession;
+}
+
+export async function listChatMessages(accessToken: string, sessionId: string) {
+  const response = await fetch(`${apiBaseUrl()}/chat/sessions/${sessionId}/messages`, {
+    cache: "no-store",
+    headers: {
+      Authorization: `Bearer ${accessToken}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to load chat messages."));
+  }
+
+  return (await response.json()) as ChatMessage[];
+}
+
+export async function sendChatMessage(accessToken: string, sessionId: string, question: string) {
+  const response = await fetch(`${apiBaseUrl()}/chat/sessions/${sessionId}/messages`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ question })
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to answer question."));
+  }
+
+  return (await response.json()) as ChatSessionMessageResponse;
 }
