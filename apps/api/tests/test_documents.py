@@ -6,10 +6,12 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.documents import routes as document_routes
+from app.documents.models import DocumentCreate
 from app.documents.repository import InMemoryDocumentRepository
 from app.main import app
 from app.documents.routes import get_document_repository, get_document_storage
 from app.documents.storage import InMemoryDocumentStorage, SupabaseDocumentStorage
+from app.core.config import Settings, get_settings
 
 
 USER_ID = "user-documents-123"
@@ -24,6 +26,12 @@ def document_repository_override() -> None:
     storage = InMemoryDocumentStorage()
     app.dependency_overrides[get_document_repository] = lambda: repository
     app.dependency_overrides[get_document_storage] = lambda: storage
+    app.dependency_overrides[get_settings] = lambda: Settings(
+        supabase_jwt_secret="test-secret",
+        supabase_jwks_url="",
+        supabase_url="",
+        supabase_service_role_key="",
+    )
     yield
     app.dependency_overrides.clear()
 
@@ -85,6 +93,76 @@ def test_create_document_metadata_then_list_documents() -> None:
 
     assert list_response.status_code == 200
     assert list_response.json() == [created_document]
+
+
+def test_get_document_returns_only_owned_document() -> None:
+    repository = InMemoryDocumentRepository()
+    app.dependency_overrides[get_document_repository] = lambda: repository
+    created = repository.create_document(
+        USER_ID,
+        DocumentCreate(
+            filename="policy.pdf",
+            file_type="pdf",
+            file_size=1200,
+            storage_path=f"{USER_ID}/{DOCUMENT_ID}/policy.pdf",
+        ),
+    )
+
+    owned_response = client.get(f"/documents/{created.id}", headers=auth_headers())
+    other_user_response = client.get(
+        f"/documents/{created.id}",
+        headers=auth_headers("other-user"),
+    )
+
+    assert owned_response.status_code == 200
+    assert owned_response.json()["id"] == created.id
+    assert other_user_response.status_code == 404
+
+
+def test_get_document_intelligence_returns_summary_and_detected_fields() -> None:
+    repository = InMemoryDocumentRepository()
+    app.dependency_overrides[get_document_repository] = lambda: repository
+    created = repository.create_document(
+        USER_ID,
+        DocumentCreate(
+            filename="creator.pdf",
+            file_type="pdf",
+            file_size=1200,
+            storage_path=f"{USER_ID}/{DOCUMENT_ID}/creator.pdf",
+        ),
+    )
+    repository.add_chunks(
+        [
+            {
+                "document_id": created.id,
+                "user_id": USER_ID,
+                "chunk_index": 0,
+                "text": "Rifki Mardiyanto uploaded X Twitter content. Email rifki@example.com. Link https://x.com/rifki.",
+                "page_number": 1,
+                "qdrant_point_id": "point-1",
+            },
+            {
+                "document_id": created.id,
+                "user_id": USER_ID,
+                "chunk_index": 1,
+                "text": "WATI MULTIVERSE made Short Post content with 3000 views and Telegram distribution.",
+                "page_number": 2,
+                "qdrant_point_id": "point-2",
+            },
+        ]
+    )
+
+    response = client.get(f"/documents/{created.id}/intelligence", headers=auth_headers())
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["document_id"] == created.id
+    assert body["chunk_count"] == 2
+    assert "Rifki Mardiyanto" in body["summary"]
+    assert "rifki@example.com" in body["emails"]
+    assert "https://x.com/rifki" in body["links"]
+    assert "Rifki Mardiyanto" in body["candidate_names"]
+    assert body["suggested_questions"]
 
 
 def test_create_document_with_unsupported_file_type_returns_422() -> None:

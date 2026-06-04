@@ -14,6 +14,20 @@ export type DocumentItem = {
   updated_at: string;
 };
 
+export type DocumentIntelligence = {
+  document_id: string;
+  filename: string;
+  status: DocumentStatus;
+  chunk_count: number;
+  summary: string;
+  key_points: string[];
+  emails: string[];
+  links: string[];
+  candidate_names: string[];
+  top_pages: number[];
+  suggested_questions: string[];
+};
+
 export type ChatCitation = {
   source_number: number;
   document_id: string;
@@ -121,6 +135,36 @@ export async function listDocuments(accessToken: string) {
   }
 
   return (await response.json()) as DocumentItem[];
+}
+
+export async function getDocument(accessToken: string, documentId: string) {
+  const response = await fetchWithTimeout(`${apiBaseUrl()}/documents/${documentId}`, {
+    cache: "no-store",
+    headers: {
+      Authorization: `Bearer ${accessToken}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to load document."));
+  }
+
+  return (await response.json()) as DocumentItem;
+}
+
+export async function getDocumentIntelligence(accessToken: string, documentId: string) {
+  const response = await fetchWithTimeout(`${apiBaseUrl()}/documents/${documentId}/intelligence`, {
+    cache: "no-store",
+    headers: {
+      Authorization: `Bearer ${accessToken}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to load document intelligence."));
+  }
+
+  return (await response.json()) as DocumentIntelligence;
 }
 
 export async function uploadDocument(accessToken: string, file: File) {

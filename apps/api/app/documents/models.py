@@ -64,3 +64,26 @@ class DocumentResponse(BaseModel):
     chunk_count: int
     created_at: datetime
     updated_at: datetime
+
+
+class DocumentChunkResponse(BaseModel):
+    document_id: str
+    user_id: str
+    chunk_index: int
+    text: str
+    page_number: int | None
+    qdrant_point_id: str
+
+
+class DocumentIntelligenceResponse(BaseModel):
+    document_id: str
+    filename: str
+    status: DocumentStatus
+    chunk_count: int
+    summary: str
+    key_points: list[str]
+    emails: list[str]
+    links: list[str]
+    candidate_names: list[str]
+    top_pages: list[int]
+    suggested_questions: list[str]

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { uploadDocument, listDocuments, type DocumentItem, type DocumentStatus } from "@/lib/api";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
@@ -175,7 +176,11 @@ export function DocumentUploadPanel() {
             {documents.length > 0 ? (
               documents.map((document) => (
                 <tr key={document.id} className="border-b border-border last:border-0">
-                  <td className="max-w-[320px] truncate px-5 py-3 font-medium">{document.filename}</td>
+                  <td className="max-w-[320px] truncate px-5 py-3 font-medium">
+                    <Link className="text-primary hover:underline" href={`/documents/${document.id}`}>
+                      {document.filename}
+                    </Link>
+                  </td>
                   <td className="px-5 py-3 uppercase text-subtle">{document.file_type}</td>
                   <td className="px-5 py-3 text-subtle">{formatBytes(document.file_size)}</td>
                   <td className="px-5 py-3">
