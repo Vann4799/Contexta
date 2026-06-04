@@ -7,17 +7,19 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 
 try:
+    from contexta_rag.embeddings import create_embedding_provider
     from contexta_rag.prompts import build_rag_prompt
 except ModuleNotFoundError:
     rag_package_path = Path(__file__).resolve().parents[4] / "packages" / "rag"
     sys.path.append(str(rag_package_path))
+    from contexta_rag.embeddings import create_embedding_provider
     from contexta_rag.prompts import build_rag_prompt
 
 from app.auth.dependencies import get_current_user
 from app.auth.supabase_jwt import CurrentUser
 from app.chat.llm import AnswerGenerator, DeepSeekAnswerGenerator
 from app.chat.models import ChatCitation, ChatQueryRequest, ChatQueryResponse
-from app.chat.retrieval import DeterministicEmbeddingProvider, QdrantRetriever
+from app.chat.retrieval import QdrantRetriever
 from app.core.config import Settings, get_settings
 
 
@@ -30,8 +32,11 @@ def get_retriever(
     return QdrantRetriever(
         qdrant_url=settings.qdrant_url,
         collection_name=settings.qdrant_collection,
-        embedding_provider=DeterministicEmbeddingProvider(
-            dimensions=settings.embedding_dimensions
+        embedding_provider=create_embedding_provider(
+            provider_name=settings.embedding_provider,
+            dimensions=settings.embedding_dimensions,
+            model_name=settings.embedding_model_name,
+            device=settings.embedding_device or None,
         ),
     )
 

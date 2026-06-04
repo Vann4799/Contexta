@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     api_cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
     deepseek_api_key: str = ""
     deepseek_model: str = "deepseek-chat"
+    embedding_provider: str = "deterministic"
+    embedding_model_name: str = "BAAI/bge-m3"
+    embedding_device: str = ""
     embedding_dimensions: int = 384
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

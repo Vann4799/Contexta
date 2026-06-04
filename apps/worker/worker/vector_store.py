@@ -1,35 +1,19 @@
 from __future__ import annotations
 
-import hashlib
-import math
+import sys
+from pathlib import Path
 from uuid import NAMESPACE_URL, uuid5
 
 import httpx
 
 from worker.processor import ProcessingChunk, ProcessingDocument
 
-
-class DeterministicEmbeddingProvider:
-    def __init__(self, dimensions: int = 384) -> None:
-        if dimensions <= 0:
-            raise ValueError("dimensions must be greater than 0")
-        self.dimensions = dimensions
-
-    def embed_texts(self, texts: list[str]) -> list[list[float]]:
-        return [self._embed_text(text) for text in texts]
-
-    def _embed_text(self, text: str) -> list[float]:
-        vector = [0.0] * self.dimensions
-        for word in text.lower().split():
-            digest = hashlib.sha256(word.encode("utf-8")).digest()
-            index = int.from_bytes(digest[:4], "big") % self.dimensions
-            sign = 1.0 if digest[4] % 2 == 0 else -1.0
-            vector[index] += sign
-
-        magnitude = math.sqrt(sum(value * value for value in vector))
-        if magnitude == 0:
-            return vector
-        return [value / magnitude for value in vector]
+try:
+    from contexta_rag.embeddings import DeterministicEmbeddingProvider
+except ModuleNotFoundError:
+    rag_package_path = Path(__file__).resolve().parents[3] / "packages" / "rag"
+    sys.path.append(str(rag_package_path))
+    from contexta_rag.embeddings import DeterministicEmbeddingProvider
 
 
 class QdrantVectorStore:

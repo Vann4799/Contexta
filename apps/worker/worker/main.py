@@ -5,10 +5,19 @@ import os
 import time
 from pathlib import Path
 
+try:
+    from contexta_rag.embeddings import create_embedding_provider
+except ModuleNotFoundError:
+    rag_package_path = Path(__file__).resolve().parents[3] / "packages" / "rag"
+    import sys
+
+    sys.path.append(str(rag_package_path))
+    from contexta_rag.embeddings import create_embedding_provider
+
 from worker.extraction import DocumentTextExtractor
 from worker.processor import WorkerProcessor
 from worker.supabase import SupabaseDocumentRepository, SupabaseDocumentStorage
-from worker.vector_store import DeterministicEmbeddingProvider, QdrantVectorStore
+from worker.vector_store import QdrantVectorStore
 
 
 def load_env_files() -> None:
@@ -31,14 +40,20 @@ def create_processor() -> WorkerProcessor:
     bucket = os.environ.get("SUPABASE_STORAGE_BUCKET", "contexta-documents")
     qdrant_url = os.environ.get("QDRANT_URL", "http://localhost:6333")
     collection_name = os.environ.get("QDRANT_COLLECTION", "contexta_chunks")
+    embedding_provider = os.environ.get("EMBEDDING_PROVIDER", "deterministic")
+    embedding_model_name = os.environ.get("EMBEDDING_MODEL_NAME", "BAAI/bge-m3")
+    embedding_device = os.environ.get("EMBEDDING_DEVICE") or None
     embedding_dimensions = int(os.environ.get("EMBEDDING_DIMENSIONS", "384"))
 
     return WorkerProcessor(
         repository=SupabaseDocumentRepository(supabase_url, service_role_key),
         storage=SupabaseDocumentStorage(supabase_url, service_role_key, bucket),
         extractor=DocumentTextExtractor(),
-        embedding_provider=DeterministicEmbeddingProvider(
-            dimensions=embedding_dimensions
+        embedding_provider=create_embedding_provider(
+            provider_name=embedding_provider,
+            dimensions=embedding_dimensions,
+            model_name=embedding_model_name,
+            device=embedding_device,
         ),
         vector_store=QdrantVectorStore(
             qdrant_url=qdrant_url,
