@@ -116,49 +116,51 @@ export function AuthForm({ mode }: AuthFormProps) {
   }
 
   return (
-    <form className="mt-6 space-y-3" onSubmit={handleSubmit}>
+    <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
       {isRegister ? (
-        <>
-          <label className="sr-only" htmlFor="register-name">
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-ink" htmlFor="register-name">
             Full name
           </label>
           <input
             id="register-name"
             autoComplete="name"
-            className="h-11 w-full rounded border border-border px-3 text-sm leading-5 outline-none transition placeholder:text-subtle focus:border-primary"
-            placeholder="Full name"
+            className="h-12 w-full rounded border border-[#c8cfdf] bg-white px-4 text-sm leading-5 outline-none transition placeholder:text-subtle focus:border-primary"
+            placeholder="Your name"
             value={fullName}
             onChange={(event) => setFullName(event.target.value)}
           />
-        </>
+        </div>
       ) : null}
-      <label className="sr-only" htmlFor={`${mode}-email`}>
-        Email
-      </label>
-      <input
-        id={`${mode}-email`}
-        autoComplete="email"
-        className="h-11 w-full rounded border border-border px-3 text-sm leading-5 outline-none transition placeholder:text-subtle focus:border-primary"
-        placeholder="Email"
-        type="email"
-        value={email}
-        onChange={(event) => setEmail(event.target.value)}
-      />
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-ink" htmlFor={`${mode}-email`}>
+          {mode === "login" ? "Email address" : "Email"}
+        </label>
+        <input
+          id={`${mode}-email`}
+          autoComplete="email"
+          className="h-12 w-full rounded border border-[#c8cfdf] bg-white px-4 text-sm leading-5 outline-none transition placeholder:text-subtle focus:border-primary"
+          placeholder="you@company.com"
+          type="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+        />
+      </div>
       {needsPassword ? (
-        <>
-          <label className="sr-only" htmlFor={`${mode}-password`}>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-ink" htmlFor={`${mode}-password`}>
             Password
           </label>
           <input
             id={`${mode}-password`}
             autoComplete={mode === "login" ? "current-password" : "new-password"}
-            className="h-11 w-full rounded border border-border px-3 text-sm leading-5 outline-none transition placeholder:text-subtle focus:border-primary"
+            className="h-12 w-full rounded border border-[#c8cfdf] bg-white px-4 text-sm leading-5 outline-none transition placeholder:text-subtle focus:border-primary"
             placeholder="Password"
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
           />
-        </>
+        </div>
       ) : null}
       {message ? (
         <p
@@ -170,7 +172,7 @@ export function AuthForm({ mode }: AuthFormProps) {
           {message.text}
         </p>
       ) : null}
-      <Button className="h-11 w-full" disabled={isSubmitting} type="submit">
+      <Button className="h-12 w-full" disabled={isSubmitting} type="submit">
         {isSubmitting ? "Working..." : copy[mode].button}
       </Button>
     </form>

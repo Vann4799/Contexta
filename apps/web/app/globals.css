@@ -34,3 +34,10 @@ a {
   color: inherit;
   text-decoration: none;
 }
+
+.login-grid-bg {
+  background-size: 24px 24px;
+  background-image:
+    linear-gradient(to right, rgba(209, 213, 219, 0.42) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(209, 213, 219, 0.42) 1px, transparent 1px);
+}
