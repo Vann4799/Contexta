@@ -35,6 +35,7 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -151,15 +152,25 @@ export function AuthForm({ mode }: AuthFormProps) {
           <label className="text-sm font-medium text-ink" htmlFor={`${mode}-password`}>
             Password
           </label>
-          <input
-            id={`${mode}-password`}
-            autoComplete={mode === "login" ? "current-password" : "new-password"}
-            className="h-12 w-full rounded border border-[#c8cfdf] bg-white px-4 text-sm leading-5 outline-none transition placeholder:text-subtle focus:border-primary"
-            placeholder="Password"
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
+          <div className="relative">
+            <input
+              id={`${mode}-password`}
+              autoComplete={mode === "login" ? "current-password" : "new-password"}
+              className="h-12 w-full rounded border border-[#c8cfdf] bg-white px-4 pr-16 text-sm leading-5 outline-none transition placeholder:text-subtle focus:border-primary"
+              placeholder="Password"
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+            <button
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              className="absolute inset-y-0 right-0 flex items-center px-4 text-xs font-medium text-subtle hover:text-ink"
+              type="button"
+              onClick={() => setShowPassword((current) => !current)}
+            >
+              {showPassword ? "Hide" : "Show"}
+            </button>
+          </div>
         </div>
       ) : null}
       {message ? (
