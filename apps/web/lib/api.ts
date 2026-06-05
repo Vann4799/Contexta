@@ -78,6 +78,26 @@ export function apiBaseUrl() {
 const DEFAULT_REQUEST_TIMEOUT_MS = 15000;
 const CHAT_ANSWER_TIMEOUT_MS = 120000;
 
+function apiBaseUrls() {
+  const primaryUrl = apiBaseUrl().replace(/\/$/, "");
+  const urls = [primaryUrl];
+
+  try {
+    const parsedUrl = new URL(primaryUrl);
+    if (parsedUrl.hostname === "127.0.0.1") {
+      parsedUrl.hostname = "localhost";
+      urls.push(parsedUrl.toString().replace(/\/$/, ""));
+    } else if (parsedUrl.hostname === "localhost") {
+      parsedUrl.hostname = "127.0.0.1";
+      urls.push(parsedUrl.toString().replace(/\/$/, ""));
+    }
+  } catch {
+    return urls;
+  }
+
+  return Array.from(new Set(urls));
+}
+
 async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}, timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS) {
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
@@ -95,6 +115,24 @@ async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}
   } finally {
     window.clearTimeout(timeoutId);
   }
+}
+
+async function fetchApi(path: string, init: RequestInit = {}, timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS) {
+  let lastError: unknown = null;
+
+  for (const baseUrl of apiBaseUrls()) {
+    try {
+      return await fetchWithTimeout(`${baseUrl}${path}`, init, timeoutMs);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  if (lastError instanceof Error && lastError.message.includes("timed out")) {
+    throw lastError;
+  }
+
+  throw new Error(`Unable to reach Contexta API at ${apiBaseUrls().join(" or ")}. Make sure the API server is running.`);
 }
 
 async function getErrorMessage(response: Response, fallback: string) {
@@ -128,7 +166,7 @@ async function getErrorMessage(response: Response, fallback: string) {
 }
 
 export async function listDocuments(accessToken: string) {
-  const response = await fetchWithTimeout(`${apiBaseUrl()}/documents`, {
+  const response = await fetchApi("/documents", {
     cache: "no-store",
     headers: {
       Authorization: `Bearer ${accessToken}`
@@ -143,7 +181,7 @@ export async function listDocuments(accessToken: string) {
 }
 
 export async function getDocument(accessToken: string, documentId: string) {
-  const response = await fetchWithTimeout(`${apiBaseUrl()}/documents/${documentId}`, {
+  const response = await fetchApi(`/documents/${documentId}`, {
     cache: "no-store",
     headers: {
       Authorization: `Bearer ${accessToken}`
@@ -158,7 +196,7 @@ export async function getDocument(accessToken: string, documentId: string) {
 }
 
 export async function getDocumentIntelligence(accessToken: string, documentId: string) {
-  const response = await fetchWithTimeout(`${apiBaseUrl()}/documents/${documentId}/intelligence`, {
+  const response = await fetchApi(`/documents/${documentId}/intelligence`, {
     cache: "no-store",
     headers: {
       Authorization: `Bearer ${accessToken}`
@@ -173,7 +211,7 @@ export async function getDocumentIntelligence(accessToken: string, documentId: s
 }
 
 export async function generateDocumentAIBrief(accessToken: string, documentId: string) {
-  const response = await fetchWithTimeout(`${apiBaseUrl()}/documents/${documentId}/brief`, {
+  const response = await fetchApi(`/documents/${documentId}/brief`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`
@@ -191,7 +229,7 @@ export async function uploadDocument(accessToken: string, file: File) {
   const formData = new FormData();
   formData.append("file", file);
 
-  const response = await fetchWithTimeout(`${apiBaseUrl()}/documents/upload`, {
+  const response = await fetchApi("/documents/upload", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`
@@ -207,7 +245,7 @@ export async function uploadDocument(accessToken: string, file: File) {
 }
 
 export async function deleteDocument(accessToken: string, documentId: string) {
-  const response = await fetchWithTimeout(`${apiBaseUrl()}/documents/${documentId}`, {
+  const response = await fetchApi(`/documents/${documentId}`, {
     method: "DELETE",
     headers: {
       Authorization: `Bearer ${accessToken}`
@@ -220,7 +258,7 @@ export async function deleteDocument(accessToken: string, documentId: string) {
 }
 
 export async function retryDocument(accessToken: string, documentId: string) {
-  const response = await fetchWithTimeout(`${apiBaseUrl()}/documents/${documentId}/retry`, {
+  const response = await fetchApi(`/documents/${documentId}/retry`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`
@@ -235,7 +273,7 @@ export async function retryDocument(accessToken: string, documentId: string) {
 }
 
 export async function queryChat(accessToken: string, question: string) {
-  const response = await fetchWithTimeout(`${apiBaseUrl()}/chat/query`, {
+  const response = await fetchApi("/chat/query", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -252,7 +290,7 @@ export async function queryChat(accessToken: string, question: string) {
 }
 
 export async function listChatSessions(accessToken: string) {
-  const response = await fetchWithTimeout(`${apiBaseUrl()}/chat/sessions`, {
+  const response = await fetchApi("/chat/sessions", {
     cache: "no-store",
     headers: {
       Authorization: `Bearer ${accessToken}`
@@ -267,7 +305,7 @@ export async function listChatSessions(accessToken: string) {
 }
 
 export async function createChatSession(accessToken: string, title = "New chat") {
-  const response = await fetchWithTimeout(`${apiBaseUrl()}/chat/sessions`, {
+  const response = await fetchApi("/chat/sessions", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -284,7 +322,7 @@ export async function createChatSession(accessToken: string, title = "New chat")
 }
 
 export async function listChatMessages(accessToken: string, sessionId: string) {
-  const response = await fetchWithTimeout(`${apiBaseUrl()}/chat/sessions/${sessionId}/messages`, {
+  const response = await fetchApi(`/chat/sessions/${sessionId}/messages`, {
     cache: "no-store",
     headers: {
       Authorization: `Bearer ${accessToken}`
@@ -299,7 +337,7 @@ export async function listChatMessages(accessToken: string, sessionId: string) {
 }
 
 export async function sendChatMessage(accessToken: string, sessionId: string, question: string, documentIds?: string[]) {
-  const response = await fetchWithTimeout(`${apiBaseUrl()}/chat/sessions/${sessionId}/messages`, {
+  const response = await fetchApi(`/chat/sessions/${sessionId}/messages`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,
