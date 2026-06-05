@@ -53,6 +53,7 @@ export function DocumentUploadPanel() {
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [mutatingDocumentId, setMutatingDocumentId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -190,20 +191,65 @@ export function DocumentUploadPanel() {
     }
   };
 
+  const totalStorage = documents.reduce((sum, document) => sum + document.file_size, 0);
+  const queueCount = documents.filter((document) => document.status === "uploaded" || document.status === "processing").length;
+  const readyCount = documents.filter((document) => document.status === "ready").length;
+
   return (
-    <section className="rounded-contexta border border-border bg-white">
-      <div className="flex flex-col gap-4 border-b border-border p-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
-          <h2 className="font-heading text-lg font-semibold">Upload and Manage</h2>
-          <p className="mt-1 text-sm text-subtle">Upload PDF and DOCX documents for grounded chats.</p>
+    <section className="space-y-8">
+      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div>
+          <h2 className="font-heading text-3xl font-semibold text-ink">Upload & Manage</h2>
+          <p className="mt-1 text-sm text-subtle">Add new documents to your knowledge base. Supported formats: PDF and DOCX.</p>
         </div>
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-          <Button className="w-full sm:w-auto" disabled={isLoading || isUploading} onClick={() => void loadDocuments()} variant="secondary">
+        <div className="flex gap-2">
+          <Button disabled={isLoading || isUploading} onClick={() => void loadDocuments()} variant="secondary">
             Refresh
           </Button>
+          <Button disabled={isUploading} onClick={() => fileInputRef.current?.click()}>
+            {isUploading ? "Uploading..." : "Browse Files"}
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-12">
+        <div
+          className={`flex min-h-[320px] cursor-pointer flex-col items-center justify-center rounded border border-dashed p-8 text-center transition ${
+            isDragging ? "border-primary bg-[#f0f3ff]" : "border-[#737686] bg-white hover:bg-[#f0f3ff]"
+          } lg:col-span-8`}
+          onClick={() => fileInputRef.current?.click()}
+          onDragEnter={(event) => {
+            event.preventDefault();
+            setIsDragging(true);
+          }}
+          onDragLeave={(event) => {
+            event.preventDefault();
+            setIsDragging(false);
+          }}
+          onDragOver={(event) => {
+            event.preventDefault();
+            setIsDragging(true);
+          }}
+          onDrop={(event) => {
+            event.preventDefault();
+            setIsDragging(false);
+            const file = event.dataTransfer.files?.[0];
+            if (file) {
+              void handleUpload(file);
+            }
+          }}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              fileInputRef.current?.click();
+            }
+          }}
+        >
           <input
             ref={fileInputRef}
-            className="block w-full rounded border border-border bg-white text-sm text-subtle file:mr-3 file:h-10 file:border-0 file:bg-muted file:px-3 file:text-sm file:font-medium file:text-ink hover:file:bg-border sm:w-72"
+            className="sr-only"
             type="file"
             accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             disabled={isUploading}
@@ -214,54 +260,89 @@ export function DocumentUploadPanel() {
               }
             }}
           />
-          <Button className="w-full sm:w-auto" disabled={isUploading} onClick={() => fileInputRef.current?.click()}>
-            {isUploading ? "Uploading..." : "Choose File"}
-          </Button>
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded bg-[#dbe1ff] text-primary">
+            <svg className="h-9 w-9" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 16V7m0 0-4 4m4-4 4 4M7 18a4 4 0 0 1-.9-7.9A6 6 0 0 1 17.8 12H18a3 3 0 0 1 0 6H7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <h3 className="font-heading text-xl font-semibold text-ink">Drag and drop files here</h3>
+          <p className="mt-2 max-w-md text-sm text-subtle">Files will be securely uploaded and automatically indexed for RAG analysis.</p>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <span className="inline-flex h-10 items-center justify-center rounded border border-[#c3c6d7] bg-white px-5 text-sm font-semibold text-ink">
+              Browse Files
+            </span>
+            <span className="text-sm text-subtle">PDF or DOCX, max 50 MB</span>
+          </div>
         </div>
+
+        <aside className="flex rounded border border-[#c3c6d7] bg-[#f9f9ff] p-5 lg:col-span-4">
+          <div className="flex w-full flex-col gap-4">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-subtle">System Status</h3>
+            <div className="flex items-center justify-between rounded border border-[#c3c6d7] bg-white p-3 text-sm">
+              <span className="font-medium text-ink">Storage Used</span>
+              <span className="font-mono text-xs text-ink">{formatBytes(totalStorage)}</span>
+            </div>
+            <div className="flex items-center justify-between rounded border border-[#c3c6d7] bg-white p-3 text-sm">
+              <span className="font-medium text-ink">Indexing Queue</span>
+              <span className="font-mono text-xs text-ink">{queueCount} file{queueCount === 1 ? "" : "s"}</span>
+            </div>
+            <div className="flex items-center justify-between rounded border border-[#c3c6d7] bg-white p-3 text-sm">
+              <span className="font-medium text-ink">Ready</span>
+              <span className="font-mono text-xs text-ink">{readyCount} file{readyCount === 1 ? "" : "s"}</span>
+            </div>
+            <div className="mt-auto rounded border border-[#b4c5ff] bg-[#dbe1ff]/40 p-3 text-sm text-subtle">
+              Large PDFs may take up to 2 minutes to fully index for vector search.
+            </div>
+          </div>
+        </aside>
       </div>
 
-      <div className="border-b border-border px-5 py-3 text-sm">
-        {isLoading ? <p className="text-subtle">Loading documents...</p> : null}
-        {isUploading ? <p className="text-subtle">Uploading document...</p> : null}
-        {success ? <p className="text-emerald-700">{success}</p> : null}
-        {error ? <p className="text-red-700">{error}</p> : null}
-        {!isLoading && !isUploading && !success && !error ? <p className="text-subtle">Ready for uploads.</p> : null}
+      <div className="text-sm">
+        {isLoading ? <p className="rounded border border-[#c3c6d7] bg-white p-3 text-subtle">Loading documents...</p> : null}
+        {isUploading ? <p className="rounded border border-[#c3c6d7] bg-white p-3 text-subtle">Uploading document...</p> : null}
+        {success ? <p className="rounded border border-emerald-200 bg-emerald-50 p-3 text-emerald-700">{success}</p> : null}
+        {error ? <p className="rounded border border-red-200 bg-red-50 p-3 text-red-700">{error}</p> : null}
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[640px] text-left text-sm">
-          <thead className="border-b border-border bg-muted text-xs font-medium uppercase text-subtle">
-            <tr>
-              <th className="px-5 py-3">Filename</th>
-              <th className="px-5 py-3">Type</th>
-              <th className="px-5 py-3">Size</th>
-              <th className="px-5 py-3">Status</th>
-              <th className="px-5 py-3 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {documents.length > 0 ? (
-              documents.map((document) => (
-                <tr key={document.id} className="border-b border-border last:border-0">
-                  <td className="max-w-[320px] truncate px-5 py-3 font-medium">
-                    <Link className="text-primary hover:underline" href={`/documents/${document.id}`}>
-                      {document.filename}
-                    </Link>
-                  </td>
-                  <td className="px-5 py-3 uppercase text-subtle">{document.file_type}</td>
-                  <td className="px-5 py-3 text-subtle">{formatBytes(document.file_size)}</td>
-                  <td className="px-5 py-3">
-                    <div className="flex flex-col items-start gap-1">
-                      <StatusPill status={statusForPill(document.status)} />
-                      {document.status === "failed" && document.error_message ? (
-                        <span className="max-w-40 truncate text-xs text-red-700" title={document.error_message}>
-                          {document.error_message}
-                        </span>
-                      ) : null}
+      <section>
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="font-heading text-xl font-semibold text-ink">Recent Activity</h3>
+          <button className="text-sm font-semibold text-primary hover:underline" disabled={isLoading} onClick={() => void loadDocuments()} type="button">
+            View All
+          </button>
+        </div>
+        <div className="overflow-hidden rounded border border-[#c3c6d7] bg-white">
+          <div className="grid min-w-[760px] grid-cols-12 border-b border-[#c3c6d7] bg-[#f0f3ff] px-5 py-3 text-xs font-semibold uppercase text-subtle">
+            <div className="col-span-6">File Name</div>
+            <div className="col-span-2">Size</div>
+            <div className="col-span-3">Status</div>
+            <div className="col-span-1 text-right">Actions</div>
+          </div>
+          <div className="overflow-x-auto">
+            <div className="min-w-[760px] divide-y divide-[#dce2f3]">
+              {documents.length > 0 ? (
+                documents.map((document) => (
+                  <div key={document.id} className="grid grid-cols-12 items-center gap-3 px-5 py-4 transition hover:bg-[#f9f9ff]">
+                    <div className="col-span-6 flex min-w-0 items-center gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-[#dbe1ff] text-primary">
+                        <span className="text-xs font-bold">{document.file_type.toUpperCase()}</span>
+                      </div>
+                      <div className="min-w-0">
+                        <Link className="block truncate font-medium text-ink hover:text-primary hover:underline" href={`/documents/${document.id}`}>
+                          {document.filename}
+                        </Link>
+                        {document.status === "failed" && document.error_message ? (
+                          <p className="truncate text-xs text-red-700" title={document.error_message}>
+                            {document.error_message}
+                          </p>
+                        ) : null}
+                      </div>
                     </div>
-                  </td>
-                  <td className="px-5 py-3">
-                    <div className="flex justify-end gap-2">
+                    <div className="col-span-2 font-mono text-xs text-subtle">{formatBytes(document.file_size)}</div>
+                    <div className="col-span-3">
+                      <StatusPill status={statusForPill(document.status)} />
+                    </div>
+                    <div className="col-span-1 flex justify-end gap-2">
                       {document.status === "failed" ? (
                         <Button
                           disabled={mutatingDocumentId === document.id}
@@ -279,19 +360,17 @@ export function DocumentUploadPanel() {
                         Delete
                       </Button>
                     </div>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td className="px-5 py-8 text-center text-subtle" colSpan={5}>
+                  </div>
+                ))
+              ) : (
+                <div className="px-5 py-10 text-center text-sm text-subtle">
                   {isLoading ? "Loading documents..." : "No documents uploaded yet."}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
     </section>
   );
 }
