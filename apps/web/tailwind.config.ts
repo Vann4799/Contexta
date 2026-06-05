@@ -15,8 +15,8 @@ const config: Config = {
         soft: "#f9f9ff"
       },
       fontFamily: {
-        sans: ["Inter", "Arial", "sans-serif"],
-        heading: ["Plus Jakarta Sans", "Inter", "Arial", "sans-serif"],
+        sans: ["var(--font-inter)", "Inter", "Arial", "sans-serif"],
+        heading: ["var(--font-plus-jakarta)", "var(--font-inter)", "Inter", "Arial", "sans-serif"],
         mono: ["JetBrains Mono", "Consolas", "monospace"]
       },
       borderRadius: {

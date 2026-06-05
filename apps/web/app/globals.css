@@ -19,7 +19,7 @@ body {
   min-width: 320px;
   background: #f9fafb;
   color: #111827;
-  font-family: Inter, Arial, sans-serif;
+  font-family: var(--font-inter), Inter, Arial, sans-serif;
   text-rendering: geometricPrecision;
 }
 
