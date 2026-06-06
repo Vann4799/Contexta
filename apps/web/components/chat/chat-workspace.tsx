@@ -199,6 +199,8 @@ export function ChatWorkspace() {
   };
 
   const readyDocuments = documents.filter((document) => document.status === "ready");
+  const selectedDocument = readyDocuments.find((document) => document.id === selectedDocumentId) ?? null;
+  const chatScopeLabel = selectedDocument?.filename ?? "Choose one ready document";
 
   function cancelActiveResponse() {
     activeRequestRef.current?.abort();
@@ -207,6 +209,21 @@ export function ChatWorkspace() {
   return (
     <div className="relative min-h-[calc(100vh-120px)]">
       <section className="mx-auto flex min-h-[calc(100vh-132px)] w-full max-w-4xl flex-col">
+        <div className="mb-5 flex flex-col gap-3 border-b border-[#dce2f3] pb-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Ask about</p>
+            <p className="mt-1 truncate text-sm font-medium text-ink">{chatScopeLabel}</p>
+          </div>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <Button disabled={isLoading || isSending} onClick={() => void handleNewChat()} variant="secondary">
+              New chat
+            </Button>
+            <Button onClick={() => setIsSourcesOpen(true)} type="button" variant="secondary">
+              Sources {citations.length > 0 ? `(${citations.length})` : ""}
+            </Button>
+          </div>
+        </div>
+
         <div className="flex-1 space-y-6 overflow-y-auto pb-6">
           {isLoading ? <p className="text-sm text-subtle">Loading chat...</p> : null}
           {!isLoading && messages.length === 0 ? (
@@ -287,12 +304,6 @@ export function ChatWorkspace() {
                     </option>
                   ))}
                 </select>
-                <Button disabled={isLoading || isSending} onClick={() => void handleNewChat()} variant="secondary">
-                  New chat
-                </Button>
-                <Button onClick={() => setIsSourcesOpen(true)} type="button" variant="secondary">
-                  Sources {citations.length > 0 ? `(${citations.length})` : ""}
-                </Button>
               </>
             }
           />
