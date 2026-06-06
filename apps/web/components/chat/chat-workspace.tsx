@@ -234,9 +234,10 @@ export function ChatWorkspace() {
       }
 
       const response = await sendChatMessage(accessToken, sessionId, trimmedQuestion, [selectedDocumentId], abortController.signal);
+      const answer = response.answer.trim() || "Maaf, Contexta belum menerima jawaban yang bisa ditampilkan. Coba kirim ulang pertanyaannya.";
       setMessages((current) => [
         ...current,
-        { role: "assistant", content: response.answer, citations: response.citations }
+        { role: "assistant", content: answer, citations: response.citations }
       ]);
       setCitations(response.citations);
       setIsSourcesOpen(response.citations.length > 0);
@@ -408,8 +409,9 @@ export function ChatWorkspace() {
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-white" aria-hidden="true">
                 AI
               </div>
-              <div className="max-w-[78%] rounded border border-[#dce2f3] bg-white px-4 py-3">
-                <ShiningText text="Contexta is thinking..." />
+              <div className="min-w-60 max-w-[78%] rounded border border-[#dce2f3] bg-white px-4 py-3">
+                <ShiningText className="sr-only" text="Contexta is thinking..." />
+                <span className="text-sm leading-6 text-subtle">Contexta is thinking...</span>
               </div>
             </div>
           ) : null}
