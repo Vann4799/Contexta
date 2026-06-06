@@ -51,6 +51,8 @@ COUNT_TARGET_PATTERN = re.compile(
     r"(?:nama|user|pengguna|creator|kreator)\s+(?:dengan\s+nama\s+)?([@#]?[A-Za-z0-9_.-]+)",
     re.IGNORECASE,
 )
+ROW_TIMESTAMP_PATTERN = re.compile(r"(?=\b\d{1,2}/\d{1,2}/\d{4}\s+\d{1,2}:\d{2}:\d{2}\b)")
+ROW_START_PATTERN = re.compile(r"^\d{1,2}/\d{1,2}/\d{4}\s+\d{1,2}:\d{2}:\d{2}\b")
 
 
 def build_auto_session_title(question: str) -> str:
@@ -132,6 +134,14 @@ def extract_count_target(question: str) -> str | None:
     return match.group(1).strip(".,:;!?()[]{}\"'")
 
 
+def split_extracted_table_rows(text: str) -> list[str]:
+    return [
+        part.strip()
+        for part in ROW_TIMESTAMP_PATTERN.split(text)
+        if ROW_START_PATTERN.match(part.strip())
+    ]
+
+
 def build_exact_count_response(
     question: str,
     user_id: str,
@@ -152,19 +162,31 @@ def build_exact_count_response(
         return None
 
     target_pattern = re.compile(re.escape(target), re.IGNORECASE)
-    matching_chunks = []
+    matching_records: list[tuple[object, str]] = []
     total_occurrences = 0
+    saw_table_rows = False
     for chunk in repository.list_document_chunks(user_id, document.id):
-        occurrences = len(target_pattern.findall(chunk.text))
-        if occurrences:
-            total_occurrences += occurrences
-            matching_chunks.append(chunk)
+        rows = split_extracted_table_rows(chunk.text)
+        if rows:
+            saw_table_rows = True
+            for row in rows:
+                if target_pattern.search(row):
+                    matching_records.append((chunk, row))
+            continue
 
-    if total_occurrences == 0:
+        occurrences = target_pattern.findall(chunk.text)
+        if occurrences:
+            total_occurrences += len(occurrences)
+            matching_records.append((chunk, chunk.text))
+
+    total_matches = len(matching_records) if saw_table_rows else total_occurrences
+    match_unit = "postingan/baris" if saw_table_rows else "kemunculan teks"
+
+    if total_matches == 0:
         return ChatQueryResponse(
             answer=(
                 f"Saya tidak menemukan nama \"{target}\" di dokumen {document.filename}. "
-                "Perhitungan ini dilakukan dari seluruh teks chunk dokumen, bukan hanya source hasil pencarian."
+                "Perhitungan ini dilakukan dari seluruh teks hasil ekstraksi dokumen, bukan hanya source hasil pencarian."
             ),
             citations=[],
         )
@@ -176,17 +198,19 @@ def build_exact_count_response(
             document_name=document.filename,
             chunk_index=chunk.chunk_index,
             page_number=chunk.page_number,
-            text=chunk.text,
+            text=record_text,
             score=1.0,
         )
-        for index, chunk in enumerate(matching_chunks[:5], start=1)
+        for index, (chunk, record_text) in enumerate(matching_records[:5], start=1)
     ]
     return ChatQueryResponse(
         answer=(
-            f"Saya menemukan {total_occurrences} postingan/baris untuk nama \"{target}\" "
+            f"Saya menemukan {total_matches} {match_unit} untuk nama \"{target}\" "
             f"di dokumen {document.filename}. Angka ini dihitung langsung dari seluruh "
-            "teks hasil ekstraksi dokumen, dengan menghitung setiap kemunculan nama tersebut "
-            "di semua chunk dokumen, bukan dari sampel source retrieval."
+            "teks hasil ekstraksi dokumen. Untuk dokumen tabel, Contexta menghitung baris "
+            "berdasarkan timestamp postingan, sehingga satu postingan tidak dihitung dua kali "
+            "hanya karena nama juga muncul di email atau link. Perhitungan ini bukan dari "
+            "sampel source retrieval."
         ),
         citations=citations,
     )

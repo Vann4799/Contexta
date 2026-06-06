@@ -193,7 +193,12 @@ def test_session_message_counts_target_across_all_document_chunks_without_llm() 
                 "document_id": "doc-1",
                 "user_id": "user-chat-123",
                 "chunk_index": 0,
-                "text": "row one 0x9vann link a\nrow two 0x9vann link b",
+                "text": (
+                    "4/20/2026 10:29:31 user@example.com 0x9vann link a "
+                    "Short post X 5 26 0 0 "
+                    "4/20/2026 10:30:28 user@example.com 0x9vann link b "
+                    "Short post X 5 21 0 0"
+                ),
                 "page_number": 1,
                 "qdrant_point_id": "point-1",
             },
@@ -201,7 +206,12 @@ def test_session_message_counts_target_across_all_document_chunks_without_llm() 
                 "document_id": "doc-1",
                 "user_id": "user-chat-123",
                 "chunk_index": 1,
-                "text": "row three 0x9vann link c\nrow four someone else",
+                "text": (
+                    "4/20/2026 10:31:21 user@example.com 0x9vann link c "
+                    "Short post X 5 22 0 0 "
+                    "4/20/2026 10:33:13 user@example.com someoneelse link d "
+                    "Short post X 5 14 0 0"
+                ),
                 "page_number": 2,
                 "qdrant_point_id": "point-2",
             },
@@ -227,6 +237,64 @@ def test_session_message_counts_target_across_all_document_chunks_without_llm() 
     body = response.json()
     assert "3 postingan/baris" in body["answer"]
     assert body["citations"][0]["document_name"] == "creator-track.pdf"
+    assert answer_generator.prompt == ""
+    app.dependency_overrides.clear()
+
+
+def test_session_message_counts_table_rows_not_duplicate_name_occurrences() -> None:
+    chat_repository = InMemoryChatRepository()
+    document_repository = InMemoryDocumentRepository()
+    document = DocumentResponse(
+        id="doc-1",
+        user_id="user-chat-123",
+        filename="creator-track.pdf",
+        file_type="pdf",
+        file_size=100,
+        storage_path="user-chat-123/doc-1/creator-track.pdf",
+        status="ready",
+        error_message=None,
+        chunk_count=1,
+        created_at="2026-06-06T00:00:00+00:00",
+        updated_at="2026-06-06T00:00:00+00:00",
+    )
+    document_repository._documents.append(document)
+    document_repository.add_chunks(
+        [
+            {
+                "document_id": "doc-1",
+                "user_id": "user-chat-123",
+                "chunk_index": 0,
+                "text": (
+                    "4/20/2026 10:29:31 cicachacha23@gmail.com chacha "
+                    "https://x.com/haicharicacha/status/1 Short post X 5 26 0 0 "
+                    "4/20/2026 10:30:28 cicachacha23@gmail.com chacha "
+                    "https://x.com/haicharicacha/status/2 Short post X 5 21 0 0"
+                ),
+                "page_number": 1,
+                "qdrant_point_id": "point-1",
+            },
+        ]
+    )
+    answer_generator = FakeAnswerGenerator()
+    session = chat_repository.create_session("user-chat-123", title="New chat")
+    app.dependency_overrides[get_current_user] = override_user
+    app.dependency_overrides[get_chat_repository] = lambda: chat_repository
+    app.dependency_overrides[get_document_repository] = lambda: document_repository
+    app.dependency_overrides[get_retriever] = lambda: FakeRetriever([])
+    app.dependency_overrides[get_answer_generator] = lambda: answer_generator
+
+    response = client.post(
+        f"/chat/sessions/{session.id}/messages",
+        json={
+            "question": "cek ada berapa total postingan yang di punyai oleh user dengan nama chacha",
+            "document_ids": ["doc-1"],
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "2 postingan/baris" in body["answer"]
+    assert "email atau link" in body["answer"]
     assert answer_generator.prompt == ""
     app.dependency_overrides.clear()
 
