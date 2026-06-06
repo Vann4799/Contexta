@@ -11,7 +11,8 @@ import {
   sendChatMessage,
   type ChatCitation,
   type DocumentItem,
-  type ChatMessage
+  type ChatMessage,
+  type ChatSession
 } from "@/lib/api";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ export function ChatWorkspace() {
   const [question, setQuestion] = useState("");
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<VisibleMessage[]>([]);
   const [citations, setCitations] = useState<ChatCitation[]>([]);
@@ -40,6 +42,14 @@ export function ChatWorkspace() {
     return data.session?.access_token ?? null;
   }, []);
 
+  function inferDocumentIdFromMessages(loadedMessages: VisibleMessage[]) {
+    const assistantWithSources = [...loadedMessages]
+      .reverse()
+      .find((message) => message.role === "assistant" && message.citations.length > 0);
+
+    return assistantWithSources?.citations[0]?.document_id ?? null;
+  }
+
   const loadSessionMessages = useCallback(
     async (sessionId: string, accessToken?: string) => {
       const token = accessToken ?? (await getAccessToken());
@@ -52,6 +62,7 @@ export function ChatWorkspace() {
       const latestAssistant = [...loadedMessages].reverse().find((message) => message.role === "assistant");
       setCitations(latestAssistant?.citations ?? []);
       setIsSourcesOpen((latestAssistant?.citations ?? []).length > 0);
+      return loadedMessages;
     },
     [getAccessToken]
   );
@@ -80,9 +91,14 @@ export function ChatWorkspace() {
           return;
         }
 
+        setSessions(loadedSessions);
         setDocuments(loadedDocuments);
         setActiveSessionId(loadedSessions[0].id);
-        await loadSessionMessages(loadedSessions[0].id, accessToken);
+        const loadedMessages = await loadSessionMessages(loadedSessions[0].id, accessToken);
+        const sessionDocumentId = inferDocumentIdFromMessages(loadedMessages);
+        if (sessionDocumentId) {
+          setSelectedDocumentId(sessionDocumentId);
+        }
       } catch (chatError) {
         if (isMounted) {
           setError(chatError instanceof Error ? chatError.message : "Unable to load chat.");
@@ -120,6 +136,28 @@ export function ChatWorkspace() {
     setSelectedDocumentId(readyDocuments[0]?.id ?? null);
   }, [documents, selectedDocumentId]);
 
+  const handleSelectSession = async (sessionId: string) => {
+    if (sessionId === activeSessionId) {
+      return;
+    }
+
+    setActiveSessionId(sessionId);
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      const loadedMessages = await loadSessionMessages(sessionId);
+      const sessionDocumentId = inferDocumentIdFromMessages(loadedMessages);
+      if (sessionDocumentId) {
+        setSelectedDocumentId(sessionDocumentId);
+      }
+    } catch (chatError) {
+      setError(chatError instanceof Error ? chatError.message : "Unable to load chat messages.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleNewChat = async () => {
     setError(null);
     setIsLoading(true);
@@ -131,6 +169,7 @@ export function ChatWorkspace() {
       }
 
       const createdSession = await createChatSession(accessToken);
+      setSessions((current) => [createdSession, ...current]);
       setActiveSessionId(createdSession.id);
       setMessages([]);
       setCitations([]);
@@ -168,6 +207,7 @@ export function ChatWorkspace() {
       if (!sessionId) {
         const createdSession = await createChatSession(accessToken);
         sessionId = createdSession.id;
+        setSessions((current) => [createdSession, ...current]);
         setActiveSessionId(sessionId);
       }
 
@@ -182,6 +222,7 @@ export function ChatWorkspace() {
       ]);
       setCitations(response.citations);
       setIsSourcesOpen(response.citations.length > 0);
+      setSessions(await listChatSessions(accessToken));
     } catch (chatError) {
       const message = chatError instanceof Error ? chatError.message : "Unable to answer question.";
       if (message === "Request canceled.") {
@@ -201,6 +242,7 @@ export function ChatWorkspace() {
   const readyDocuments = documents.filter((document) => document.status === "ready");
   const selectedDocument = readyDocuments.find((document) => document.id === selectedDocumentId) ?? null;
   const chatScopeLabel = selectedDocument?.filename ?? "Choose one ready document";
+  const conversationHasMessages = messages.length > 0;
 
   function cancelActiveResponse() {
     activeRequestRef.current?.abort();
@@ -215,6 +257,21 @@ export function ChatWorkspace() {
             <p className="mt-1 truncate text-sm font-medium text-ink">{chatScopeLabel}</p>
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
+            {sessions.length > 0 ? (
+              <select
+                className="h-9 max-w-xs rounded border border-[#c3c6d7] bg-white px-3 text-sm text-ink outline-none transition focus:border-primary"
+                value={activeSessionId ?? ""}
+                disabled={isLoading || isSending}
+                onChange={(event) => void handleSelectSession(event.target.value)}
+                aria-label="Conversation history"
+              >
+                {sessions.map((session) => (
+                  <option key={session.id} value={session.id}>
+                    {session.title}
+                  </option>
+                ))}
+              </select>
+            ) : null}
             <Button disabled={isLoading || isSending} onClick={() => void handleNewChat()} variant="secondary">
               New chat
             </Button>
@@ -294,15 +351,19 @@ export function ChatWorkspace() {
                   id="chat-document"
                   className="h-9 max-w-full rounded border border-[#c3c6d7] bg-[#f9f9ff] px-3 text-sm font-medium text-ink outline-none transition focus:border-primary"
                   value={selectedDocumentId ?? ""}
-                  disabled={isSending || readyDocuments.length === 0}
+                  disabled={isSending || readyDocuments.length === 0 || conversationHasMessages}
                   onChange={(event) => setSelectedDocumentId(event.target.value || null)}
                 >
                   {readyDocuments.length === 0 ? <option value="">No ready documents</option> : null}
-                  {readyDocuments.map((document) => (
-                    <option key={document.id} value={document.id}>
-                      {document.filename}
-                    </option>
-                  ))}
+                  {conversationHasMessages && selectedDocument ? (
+                    <option value={selectedDocument.id}>{selectedDocument.filename}</option>
+                  ) : (
+                    readyDocuments.map((document) => (
+                      <option key={document.id} value={document.id}>
+                        {document.filename}
+                      </option>
+                    ))
+                  )}
                 </select>
               </>
             }
