@@ -80,6 +80,7 @@ def get_answer_generator(
     return DeepSeekAnswerGenerator(
         api_key=settings.deepseek_api_key,
         model=settings.deepseek_model,
+        max_tokens=settings.deepseek_max_tokens,
     )
 
 

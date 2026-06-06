@@ -16,11 +16,13 @@ class DeepSeekAnswerGenerator:
         api_key: str,
         model: str = "deepseek-chat",
         base_url: str = "https://api.deepseek.com",
+        max_tokens: int = 900,
         client: httpx.Client | None = None,
     ) -> None:
         self._api_key = api_key
         self._model = model.strip().lower()
         self._base_url = base_url.rstrip("/")
+        self._max_tokens = max_tokens
         self._client = client or httpx.Client(timeout=60)
 
     def generate_answer(self, prompt: str) -> str:
@@ -39,6 +41,7 @@ class DeepSeekAnswerGenerator:
                     }
                 ],
                 "temperature": 0.1,
+                "max_tokens": self._max_tokens,
             },
         )
         try:

@@ -28,8 +28,10 @@ def test_deepseek_model_name_is_normalized_before_request() -> None:
     generator = DeepSeekAnswerGenerator(
         api_key="test-key",
         model="DeepSeek-V4-Pro",
+        max_tokens=512,
         client=httpx.Client(transport=httpx.MockTransport(handler)),
     )
 
     assert generator.generate_answer("hello") == "ok"
     assert captured_payload["model"] == "deepseek-v4-pro"
+    assert captured_payload["max_tokens"] == 512
