@@ -50,4 +50,7 @@ class DeepSeekAnswerGenerator:
             detail = response.text[:500]
             raise RuntimeError(f"DeepSeek API error {response.status_code}: {detail}") from exc
         body = response.json()
-        return body["choices"][0]["message"]["content"]
+        content = body["choices"][0]["message"].get("content") or ""
+        if not content.strip():
+            raise RuntimeError("DeepSeek returned an empty answer. Try a content-generating model such as deepseek-v4-pro.")
+        return content

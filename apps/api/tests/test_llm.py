@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 import httpx
+import pytest
 
 from app.chat.llm import DeepSeekAnswerGenerator
 
@@ -35,3 +36,29 @@ def test_deepseek_model_name_is_normalized_before_request() -> None:
     assert generator.generate_answer("hello") == "ok"
     assert captured_payload["model"] == "deepseek-v4-pro"
     assert captured_payload["max_tokens"] == 512
+
+
+def test_empty_deepseek_content_raises_clear_error() -> None:
+    def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "choices": [
+                    {
+                        "message": {
+                            "content": "",
+                            "reasoning_content": "thinking only",
+                        }
+                    }
+                ]
+            },
+        )
+
+    generator = DeepSeekAnswerGenerator(
+        api_key="test-key",
+        model="deepseek-v4-flash",
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+
+    with pytest.raises(RuntimeError, match="empty answer"):
+        generator.generate_answer("hello")

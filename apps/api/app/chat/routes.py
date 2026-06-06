@@ -53,6 +53,27 @@ COUNT_TARGET_PATTERN = re.compile(
 )
 ROW_TIMESTAMP_PATTERN = re.compile(r"(?=\b\d{1,2}/\d{1,2}/\d{4}\s+\d{1,2}:\d{2}:\d{2}\b)")
 ROW_START_PATTERN = re.compile(r"^\d{1,2}/\d{1,2}/\d{4}\s+\d{1,2}:\d{2}:\d{2}\b")
+HIGHEST_METRIC_PATTERN = re.compile(r"\b(paling\s+tinggi|tertinggi|terbesar|highest|max(?:imum)?)\b", re.IGNORECASE)
+METRIC_ALIASES = {
+    "view": ("view", "views", "tampilan"),
+    "like": ("like", "likes"),
+    "comment": ("comment", "comments", "komentar"),
+    "point": ("point", "points", "poin"),
+}
+ROW_METRICS_PATTERN = re.compile(
+    r"^(?P<timestamp>\d{1,2}/\d{1,2}/\d{4}\s+\d{1,2}:\d{2}:\d{2})\s+"
+    r"(?P<email>\S+@\S+)\s+"
+    r"(?P<name>.+?)\s+"
+    r"(?P<uid>\d{8,})\s+"
+    r"(?P<link>https?://\S+)\s+"
+    r"(?P<content_type>.+?)\s+"
+    r"(?P<channel>X\s+\(Twitter\)|Instagram|TikTok|Telegram|LinkedIn)\s+"
+    r"(?P<point>-?\d+)\s+"
+    r"(?P<view>-?\d+)\s+"
+    r"(?P<like>-?\d+)\s+"
+    r"(?P<comment>-?\d+)\b",
+    re.IGNORECASE,
+)
 
 
 def build_auto_session_title(question: str) -> str:
@@ -142,6 +163,84 @@ def split_extracted_table_rows(text: str) -> list[str]:
     ]
 
 
+def requested_metric(question: str) -> str | None:
+    normalized_question = question.lower()
+    for metric, aliases in METRIC_ALIASES.items():
+        if any(re.search(rf"\b{re.escape(alias)}\b", normalized_question) for alias in aliases):
+            return metric
+    return None
+
+
+def build_highest_metric_response(
+    question: str,
+    user_id: str,
+    document_ids: list[str] | None,
+    repository: DocumentRepository,
+) -> ChatQueryResponse | None:
+    if not document_ids or len(document_ids) != 1:
+        return None
+    if not HIGHEST_METRIC_PATTERN.search(question):
+        return None
+
+    metric = requested_metric(question)
+    if not metric:
+        return None
+
+    document = repository.get_document(user_id, document_ids[0])
+    if not document:
+        return None
+
+    best_row: str | None = None
+    best_chunk = None
+    best_values: dict[str, str] | None = None
+    best_metric = None
+    for chunk in repository.list_document_chunks(user_id, document.id):
+        for row in split_extracted_table_rows(chunk.text):
+            match = ROW_METRICS_PATTERN.search(row)
+            if not match:
+                continue
+
+            values = match.groupdict()
+            metric_value = int(values[metric])
+            if best_metric is None or metric_value > best_metric:
+                best_metric = metric_value
+                best_values = values
+                best_row = row
+                best_chunk = chunk
+
+    if best_metric is None or best_values is None or best_row is None or best_chunk is None:
+        return ChatQueryResponse(
+            answer=(
+                f"Saya belum bisa menghitung {metric} tertinggi dari dokumen {document.filename} "
+                "karena struktur baris tabel hasil ekstraksi tidak cukup jelas."
+            ),
+            citations=[],
+        )
+
+    citations = [
+        ChatCitation(
+            source_number=1,
+            document_id=best_chunk.document_id,
+            document_name=document.filename,
+            chunk_index=best_chunk.chunk_index,
+            page_number=best_chunk.page_number,
+            text=best_row,
+            score=1.0,
+        )
+    ]
+    return ChatQueryResponse(
+        answer=(
+            f"{metric.capitalize()} paling tinggi di dokumen {document.filename} adalah "
+            f"{best_metric:,} pada creator {best_values['name']} ({best_values['email']}). "
+            f"Postingan tersebut berada pada {best_values['timestamp']} melalui "
+            f"{best_values['channel']} dengan tipe konten {best_values['content_type']}. "
+            f"Link: {best_values['link']}. Angka ini dihitung langsung dari seluruh baris "
+            "tabel hasil ekstraksi dokumen, bukan dari sampel source retrieval."
+        ),
+        citations=citations,
+    )
+
+
 def build_exact_count_response(
     question: str,
     user_id: str,
@@ -224,6 +323,15 @@ def query_chat(
     retriever: Annotated[QdrantRetriever, Depends(get_retriever)],
     answer_generator: Annotated[AnswerGenerator, Depends(get_answer_generator)],
 ) -> ChatQueryResponse:
+    highest_metric_response = build_highest_metric_response(
+        payload.question,
+        current_user.id,
+        payload.document_ids,
+        document_repository,
+    )
+    if highest_metric_response:
+        return highest_metric_response
+
     exact_count_response = build_exact_count_response(
         payload.question,
         current_user.id,
@@ -316,32 +424,41 @@ def create_chat_message(
         "user",
         payload.question,
     )
-    exact_count_response = build_exact_count_response(
+    highest_metric_response = build_highest_metric_response(
         payload.question,
         current_user.id,
         payload.document_ids,
         document_repository,
     )
-    if exact_count_response:
-        chat_response = exact_count_response
+    if highest_metric_response:
+        chat_response = highest_metric_response
     else:
-        contexts = retriever.retrieve(
-            user_id=current_user.id,
-            question=payload.question,
-            document_ids=payload.document_ids,
+        exact_count_response = build_exact_count_response(
+            payload.question,
+            current_user.id,
+            payload.document_ids,
+            document_repository,
         )
-        if contexts:
-            prompt = build_rag_prompt(payload.question, contexts)
-            try:
-                answer = answer_generator.generate_answer(prompt)
-            except Exception as exc:
-                raise HTTPException(status_code=502, detail=str(exc)) from exc
-            chat_response = build_chat_response(answer, contexts)
+        if exact_count_response:
+            chat_response = exact_count_response
         else:
-            chat_response = ChatQueryResponse(
-                answer="The document context is insufficient to answer that question.",
-                citations=[],
+            contexts = retriever.retrieve(
+                user_id=current_user.id,
+                question=payload.question,
+                document_ids=payload.document_ids,
             )
+            if contexts:
+                prompt = build_rag_prompt(payload.question, contexts)
+                try:
+                    answer = answer_generator.generate_answer(prompt)
+                except Exception as exc:
+                    raise HTTPException(status_code=502, detail=str(exc)) from exc
+                chat_response = build_chat_response(answer, contexts)
+            else:
+                chat_response = ChatQueryResponse(
+                    answer="The document context is insufficient to answer that question.",
+                    citations=[],
+                )
 
     repository.create_message(
         current_user.id,

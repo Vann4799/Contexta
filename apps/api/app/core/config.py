@@ -15,8 +15,8 @@ class Settings(BaseSettings):
     supabase_storage_bucket: str = "contexta-documents"
     api_cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
     deepseek_api_key: str = ""
-    deepseek_model: str = "deepseek-v4-flash"
-    deepseek_max_tokens: int = 900
+    deepseek_model: str = "deepseek-v4-pro"
+    deepseek_max_tokens: int = 1200
     embedding_provider: str = "deterministic"
     embedding_model_name: str = "BAAI/bge-m3"
     embedding_device: str = ""
