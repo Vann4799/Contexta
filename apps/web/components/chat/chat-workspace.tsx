@@ -36,6 +36,7 @@ export function ChatWorkspace() {
   const [isSourcesOpen, setIsSourcesOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const activeRequestRef = useRef<AbortController | null>(null);
+  const latestMessageRef = useRef<HTMLDivElement | null>(null);
 
   const getAccessToken = useCallback(async () => {
     const supabase = createSupabaseBrowserClient();
@@ -141,6 +142,17 @@ export function ChatWorkspace() {
     }
     setSelectedDocumentId(null);
   }, [documents, selectedDocumentId]);
+
+  useEffect(() => {
+    if (isLoading) {
+      return;
+    }
+
+    latestMessageRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "end",
+    });
+  }, [messages.length, isSending, error, isLoading]);
 
   const handleSelectSession = async (sessionId: string) => {
     if (sessionId === activeSessionId) {
@@ -402,6 +414,7 @@ export function ChatWorkspace() {
             </div>
           ) : null}
           {error ? <p className="rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
+          <div ref={latestMessageRef} className="h-1" aria-hidden="true" />
         </div>
 
         <div className="sticky bottom-0 border-t border-[#dce2f3] bg-[#f9f9ff] py-4">
