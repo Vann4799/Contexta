@@ -11,8 +11,7 @@ import {
   sendChatMessage,
   type ChatCitation,
   type DocumentItem,
-  type ChatMessage,
-  type ChatSession
+  type ChatMessage
 } from "@/lib/api";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
@@ -26,7 +25,6 @@ export function ChatWorkspace() {
   const [question, setQuestion] = useState("");
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
-  const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<VisibleMessage[]>([]);
   const [citations, setCitations] = useState<ChatCitation[]>([]);
@@ -82,7 +80,6 @@ export function ChatWorkspace() {
           return;
         }
 
-        setSessions(loadedSessions);
         setDocuments(loadedDocuments);
         setActiveSessionId(loadedSessions[0].id);
         await loadSessionMessages(loadedSessions[0].id, accessToken);
@@ -123,24 +120,6 @@ export function ChatWorkspace() {
     setSelectedDocumentId(readyDocuments[0]?.id ?? null);
   }, [documents, selectedDocumentId]);
 
-  const handleSelectSession = async (sessionId: string) => {
-    if (sessionId === activeSessionId) {
-      return;
-    }
-
-    setActiveSessionId(sessionId);
-    setError(null);
-    setIsLoading(true);
-
-    try {
-      await loadSessionMessages(sessionId);
-    } catch (chatError) {
-      setError(chatError instanceof Error ? chatError.message : "Unable to load chat messages.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleNewChat = async () => {
     setError(null);
     setIsLoading(true);
@@ -152,7 +131,6 @@ export function ChatWorkspace() {
       }
 
       const createdSession = await createChatSession(accessToken);
-      setSessions((current) => [createdSession, ...current]);
       setActiveSessionId(createdSession.id);
       setMessages([]);
       setCitations([]);
@@ -190,7 +168,6 @@ export function ChatWorkspace() {
       if (!sessionId) {
         const createdSession = await createChatSession(accessToken);
         sessionId = createdSession.id;
-        setSessions((current) => [createdSession, ...current]);
         setActiveSessionId(sessionId);
       }
 
@@ -205,7 +182,6 @@ export function ChatWorkspace() {
       ]);
       setCitations(response.citations);
       setIsSourcesOpen(response.citations.length > 0);
-      setSessions(await listChatSessions(accessToken));
     } catch (chatError) {
       const message = chatError instanceof Error ? chatError.message : "Unable to answer question.";
       if (message === "Request canceled.") {
@@ -223,8 +199,6 @@ export function ChatWorkspace() {
   };
 
   const readyDocuments = documents.filter((document) => document.status === "ready");
-  const selectedDocument = readyDocuments.find((document) => document.id === selectedDocumentId) ?? null;
-  const chatScopeLabel = selectedDocument?.filename ?? "Choose one ready document";
 
   function cancelActiveResponse() {
     activeRequestRef.current?.abort();
@@ -233,36 +207,6 @@ export function ChatWorkspace() {
   return (
     <div className="relative min-h-[calc(100vh-120px)]">
       <section className="mx-auto flex min-h-[calc(100vh-132px)] w-full max-w-4xl flex-col">
-        <div className="mb-4 flex flex-col gap-3 border-b border-[#dce2f3] pb-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Ask about</p>
-            <p className="mt-1 truncate text-sm font-medium text-ink">{chatScopeLabel}</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {sessions.length > 0 ? (
-              <select
-                className="h-9 rounded border border-[#c3c6d7] bg-white px-3 text-sm text-ink outline-none transition focus:border-primary"
-                value={activeSessionId ?? ""}
-                disabled={isLoading || isSending}
-                onChange={(event) => void handleSelectSession(event.target.value)}
-                aria-label="Chat history"
-              >
-                {sessions.map((session) => (
-                  <option key={session.id} value={session.id}>
-                    {session.title}
-                  </option>
-                ))}
-              </select>
-            ) : null}
-            <Button disabled={isLoading || isSending} onClick={() => void handleNewChat()} variant="secondary">
-              New chat
-            </Button>
-            <Button onClick={() => setIsSourcesOpen(true)} type="button" variant="secondary">
-              Sources {citations.length > 0 ? `(${citations.length})` : ""}
-            </Button>
-          </div>
-        </div>
-
         <div className="flex-1 space-y-6 overflow-y-auto pb-6">
           {isLoading ? <p className="text-sm text-subtle">Loading chat...</p> : null}
           {!isLoading && messages.length === 0 ? (
@@ -343,7 +287,12 @@ export function ChatWorkspace() {
                     </option>
                   ))}
                 </select>
-                <span className="min-w-0 truncate text-xs text-subtle">{chatScopeLabel}</span>
+                <Button disabled={isLoading || isSending} onClick={() => void handleNewChat()} variant="secondary">
+                  New chat
+                </Button>
+                <Button onClick={() => setIsSourcesOpen(true)} type="button" variant="secondary">
+                  Sources {citations.length > 0 ? `(${citations.length})` : ""}
+                </Button>
               </>
             }
           />
