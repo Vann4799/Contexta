@@ -129,11 +129,15 @@ export function ChatWorkspace() {
   }, [searchParams]);
 
   useEffect(() => {
+    if (documents.length === 0) {
+      return;
+    }
+
     const readyDocuments = documents.filter((document) => document.status === "ready");
     if (selectedDocumentId && readyDocuments.some((document) => document.id === selectedDocumentId)) {
       return;
     }
-    setSelectedDocumentId(readyDocuments[0]?.id ?? null);
+    setSelectedDocumentId(null);
   }, [documents, selectedDocumentId]);
 
   const handleSelectSession = async (sessionId: string) => {
@@ -148,9 +152,7 @@ export function ChatWorkspace() {
     try {
       const loadedMessages = await loadSessionMessages(sessionId);
       const sessionDocumentId = inferDocumentIdFromMessages(loadedMessages);
-      if (sessionDocumentId) {
-        setSelectedDocumentId(sessionDocumentId);
-      }
+      setSelectedDocumentId(sessionDocumentId);
     } catch (chatError) {
       setError(chatError instanceof Error ? chatError.message : "Unable to load chat messages.");
     } finally {
@@ -174,6 +176,7 @@ export function ChatWorkspace() {
       setMessages([]);
       setCitations([]);
       setQuestion("");
+      setSelectedDocumentId(null);
     } catch (chatError) {
       setError(chatError instanceof Error ? chatError.message : "Unable to create a new chat.");
     } finally {
@@ -241,8 +244,9 @@ export function ChatWorkspace() {
 
   const readyDocuments = documents.filter((document) => document.status === "ready");
   const selectedDocument = readyDocuments.find((document) => document.id === selectedDocumentId) ?? null;
-  const chatScopeLabel = selectedDocument?.filename ?? "Choose one ready document";
+  const chatScopeLabel = selectedDocument?.filename ?? "Choose a document to start";
   const conversationHasMessages = messages.length > 0;
+  const isComposerDisabled = isLoading || (!selectedDocumentId && !conversationHasMessages);
 
   function cancelActiveResponse() {
     activeRequestRef.current?.abort();
@@ -284,13 +288,48 @@ export function ChatWorkspace() {
         <div className="flex-1 space-y-6 overflow-y-auto pb-6">
           {isLoading ? <p className="text-sm text-subtle">Loading chat...</p> : null}
           {!isLoading && messages.length === 0 ? (
-            <div className="flex items-start gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-white" aria-hidden="true">
-                AI
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-white" aria-hidden="true">
+                  AI
+                </div>
+                <div className="max-w-[80%] rounded border border-[#dce2f3] bg-white px-4 py-3 text-sm leading-6 text-ink">
+                  Pilih dokumen yang mau kamu analisa, lalu kita lanjut ke percakapan.
+                </div>
               </div>
-              <div className="max-w-[80%] rounded border border-[#dce2f3] bg-white px-4 py-3 text-sm leading-6 text-ink">
-                Pilih dokumen di bawah, lalu tanya apa yang ingin kamu pahami.
+              <div className="ml-12 grid gap-3 sm:grid-cols-2">
+                {readyDocuments.length > 0 ? (
+                  readyDocuments.map((document) => {
+                    const isSelected = document.id === selectedDocumentId;
+                    return (
+                      <button
+                        key={document.id}
+                        className={`rounded border px-4 py-3 text-left transition ${
+                          isSelected
+                            ? "border-primary bg-primary/10 text-ink"
+                            : "border-[#dce2f3] bg-white text-ink hover:border-primary hover:bg-[#f9f9ff]"
+                        }`}
+                        type="button"
+                        onClick={() => setSelectedDocumentId(document.id)}
+                      >
+                        <span className="block truncate text-sm font-semibold">{document.filename}</span>
+                        <span className="mt-1 block text-xs text-subtle">
+                          {document.file_type.toUpperCase()} - {document.chunk_count} chunks
+                        </span>
+                      </button>
+                    );
+                  })
+                ) : (
+                  <div className="rounded border border-[#dce2f3] bg-white px-4 py-3 text-sm text-subtle">
+                    Belum ada dokumen ready. Upload atau tunggu proses indexing selesai dulu.
+                  </div>
+                )}
               </div>
+              {selectedDocument ? (
+                <div className="ml-12 rounded border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+                  Dokumen dipilih: <span className="font-semibold">{selectedDocument.filename}</span>. Sekarang tulis pertanyaan kamu di bawah.
+                </div>
+              ) : null}
             </div>
           ) : null}
           {messages.map((message, index) => (
@@ -335,37 +374,18 @@ export function ChatWorkspace() {
         <div className="sticky bottom-0 border-t border-[#dce2f3] bg-[#f9f9ff] py-4">
           <AIInputWithLoading
             id="chat-question"
-            placeholder="Ask Contexta about your documents..."
-            disabled={isLoading}
+            placeholder={selectedDocumentId ? "Ask Contexta about this document..." : "Choose a document first..."}
+            disabled={isComposerDisabled}
             isLoading={isSending}
             onSubmit={handleSubmit}
             onCancel={cancelActiveResponse}
             initialValue={question}
-            helperText={isSending ? "AI is thinking... click the spinning square to cancel." : "One chat conversation uses one selected document."}
-            leadingContent={
-              <>
-                <label className="sr-only" htmlFor="chat-document">
-                  Chat document
-                </label>
-                <select
-                  id="chat-document"
-                  className="h-9 max-w-full rounded border border-[#c3c6d7] bg-[#f9f9ff] px-3 text-sm font-medium text-ink outline-none transition focus:border-primary"
-                  value={selectedDocumentId ?? ""}
-                  disabled={isSending || readyDocuments.length === 0 || conversationHasMessages}
-                  onChange={(event) => setSelectedDocumentId(event.target.value || null)}
-                >
-                  {readyDocuments.length === 0 ? <option value="">No ready documents</option> : null}
-                  {conversationHasMessages && selectedDocument ? (
-                    <option value={selectedDocument.id}>{selectedDocument.filename}</option>
-                  ) : (
-                    readyDocuments.map((document) => (
-                      <option key={document.id} value={document.id}>
-                        {document.filename}
-                      </option>
-                    ))
-                  )}
-                </select>
-              </>
+            helperText={
+              isSending
+                ? "AI is thinking... click the spinning square to cancel."
+                : selectedDocument
+                  ? `Chatting with ${selectedDocument.filename}`
+                  : "Choose one document in the chat to start."
             }
           />
         </div>
