@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+import re
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -34,11 +35,22 @@ from app.chat.repository import (
     chat_repository,
 )
 from app.chat.retrieval import QdrantRetriever
+from app.documents.repository import (
+    DocumentRepository,
+    SupabaseDocumentRepository,
+    document_repository,
+)
 from app.core.config import Settings, get_settings
 
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 MAX_AUTO_SESSION_TITLE_CHARS = 80
+COUNT_QUESTION_PATTERN = re.compile(r"\b(berapa|jumlah|total|count|many)\b", re.IGNORECASE)
+COUNT_SUBJECT_PATTERN = re.compile(r"\b(postingan|posting|post|konten|entry|entri|baris|row|rows)\b", re.IGNORECASE)
+COUNT_TARGET_PATTERN = re.compile(
+    r"(?:nama|user|pengguna|creator|kreator)\s+(?:dengan\s+nama\s+)?([@#]?[A-Za-z0-9_.-]+)",
+    re.IGNORECASE,
+)
 
 
 def build_auto_session_title(question: str) -> str:
@@ -57,6 +69,17 @@ def get_chat_repository(
             settings.supabase_service_role_key,
         )
     return chat_repository
+
+
+def get_document_repository(
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> DocumentRepository:
+    if settings.supabase_url and settings.supabase_service_role_key:
+        return SupabaseDocumentRepository(
+            settings.supabase_url,
+            settings.supabase_service_role_key,
+        )
+    return document_repository
 
 
 def get_retriever(
@@ -102,13 +125,90 @@ def build_chat_response(answer: str, contexts: list[dict[str, object]]) -> ChatQ
     )
 
 
+def extract_count_target(question: str) -> str | None:
+    match = COUNT_TARGET_PATTERN.search(question)
+    if not match:
+        return None
+    return match.group(1).strip(".,:;!?()[]{}\"'")
+
+
+def build_exact_count_response(
+    question: str,
+    user_id: str,
+    document_ids: list[str] | None,
+    repository: DocumentRepository,
+) -> ChatQueryResponse | None:
+    if not document_ids or len(document_ids) != 1:
+        return None
+    if not COUNT_QUESTION_PATTERN.search(question) or not COUNT_SUBJECT_PATTERN.search(question):
+        return None
+
+    target = extract_count_target(question)
+    if not target:
+        return None
+
+    document = repository.get_document(user_id, document_ids[0])
+    if not document:
+        return None
+
+    target_pattern = re.compile(re.escape(target), re.IGNORECASE)
+    matching_chunks = []
+    total_occurrences = 0
+    for chunk in repository.list_document_chunks(user_id, document.id):
+        occurrences = len(target_pattern.findall(chunk.text))
+        if occurrences:
+            total_occurrences += occurrences
+            matching_chunks.append(chunk)
+
+    if total_occurrences == 0:
+        return ChatQueryResponse(
+            answer=(
+                f"Saya tidak menemukan nama \"{target}\" di dokumen {document.filename}. "
+                "Perhitungan ini dilakukan dari seluruh teks chunk dokumen, bukan hanya source hasil pencarian."
+            ),
+            citations=[],
+        )
+
+    citations = [
+        ChatCitation(
+            source_number=index,
+            document_id=chunk.document_id,
+            document_name=document.filename,
+            chunk_index=chunk.chunk_index,
+            page_number=chunk.page_number,
+            text=chunk.text,
+            score=1.0,
+        )
+        for index, chunk in enumerate(matching_chunks[:5], start=1)
+    ]
+    return ChatQueryResponse(
+        answer=(
+            f"Saya menemukan {total_occurrences} postingan/baris untuk nama \"{target}\" "
+            f"di dokumen {document.filename}. Angka ini dihitung langsung dari seluruh "
+            "teks hasil ekstraksi dokumen, dengan menghitung setiap kemunculan nama tersebut "
+            "di semua chunk dokumen, bukan dari sampel source retrieval."
+        ),
+        citations=citations,
+    )
+
+
 @router.post("/query", response_model=ChatQueryResponse)
 def query_chat(
     payload: ChatQueryRequest,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    document_repository: Annotated[DocumentRepository, Depends(get_document_repository)],
     retriever: Annotated[QdrantRetriever, Depends(get_retriever)],
     answer_generator: Annotated[AnswerGenerator, Depends(get_answer_generator)],
 ) -> ChatQueryResponse:
+    exact_count_response = build_exact_count_response(
+        payload.question,
+        current_user.id,
+        payload.document_ids,
+        document_repository,
+    )
+    if exact_count_response:
+        return exact_count_response
+
     contexts = retriever.retrieve(
         user_id=current_user.id,
         question=payload.question,
@@ -170,6 +270,7 @@ def create_chat_message(
     payload: ChatSessionMessageRequest,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     repository: Annotated[ChatRepository, Depends(get_chat_repository)],
+    document_repository: Annotated[DocumentRepository, Depends(get_document_repository)],
     retriever: Annotated[QdrantRetriever, Depends(get_retriever)],
     answer_generator: Annotated[AnswerGenerator, Depends(get_answer_generator)],
 ) -> ChatSessionMessageResponse:
@@ -191,23 +292,32 @@ def create_chat_message(
         "user",
         payload.question,
     )
-    contexts = retriever.retrieve(
-        user_id=current_user.id,
-        question=payload.question,
-        document_ids=payload.document_ids,
+    exact_count_response = build_exact_count_response(
+        payload.question,
+        current_user.id,
+        payload.document_ids,
+        document_repository,
     )
-    if contexts:
-        prompt = build_rag_prompt(payload.question, contexts)
-        try:
-            answer = answer_generator.generate_answer(prompt)
-        except Exception as exc:
-            raise HTTPException(status_code=502, detail=str(exc)) from exc
-        chat_response = build_chat_response(answer, contexts)
+    if exact_count_response:
+        chat_response = exact_count_response
     else:
-        chat_response = ChatQueryResponse(
-            answer="The document context is insufficient to answer that question.",
-            citations=[],
+        contexts = retriever.retrieve(
+            user_id=current_user.id,
+            question=payload.question,
+            document_ids=payload.document_ids,
         )
+        if contexts:
+            prompt = build_rag_prompt(payload.question, contexts)
+            try:
+                answer = answer_generator.generate_answer(prompt)
+            except Exception as exc:
+                raise HTTPException(status_code=502, detail=str(exc)) from exc
+            chat_response = build_chat_response(answer, contexts)
+        else:
+            chat_response = ChatQueryResponse(
+                answer="The document context is insufficient to answer that question.",
+                citations=[],
+            )
 
     repository.create_message(
         current_user.id,

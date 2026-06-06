@@ -6,7 +6,9 @@ from app.auth.dependencies import get_current_user
 from app.auth.supabase_jwt import CurrentUser
 from app.chat.models import RetrievedContext
 from app.chat.repository import InMemoryChatRepository
-from app.chat.routes import get_answer_generator, get_chat_repository, get_retriever
+from app.chat.routes import get_answer_generator, get_chat_repository, get_document_repository, get_retriever
+from app.documents.models import DocumentResponse
+from app.documents.repository import InMemoryDocumentRepository
 from app.main import app
 
 
@@ -165,6 +167,67 @@ def test_session_message_stores_user_and_assistant_messages() -> None:
     assert messages[0]["content"] == "What is Contexta?"
     assert messages[1]["content"] == "Contexta is a grounded document chatbot. [Source 1]"
     assert messages[1]["citations"][0]["document_name"] == "overview.pdf"
+    app.dependency_overrides.clear()
+
+
+def test_session_message_counts_target_across_all_document_chunks_without_llm() -> None:
+    chat_repository = InMemoryChatRepository()
+    document_repository = InMemoryDocumentRepository()
+    document = DocumentResponse(
+        id="doc-1",
+        user_id="user-chat-123",
+        filename="creator-track.pdf",
+        file_type="pdf",
+        file_size=100,
+        storage_path="user-chat-123/doc-1/creator-track.pdf",
+        status="ready",
+        error_message=None,
+        chunk_count=2,
+        created_at="2026-06-06T00:00:00+00:00",
+        updated_at="2026-06-06T00:00:00+00:00",
+    )
+    document_repository._documents.append(document)
+    document_repository.add_chunks(
+        [
+            {
+                "document_id": "doc-1",
+                "user_id": "user-chat-123",
+                "chunk_index": 0,
+                "text": "row one 0x9vann link a\nrow two 0x9vann link b",
+                "page_number": 1,
+                "qdrant_point_id": "point-1",
+            },
+            {
+                "document_id": "doc-1",
+                "user_id": "user-chat-123",
+                "chunk_index": 1,
+                "text": "row three 0x9vann link c\nrow four someone else",
+                "page_number": 2,
+                "qdrant_point_id": "point-2",
+            },
+        ]
+    )
+    answer_generator = FakeAnswerGenerator()
+    session = chat_repository.create_session("user-chat-123", title="New chat")
+    app.dependency_overrides[get_current_user] = override_user
+    app.dependency_overrides[get_chat_repository] = lambda: chat_repository
+    app.dependency_overrides[get_document_repository] = lambda: document_repository
+    app.dependency_overrides[get_retriever] = lambda: FakeRetriever([])
+    app.dependency_overrides[get_answer_generator] = lambda: answer_generator
+
+    response = client.post(
+        f"/chat/sessions/{session.id}/messages",
+        json={
+            "question": "cek ada berapa total postingan yang di punyai oleh user dengan nama 0x9vann",
+            "document_ids": ["doc-1"],
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "3 postingan/baris" in body["answer"]
+    assert body["citations"][0]["document_name"] == "creator-track.pdf"
+    assert answer_generator.prompt == ""
     app.dependency_overrides.clear()
 
 
