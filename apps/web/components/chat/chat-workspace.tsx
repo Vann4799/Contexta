@@ -25,6 +25,7 @@ export function ChatWorkspace() {
   const searchParams = useSearchParams();
   const [question, setQuestion] = useState("");
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
+  const [documentSearch, setDocumentSearch] = useState("");
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -125,6 +126,7 @@ export function ChatWorkspace() {
     }
     if (documentId) {
       setSelectedDocumentId(documentId);
+      setDocumentSearch("");
     }
   }, [searchParams]);
 
@@ -177,6 +179,7 @@ export function ChatWorkspace() {
       setCitations([]);
       setQuestion("");
       setSelectedDocumentId(null);
+      setDocumentSearch("");
     } catch (chatError) {
       setError(chatError instanceof Error ? chatError.message : "Unable to create a new chat.");
     } finally {
@@ -247,9 +250,18 @@ export function ChatWorkspace() {
   const chatScopeLabel = selectedDocument?.filename ?? "Choose a document to start";
   const conversationHasMessages = messages.length > 0;
   const isComposerDisabled = isLoading || (!selectedDocumentId && !conversationHasMessages);
+  const normalizedDocumentSearch = documentSearch.trim().toLowerCase();
+  const filteredReadyDocuments = normalizedDocumentSearch
+    ? readyDocuments.filter((document) => document.filename.toLowerCase().includes(normalizedDocumentSearch))
+    : readyDocuments;
 
   function cancelActiveResponse() {
     activeRequestRef.current?.abort();
+  }
+
+  function handleChooseDocument(documentId: string) {
+    setSelectedDocumentId(documentId);
+    setDocumentSearch("");
   }
 
   return (
@@ -297,39 +309,60 @@ export function ChatWorkspace() {
                   Pilih dokumen yang mau kamu analisa, lalu kita lanjut ke percakapan.
                 </div>
               </div>
-              <div className="ml-12 grid gap-3 sm:grid-cols-2">
-                {readyDocuments.length > 0 ? (
-                  readyDocuments.map((document) => {
-                    const isSelected = document.id === selectedDocumentId;
-                    return (
-                      <button
-                        key={document.id}
-                        className={`rounded border px-4 py-3 text-left transition ${
-                          isSelected
-                            ? "border-primary bg-primary/10 text-ink"
-                            : "border-[#dce2f3] bg-white text-ink hover:border-primary hover:bg-[#f9f9ff]"
-                        }`}
-                        type="button"
-                        onClick={() => setSelectedDocumentId(document.id)}
-                      >
-                        <span className="block truncate text-sm font-semibold">{document.filename}</span>
-                        <span className="mt-1 block text-xs text-subtle">
-                          {document.file_type.toUpperCase()} - {document.chunk_count} chunks
-                        </span>
-                      </button>
-                    );
-                  })
-                ) : (
-                  <div className="rounded border border-[#dce2f3] bg-white px-4 py-3 text-sm text-subtle">
-                    Belum ada dokumen ready. Upload atau tunggu proses indexing selesai dulu.
-                  </div>
-                )}
-              </div>
               {selectedDocument ? (
-                <div className="ml-12 rounded border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
-                  Dokumen dipilih: <span className="font-semibold">{selectedDocument.filename}</span>. Sekarang tulis pertanyaan kamu di bawah.
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-white" aria-hidden="true">
+                    AI
+                  </div>
+                  <div className="max-w-[80%] rounded border border-blue-200 bg-blue-50 px-4 py-3 text-sm leading-6 text-blue-700">
+                    Siap, kita bedah <span className="font-semibold">{selectedDocument.filename}</span>. Tulis pertanyaan pertama kamu, misalnya minta ringkasan, poin penting, atau data tertentu dari dokumen ini.
+                  </div>
                 </div>
-              ) : null}
+              ) : (
+                <div className="ml-12 rounded border border-[#dce2f3] bg-white p-3 shadow-sm">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-ink">Pilih dokumen</p>
+                      <p className="text-xs text-subtle">{readyDocuments.length} dokumen siap dianalisa</p>
+                    </div>
+                    <input
+                      className="h-9 rounded border border-[#c3c6d7] bg-[#f9f9ff] px-3 text-sm text-ink outline-none transition placeholder:text-subtle focus:border-primary sm:w-64"
+                      placeholder="Cari nama dokumen..."
+                      type="search"
+                      value={documentSearch}
+                      onChange={(event) => setDocumentSearch(event.target.value)}
+                    />
+                  </div>
+                  <div className="mt-3 max-h-72 overflow-y-auto rounded border border-[#dce2f3]">
+                    {readyDocuments.length === 0 ? (
+                      <div className="px-4 py-3 text-sm text-subtle">
+                        Belum ada dokumen ready. Upload atau tunggu proses indexing selesai dulu.
+                      </div>
+                    ) : filteredReadyDocuments.length > 0 ? (
+                      filteredReadyDocuments.map((document) => (
+                        <button
+                          key={document.id}
+                          className="flex w-full items-center justify-between gap-3 border-b border-[#dce2f3] px-4 py-3 text-left transition last:border-0 hover:bg-[#f9f9ff]"
+                          type="button"
+                          onClick={() => handleChooseDocument(document.id)}
+                        >
+                          <span className="min-w-0">
+                            <span className="block truncate text-sm font-semibold text-ink">{document.filename}</span>
+                            <span className="mt-1 block text-xs text-subtle">
+                              {document.file_type.toUpperCase()} - {document.chunk_count} chunks
+                            </span>
+                          </span>
+                          <span className="shrink-0 rounded bg-[#dbe1ff] px-2 py-1 text-xs font-semibold text-primary">
+                            Select
+                          </span>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-4 py-3 text-sm text-subtle">Tidak ada dokumen yang cocok.</div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           ) : null}
           {messages.map((message, index) => (
