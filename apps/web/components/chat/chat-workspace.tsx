@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   createChatSession,
   listDocuments,
@@ -16,6 +16,8 @@ import {
 } from "@/lib/api";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
+import { AIInputWithLoading } from "@/components/ui/ai-input-with-loading";
+import { ShiningText } from "@/components/ui/shining-text";
 
 type VisibleMessage = Pick<ChatMessage, "role" | "content" | "citations">;
 
@@ -152,9 +154,8 @@ export function ChatWorkspace() {
     }
   };
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const trimmedQuestion = question.trim();
+  const handleSubmit = async (submittedQuestion?: string) => {
+    const trimmedQuestion = (submittedQuestion ?? question).trim();
     if (!trimmedQuestion || isSending) {
       return;
     }
@@ -282,68 +283,71 @@ export function ChatWorkspace() {
               ) : null}
             </div>
           ))}
+          {isSending ? (
+            <div className="flex items-start gap-3 justify-start">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-white" aria-hidden="true">
+                AI
+              </div>
+              <div className="max-w-[78%] rounded border border-[#dce2f3] bg-white px-4 py-3">
+                <ShiningText text="Contexta is thinking..." />
+              </div>
+            </div>
+          ) : null}
           {error ? <p className="rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
         </div>
 
-        <form className="sticky bottom-0 border-t border-[#dce2f3] bg-[#f9f9ff] py-4" onSubmit={handleSubmit}>
-          <div className="rounded-lg border border-[#c3c6d7] bg-white p-3 shadow-sm">
-            <div className="mb-3 flex flex-wrap items-center gap-2">
-              <details className="group relative">
-                <summary className="flex h-9 cursor-pointer list-none items-center gap-2 rounded border border-[#c3c6d7] bg-[#f9f9ff] px-3 text-sm font-medium text-ink hover:border-primary">
-                  Documents
-                  <span className="text-xs text-subtle">
-                    {selectedDocumentIds.length > 0 ? `${selectedDocumentIds.length} selected` : "All ready"}
-                  </span>
-                </summary>
-                <div className="absolute bottom-11 left-0 z-20 w-80 rounded border border-[#c3c6d7] bg-white p-3 shadow-lg">
-                  <div className="mb-2 flex items-center justify-between">
-                    <p className="text-sm font-semibold text-ink">Choose context</p>
-                    {selectedDocumentIds.length > 0 ? (
-                      <button className="text-xs font-semibold text-primary hover:underline" type="button" onClick={() => setSelectedDocumentIds([])}>
-                        Use all
-                      </button>
-                    ) : null}
+        <div className="sticky bottom-0 border-t border-[#dce2f3] bg-[#f9f9ff] py-4">
+          <AIInputWithLoading
+            id="chat-question"
+            placeholder="Ask Contexta about your documents..."
+            disabled={isLoading}
+            isLoading={isSending}
+            onSubmit={handleSubmit}
+            initialValue={question}
+            helperText={isSending ? "AI is thinking..." : "Ready to submit"}
+            leadingContent={
+              <>
+                <details className="group relative">
+                  <summary className="flex h-9 cursor-pointer list-none items-center gap-2 rounded border border-[#c3c6d7] bg-[#f9f9ff] px-3 text-sm font-medium text-ink hover:border-primary">
+                    Documents
+                    <span className="text-xs text-subtle">
+                      {selectedDocumentIds.length > 0 ? `${selectedDocumentIds.length} selected` : "All ready"}
+                    </span>
+                  </summary>
+                  <div className="absolute bottom-11 left-0 z-20 w-80 rounded border border-[#c3c6d7] bg-white p-3 shadow-lg">
+                    <div className="mb-2 flex items-center justify-between">
+                      <p className="text-sm font-semibold text-ink">Choose context</p>
+                      {selectedDocumentIds.length > 0 ? (
+                        <button className="text-xs font-semibold text-primary hover:underline" type="button" onClick={() => setSelectedDocumentIds([])}>
+                          Use all
+                        </button>
+                      ) : null}
+                    </div>
+                    <div className="max-h-56 space-y-2 overflow-y-auto">
+                      {readyDocuments.length > 0 ? (
+                        readyDocuments.map((document) => {
+                          const isSelected = selectedDocumentIds.includes(document.id);
+                          return (
+                            <label key={document.id} className="flex cursor-pointer items-start gap-2 rounded border border-[#dce2f3] px-3 py-2 text-sm hover:border-primary">
+                              <input className="mt-1 h-4 w-4" type="checkbox" checked={isSelected} onChange={() => toggleDocument(document.id)} />
+                              <span className="min-w-0">
+                                <span className="block truncate font-medium text-ink">{document.filename}</span>
+                                <span className="block text-xs text-subtle">{document.chunk_count} chunks</span>
+                              </span>
+                            </label>
+                          );
+                        })
+                      ) : (
+                        <p className="rounded bg-muted p-3 text-xs leading-5 text-subtle">No ready documents yet.</p>
+                      )}
+                    </div>
                   </div>
-                  <div className="max-h-56 space-y-2 overflow-y-auto">
-                    {readyDocuments.length > 0 ? (
-                      readyDocuments.map((document) => {
-                        const isSelected = selectedDocumentIds.includes(document.id);
-                        return (
-                          <label key={document.id} className="flex cursor-pointer items-start gap-2 rounded border border-[#dce2f3] px-3 py-2 text-sm hover:border-primary">
-                            <input className="mt-1 h-4 w-4" type="checkbox" checked={isSelected} onChange={() => toggleDocument(document.id)} />
-                            <span className="min-w-0">
-                              <span className="block truncate font-medium text-ink">{document.filename}</span>
-                              <span className="block text-xs text-subtle">{document.chunk_count} chunks</span>
-                            </span>
-                          </label>
-                        );
-                      })
-                    ) : (
-                      <p className="rounded bg-muted p-3 text-xs leading-5 text-subtle">No ready documents yet.</p>
-                    )}
-                  </div>
-                </div>
-              </details>
-              <span className="min-w-0 truncate text-xs text-subtle">{chatScopeLabel}</span>
-            </div>
-            <div className="flex gap-2">
-              <label className="sr-only" htmlFor="chat-question">
-                Ask Contexta about your documents
-              </label>
-              <input
-                id="chat-question"
-                className="h-11 min-w-0 flex-1 rounded border border-transparent px-3 text-sm outline-none transition focus:border-primary"
-                placeholder="Ask Contexta about your documents..."
-                value={question}
-                disabled={isSending || isLoading}
-                onChange={(event) => setQuestion(event.target.value)}
-              />
-              <Button className="h-11 px-5" disabled={isSending || isLoading || !question.trim()} type="submit">
-                {isSending ? "Thinking..." : "Send"}
-              </Button>
-            </div>
-          </div>
-        </form>
+                </details>
+                <span className="min-w-0 truncate text-xs text-subtle">{chatScopeLabel}</span>
+              </>
+            }
+          />
+        </div>
       </section>
 
       {isSourcesOpen ? (
