@@ -30,6 +30,7 @@ export function ChatWorkspace() {
   const [citations, setCitations] = useState<ChatCitation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [isSourcesOpen, setIsSourcesOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const getAccessToken = useCallback(async () => {
@@ -49,6 +50,7 @@ export function ChatWorkspace() {
       setMessages(loadedMessages);
       const latestAssistant = [...loadedMessages].reverse().find((message) => message.role === "assistant");
       setCitations(latestAssistant?.citations ?? []);
+      setIsSourcesOpen((latestAssistant?.citations ?? []).length > 0);
     },
     [getAccessToken]
   );
@@ -185,6 +187,7 @@ export function ChatWorkspace() {
         { role: "assistant", content: response.answer, citations: response.citations }
       ]);
       setCitations(response.citations);
+      setIsSourcesOpen(response.citations.length > 0);
       setSessions(await listChatSessions(accessToken));
     } catch (chatError) {
       setError(chatError instanceof Error ? chatError.message : "Unable to answer question.");
@@ -209,170 +212,187 @@ export function ChatWorkspace() {
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)_360px]">
-      <aside className="rounded-contexta border border-border bg-white p-4">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="font-heading text-lg font-semibold">History</h2>
-          <Button disabled={isLoading || isSending} onClick={() => void handleNewChat()} variant="secondary">
-            New chat
-          </Button>
-        </div>
-        <div className="mt-3 space-y-2">
-          {sessions.map((session) => (
-            <button
-              key={session.id}
-              className={`w-full rounded border px-3 py-2 text-left text-sm transition ${
-                session.id === activeSessionId
-                  ? "border-primary bg-blue-50 text-primary"
-                  : "border-border bg-white text-ink hover:border-primary"
-              }`}
-              type="button"
-              onClick={() => void handleSelectSession(session.id)}
-            >
-              <span className="block truncate">{session.title}</span>
-            </button>
-          ))}
-        </div>
-
-        <div className="mt-5 border-t border-border pt-4">
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold text-ink">Documents in chat</h3>
-            {selectedDocumentIds.length > 0 ? (
-              <button className="text-xs font-medium text-primary hover:underline" type="button" onClick={() => setSelectedDocumentIds([])}>
-                All
-              </button>
+    <div className="relative min-h-[calc(100vh-120px)]">
+      <section className="mx-auto flex min-h-[calc(100vh-132px)] w-full max-w-4xl flex-col">
+        <div className="mb-4 flex flex-col gap-3 border-b border-[#dce2f3] pb-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Ask about</p>
+            <p className="mt-1 truncate text-sm font-medium text-ink">{chatScopeLabel}</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {sessions.length > 0 ? (
+              <select
+                className="h-9 rounded border border-[#c3c6d7] bg-white px-3 text-sm text-ink outline-none transition focus:border-primary"
+                value={activeSessionId ?? ""}
+                disabled={isLoading || isSending}
+                onChange={(event) => void handleSelectSession(event.target.value)}
+                aria-label="Chat history"
+              >
+                {sessions.map((session) => (
+                  <option key={session.id} value={session.id}>
+                    {session.title}
+                  </option>
+                ))}
+              </select>
             ) : null}
-          </div>
-          <p className="mt-1 text-xs leading-5 text-subtle">Select documents to narrow the answer scope.</p>
-          <div className="mt-3 space-y-2">
-            {readyDocuments.length > 0 ? (
-              readyDocuments.map((document) => {
-                const isSelected = selectedDocumentIds.includes(document.id);
-                return (
-                  <label
-                    key={document.id}
-                    className={`flex cursor-pointer items-start gap-2 rounded border px-3 py-2 text-sm transition ${
-                      isSelected ? "border-primary bg-blue-50 text-primary" : "border-border bg-white text-ink hover:border-primary"
-                    }`}
-                  >
-                    <input
-                      className="mt-1 h-4 w-4 rounded border-border text-primary"
-                      checked={isSelected}
-                      type="checkbox"
-                      onChange={() => toggleDocument(document.id)}
-                    />
-                    <span className="min-w-0">
-                      <span className="block truncate font-medium">{document.filename}</span>
-                      <span className="block text-xs text-subtle">{document.chunk_count} chunks</span>
-                    </span>
-                  </label>
-                );
-              })
-            ) : (
-              <p className="rounded border border-border bg-muted p-3 text-xs leading-5 text-subtle">
-                No ready documents yet. Upload and wait until processing finishes.
-              </p>
-            )}
+            <Button disabled={isLoading || isSending} onClick={() => void handleNewChat()} variant="secondary">
+              New chat
+            </Button>
+            <Button onClick={() => setIsSourcesOpen(true)} type="button" variant="secondary">
+              Sources {citations.length > 0 ? `(${citations.length})` : ""}
+            </Button>
           </div>
         </div>
-      </aside>
 
-      <section className="flex min-h-[560px] flex-col rounded-contexta border border-border bg-white p-5">
-        <div className="mb-4 rounded border border-blue-200 bg-blue-50 px-4 py-3">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Chat scope</p>
-              <p className="mt-1 truncate text-sm font-medium text-ink">{chatScopeLabel}</p>
-            </div>
-            <Link className="text-xs font-semibold text-primary hover:underline" href="/documents">
-              Manage documents
-            </Link>
-          </div>
-          {selectedDocuments.length > 0 ? (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {selectedDocuments.map((document) => (
-                <button
-                  key={document.id}
-                  className="inline-flex max-w-full items-center gap-2 rounded border border-blue-200 bg-white px-2.5 py-1 text-xs font-medium text-primary"
-                  type="button"
-                  onClick={() => toggleDocument(document.id)}
-                  title="Remove from chat scope"
-                >
-                  <span className="max-w-[220px] truncate">{document.filename}</span>
-                  <span aria-hidden="true">x</span>
-                </button>
-              ))}
-            </div>
-          ) : null}
-        </div>
-        <div className="space-y-3">
+        <div className="flex-1 space-y-6 overflow-y-auto pb-6">
           {isLoading ? <p className="text-sm text-subtle">Loading chat...</p> : null}
           {!isLoading && messages.length === 0 ? (
-            <div className="max-w-[85%] rounded-contexta border border-border bg-muted px-4 py-3 text-sm leading-6 text-ink">
-              Ask a question once your documents are ready.
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-white" aria-hidden="true">
+                AI
+              </div>
+              <div className="max-w-[80%] rounded border border-[#dce2f3] bg-white px-4 py-3 text-sm leading-6 text-ink">
+                Pilih dokumen di bawah, lalu tanya apa yang ingin kamu pahami.
+              </div>
             </div>
           ) : null}
           {messages.map((message, index) => (
             <div
               key={`${message.role}-${index}`}
-              className={`max-w-[85%] rounded-contexta border px-4 py-3 text-sm leading-6 ${
-                message.role === "user"
-                  ? "ml-auto border-primary bg-primary text-white"
-                  : "border-border bg-muted text-ink"
-              }`}
+              className={`flex items-start gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
             >
-              {message.content}
+              {message.role === "assistant" ? (
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-white" aria-hidden="true">
+                  AI
+                </div>
+              ) : null}
+              <div
+                className={`max-w-[78%] rounded border px-4 py-3 text-sm leading-6 ${
+                  message.role === "user"
+                    ? "border-primary bg-primary text-white"
+                    : "border-[#dce2f3] bg-white text-ink"
+                }`}
+              >
+                {message.content}
+              </div>
+              {message.role === "user" ? (
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-[#dce2f3] text-xs font-bold text-ink" aria-hidden="true">
+                  CT
+                </div>
+              ) : null}
             </div>
           ))}
-          {error ? <p className="text-sm text-red-700">{error}</p> : null}
+          {error ? <p className="rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
         </div>
 
-        <form className="mt-auto flex flex-col gap-2 pt-4 sm:flex-row" onSubmit={handleSubmit}>
-          {selectedDocumentIds.length > 0 ? (
-            <p className="rounded border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700 sm:mr-2 sm:self-center">
-              Asking {selectedDocumentIds.length} selected document{selectedDocumentIds.length === 1 ? "" : "s"}
-            </p>
-          ) : null}
-          <label className="sr-only" htmlFor="chat-question">
-            Ask Contexta about your documents
-          </label>
-          <input
-            id="chat-question"
-            className="h-10 min-w-0 flex-1 rounded border border-border px-3 text-sm outline-none transition focus:border-primary"
-            placeholder="Ask Contexta about your documents..."
-            value={question}
-            disabled={isSending || isLoading}
-            onChange={(event) => setQuestion(event.target.value)}
-          />
-          <Button className="w-full sm:w-auto" disabled={isSending || isLoading || !question.trim()} type="submit">
-            {isSending ? "Thinking..." : "Send"}
-          </Button>
+        <form className="sticky bottom-0 border-t border-[#dce2f3] bg-[#f9f9ff] py-4" onSubmit={handleSubmit}>
+          <div className="rounded-lg border border-[#c3c6d7] bg-white p-3 shadow-sm">
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <details className="group relative">
+                <summary className="flex h-9 cursor-pointer list-none items-center gap-2 rounded border border-[#c3c6d7] bg-[#f9f9ff] px-3 text-sm font-medium text-ink hover:border-primary">
+                  Documents
+                  <span className="text-xs text-subtle">
+                    {selectedDocumentIds.length > 0 ? `${selectedDocumentIds.length} selected` : "All ready"}
+                  </span>
+                </summary>
+                <div className="absolute bottom-11 left-0 z-20 w-80 rounded border border-[#c3c6d7] bg-white p-3 shadow-lg">
+                  <div className="mb-2 flex items-center justify-between">
+                    <p className="text-sm font-semibold text-ink">Choose context</p>
+                    {selectedDocumentIds.length > 0 ? (
+                      <button className="text-xs font-semibold text-primary hover:underline" type="button" onClick={() => setSelectedDocumentIds([])}>
+                        Use all
+                      </button>
+                    ) : null}
+                  </div>
+                  <div className="max-h-56 space-y-2 overflow-y-auto">
+                    {readyDocuments.length > 0 ? (
+                      readyDocuments.map((document) => {
+                        const isSelected = selectedDocumentIds.includes(document.id);
+                        return (
+                          <label key={document.id} className="flex cursor-pointer items-start gap-2 rounded border border-[#dce2f3] px-3 py-2 text-sm hover:border-primary">
+                            <input className="mt-1 h-4 w-4" type="checkbox" checked={isSelected} onChange={() => toggleDocument(document.id)} />
+                            <span className="min-w-0">
+                              <span className="block truncate font-medium text-ink">{document.filename}</span>
+                              <span className="block text-xs text-subtle">{document.chunk_count} chunks</span>
+                            </span>
+                          </label>
+                        );
+                      })
+                    ) : (
+                      <p className="rounded bg-muted p-3 text-xs leading-5 text-subtle">No ready documents yet.</p>
+                    )}
+                  </div>
+                </div>
+              </details>
+              <span className="min-w-0 truncate text-xs text-subtle">{chatScopeLabel}</span>
+            </div>
+            <div className="flex gap-2">
+              <label className="sr-only" htmlFor="chat-question">
+                Ask Contexta about your documents
+              </label>
+              <input
+                id="chat-question"
+                className="h-11 min-w-0 flex-1 rounded border border-transparent px-3 text-sm outline-none transition focus:border-primary"
+                placeholder="Ask Contexta about your documents..."
+                value={question}
+                disabled={isSending || isLoading}
+                onChange={(event) => setQuestion(event.target.value)}
+              />
+              <Button className="h-11 px-5" disabled={isSending || isLoading || !question.trim()} type="submit">
+                {isSending ? "Thinking..." : "Send"}
+              </Button>
+            </div>
+          </div>
         </form>
       </section>
 
-      <aside className="rounded-contexta border border-border bg-white p-5">
-        <h2 className="font-heading text-lg font-semibold">Sources</h2>
-        {citations.length > 0 ? (
-          <div className="mt-4 space-y-3">
-            {citations.map((citation) => (
-              <article key={`${citation.document_id}-${citation.chunk_index}`} className="rounded border border-border p-3">
-                <div className="flex items-start justify-between gap-2">
-                  <Link className="min-w-0 truncate text-sm font-medium text-primary hover:underline" href={`/documents/${citation.document_id}`}>
-                    {citation.document_name}
-                  </Link>
-                  <span className="shrink-0 text-xs text-subtle">#{citation.source_number}</span>
-                </div>
-                <p className="mt-1 text-xs text-subtle">
-                  {citation.page_number ? `Page ${citation.page_number}` : "Page unknown"} - Score{" "}
-                  {citation.score.toFixed(2)}
-                </p>
-                <p className="mt-2 line-clamp-5 text-sm leading-5 text-subtle">{citation.text}</p>
-              </article>
-            ))}
+      {isSourcesOpen ? (
+        <button
+          className="fixed inset-0 z-30 bg-black/10 lg:hidden"
+          type="button"
+          aria-label="Close source drawer overlay"
+          onClick={() => setIsSourcesOpen(false)}
+        />
+      ) : null}
+      <aside
+        className={`fixed bottom-0 right-0 top-0 z-40 w-full max-w-md border-l border-[#c3c6d7] bg-white shadow-xl transition-transform duration-200 ${
+          isSourcesOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+        aria-label="Source drawer"
+      >
+        <div className="flex h-full flex-col">
+          <div className="flex items-center justify-between border-b border-[#c3c6d7] px-5 py-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Source drawer</p>
+              <h2 className="font-heading text-xl font-semibold text-ink">Sources</h2>
+            </div>
+            <button className="rounded border border-[#c3c6d7] px-3 py-1.5 text-sm font-semibold hover:border-primary" type="button" onClick={() => setIsSourcesOpen(false)}>
+              Close
+            </button>
           </div>
-        ) : (
-          <p className="mt-2 text-sm text-subtle">Citations and context snippets will appear here.</p>
-        )}
+          <div className="flex-1 overflow-y-auto p-5">
+            {citations.length > 0 ? (
+              <div className="space-y-3">
+                {citations.map((citation) => (
+                  <article key={`${citation.document_id}-${citation.chunk_index}`} className="rounded border border-[#dce2f3] p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <Link className="min-w-0 truncate text-sm font-medium text-primary hover:underline" href={`/documents/${citation.document_id}`}>
+                        {citation.document_name}
+                      </Link>
+                      <span className="shrink-0 rounded bg-[#dbe1ff] px-2 py-0.5 text-xs font-semibold text-primary">#{citation.source_number}</span>
+                    </div>
+                    <p className="mt-1 text-xs text-subtle">
+                      {citation.page_number ? `Page ${citation.page_number}` : "Page unknown"} - Score {citation.score.toFixed(2)}
+                    </p>
+                    <p className="mt-2 line-clamp-6 text-sm leading-5 text-subtle">{citation.text}</p>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-subtle">Citations and context snippets will appear here after an answer.</p>
+            )}
+          </div>
+        </div>
       </aside>
     </div>
   );
