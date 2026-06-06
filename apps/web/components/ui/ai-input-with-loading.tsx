@@ -13,6 +13,7 @@ interface AIInputWithLoadingProps {
   minHeight?: number;
   maxHeight?: number;
   onSubmit?: (value: string) => void | Promise<void>;
+  onCancel?: () => void;
   className?: string;
   disabled?: boolean;
   isLoading?: boolean;
@@ -27,6 +28,7 @@ export function AIInputWithLoading({
   minHeight = 56,
   maxHeight = 200,
   onSubmit,
+  onCancel,
   className,
   disabled = false,
   isLoading = false,
@@ -86,16 +88,29 @@ export function AIInputWithLoading({
             disabled={disabled || isLoading}
           />
           <button
-            onClick={() => void handleSubmit()}
+            onClick={() => {
+              if (isLoading) {
+                onCancel?.();
+                return;
+              }
+              void handleSubmit();
+            }}
             className={cn(
               "absolute right-3 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-xl transition",
-              inputValue.trim() && !disabled && !isLoading ? "bg-black/5 text-ink" : "bg-transparent text-subtle"
+              isLoading || (inputValue.trim() && !disabled) ? "bg-black/5 text-ink" : "bg-transparent text-subtle"
             )}
             type="button"
-            disabled={disabled || isLoading || !inputValue.trim()}
-            aria-label="Send message"
+            disabled={disabled || (!isLoading && !inputValue.trim())}
+            aria-label={isLoading ? "Cancel response" : "Send message"}
           >
-            <CornerRightUp className={cn("size-4 transition-opacity", inputValue.trim() ? "opacity-100" : "opacity-30")} />
+            {isLoading ? (
+              <div
+                className="size-4 animate-spin rounded-sm bg-ink transition duration-700"
+                style={{ animationDuration: "3s" }}
+              />
+            ) : (
+              <CornerRightUp className={cn("size-4 transition-opacity", inputValue.trim() ? "opacity-100" : "opacity-30")} />
+            )}
           </button>
         </div>
         {helperText ? <p className="px-4 text-xs text-subtle">{helperText}</p> : null}

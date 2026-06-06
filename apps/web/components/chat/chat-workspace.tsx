@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   createChatSession,
   listDocuments,
@@ -24,7 +24,7 @@ type VisibleMessage = Pick<ChatMessage, "role" | "content" | "citations">;
 export function ChatWorkspace() {
   const searchParams = useSearchParams();
   const [question, setQuestion] = useState("");
-  const [selectedDocumentIds, setSelectedDocumentIds] = useState<string[]>([]);
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -34,6 +34,7 @@ export function ChatWorkspace() {
   const [isSending, setIsSending] = useState(false);
   const [isSourcesOpen, setIsSourcesOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const activeRequestRef = useRef<AbortController | null>(null);
 
   const getAccessToken = useCallback(async () => {
     const supabase = createSupabaseBrowserClient();
@@ -109,8 +110,18 @@ export function ChatWorkspace() {
     if (suggestedQuestion) {
       setQuestion(suggestedQuestion);
     }
-    setSelectedDocumentIds(documentId ? [documentId] : []);
+    if (documentId) {
+      setSelectedDocumentId(documentId);
+    }
   }, [searchParams]);
+
+  useEffect(() => {
+    const readyDocuments = documents.filter((document) => document.status === "ready");
+    if (selectedDocumentId && readyDocuments.some((document) => document.id === selectedDocumentId)) {
+      return;
+    }
+    setSelectedDocumentId(readyDocuments[0]?.id ?? null);
+  }, [documents, selectedDocumentId]);
 
   const handleSelectSession = async (sessionId: string) => {
     if (sessionId === activeSessionId) {
@@ -146,7 +157,6 @@ export function ChatWorkspace() {
       setMessages([]);
       setCitations([]);
       setQuestion("");
-      setSelectedDocumentIds([]);
     } catch (chatError) {
       setError(chatError instanceof Error ? chatError.message : "Unable to create a new chat.");
     } finally {
@@ -163,6 +173,8 @@ export function ChatWorkspace() {
     setError(null);
     setIsSending(true);
     setQuestion("");
+    const abortController = new AbortController();
+    activeRequestRef.current = abortController;
     setMessages((current) => [
       ...current,
       { role: "user", content: trimmedQuestion, citations: [] }
@@ -182,7 +194,11 @@ export function ChatWorkspace() {
         setActiveSessionId(sessionId);
       }
 
-      const response = await sendChatMessage(accessToken, sessionId, trimmedQuestion, selectedDocumentIds.length > 0 ? selectedDocumentIds : undefined);
+      if (!selectedDocumentId) {
+        throw new Error("Please choose one ready document before asking.");
+      }
+
+      const response = await sendChatMessage(accessToken, sessionId, trimmedQuestion, [selectedDocumentId], abortController.signal);
       setMessages((current) => [
         ...current,
         { role: "assistant", content: response.answer, citations: response.citations }
@@ -191,25 +207,27 @@ export function ChatWorkspace() {
       setIsSourcesOpen(response.citations.length > 0);
       setSessions(await listChatSessions(accessToken));
     } catch (chatError) {
-      setError(chatError instanceof Error ? chatError.message : "Unable to answer question.");
+      const message = chatError instanceof Error ? chatError.message : "Unable to answer question.";
+      if (message === "Request canceled.") {
+        setMessages((current) => [
+          ...current,
+          { role: "assistant", content: "Jawaban dibatalkan.", citations: [] }
+        ]);
+      } else {
+        setError(message);
+      }
     } finally {
+      activeRequestRef.current = null;
       setIsSending(false);
     }
   };
 
   const readyDocuments = documents.filter((document) => document.status === "ready");
-  const selectedDocuments = readyDocuments.filter((document) => selectedDocumentIds.includes(document.id));
-  const chatScopeLabel =
-    selectedDocuments.length === 0
-      ? `All ready documents (${readyDocuments.length})`
-      : selectedDocuments.map((document) => document.filename).join(", ");
+  const selectedDocument = readyDocuments.find((document) => document.id === selectedDocumentId) ?? null;
+  const chatScopeLabel = selectedDocument?.filename ?? "Choose one ready document";
 
-  function toggleDocument(documentId: string) {
-    setSelectedDocumentIds((current) =>
-      current.includes(documentId)
-        ? current.filter((currentDocumentId) => currentDocumentId !== documentId)
-        : [...current, documentId]
-    );
+  function cancelActiveResponse() {
+    activeRequestRef.current?.abort();
   }
 
   return (
@@ -303,46 +321,28 @@ export function ChatWorkspace() {
             disabled={isLoading}
             isLoading={isSending}
             onSubmit={handleSubmit}
+            onCancel={cancelActiveResponse}
             initialValue={question}
-            helperText={isSending ? "AI is thinking..." : "Ready to submit"}
+            helperText={isSending ? "AI is thinking... click the spinning square to cancel." : "One chat conversation uses one selected document."}
             leadingContent={
               <>
-                <details className="group relative">
-                  <summary className="flex h-9 cursor-pointer list-none items-center gap-2 rounded border border-[#c3c6d7] bg-[#f9f9ff] px-3 text-sm font-medium text-ink hover:border-primary">
-                    Documents
-                    <span className="text-xs text-subtle">
-                      {selectedDocumentIds.length > 0 ? `${selectedDocumentIds.length} selected` : "All ready"}
-                    </span>
-                  </summary>
-                  <div className="absolute bottom-11 left-0 z-20 w-80 rounded border border-[#c3c6d7] bg-white p-3 shadow-lg">
-                    <div className="mb-2 flex items-center justify-between">
-                      <p className="text-sm font-semibold text-ink">Choose context</p>
-                      {selectedDocumentIds.length > 0 ? (
-                        <button className="text-xs font-semibold text-primary hover:underline" type="button" onClick={() => setSelectedDocumentIds([])}>
-                          Use all
-                        </button>
-                      ) : null}
-                    </div>
-                    <div className="max-h-56 space-y-2 overflow-y-auto">
-                      {readyDocuments.length > 0 ? (
-                        readyDocuments.map((document) => {
-                          const isSelected = selectedDocumentIds.includes(document.id);
-                          return (
-                            <label key={document.id} className="flex cursor-pointer items-start gap-2 rounded border border-[#dce2f3] px-3 py-2 text-sm hover:border-primary">
-                              <input className="mt-1 h-4 w-4" type="checkbox" checked={isSelected} onChange={() => toggleDocument(document.id)} />
-                              <span className="min-w-0">
-                                <span className="block truncate font-medium text-ink">{document.filename}</span>
-                                <span className="block text-xs text-subtle">{document.chunk_count} chunks</span>
-                              </span>
-                            </label>
-                          );
-                        })
-                      ) : (
-                        <p className="rounded bg-muted p-3 text-xs leading-5 text-subtle">No ready documents yet.</p>
-                      )}
-                    </div>
-                  </div>
-                </details>
+                <label className="sr-only" htmlFor="chat-document">
+                  Chat document
+                </label>
+                <select
+                  id="chat-document"
+                  className="h-9 max-w-full rounded border border-[#c3c6d7] bg-[#f9f9ff] px-3 text-sm font-medium text-ink outline-none transition focus:border-primary"
+                  value={selectedDocumentId ?? ""}
+                  disabled={isSending || readyDocuments.length === 0}
+                  onChange={(event) => setSelectedDocumentId(event.target.value || null)}
+                >
+                  {readyDocuments.length === 0 ? <option value="">No ready documents</option> : null}
+                  {readyDocuments.map((document) => (
+                    <option key={document.id} value={document.id}>
+                      {document.filename}
+                    </option>
+                  ))}
+                </select>
                 <span className="min-w-0 truncate text-xs text-subtle">{chatScopeLabel}</span>
               </>
             }

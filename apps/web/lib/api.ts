@@ -101,6 +101,19 @@ function apiBaseUrls() {
 async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}, timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS) {
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+  const requestSignal = init.signal;
+
+  function handleRequestAbort() {
+    controller.abort();
+  }
+
+  if (requestSignal) {
+    if (requestSignal.aborted) {
+      controller.abort();
+    } else {
+      requestSignal.addEventListener("abort", handleRequestAbort, { once: true });
+    }
+  }
 
   try {
     return await fetch(input, {
@@ -109,11 +122,12 @@ async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
-      throw new Error("Request timed out. Please try again.");
+      throw new Error(requestSignal?.aborted ? "Request canceled." : "Request timed out. Please try again.");
     }
     throw error;
   } finally {
     window.clearTimeout(timeoutId);
+    requestSignal?.removeEventListener("abort", handleRequestAbort);
   }
 }
 
@@ -336,14 +350,15 @@ export async function listChatMessages(accessToken: string, sessionId: string) {
   return (await response.json()) as ChatMessage[];
 }
 
-export async function sendChatMessage(accessToken: string, sessionId: string, question: string, documentIds?: string[]) {
+export async function sendChatMessage(accessToken: string, sessionId: string, question: string, documentIds?: string[], signal?: AbortSignal) {
   const response = await fetchApi(`/chat/sessions/${sessionId}/messages`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({ question, document_ids: documentIds })
+    body: JSON.stringify({ question, document_ids: documentIds }),
+    signal
   }, CHAT_ANSWER_TIMEOUT_MS);
 
   if (!response.ok) {
