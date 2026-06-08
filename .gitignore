@@ -2,6 +2,7 @@
 .env.*
 !.env.example
 !*.env.example
+!.env.production.example
 
 # Local planning/design drafts that are not required to run Contexta
 01_PRD.md

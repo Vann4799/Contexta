@@ -1,0 +1,71 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: contexta-api
+    restart: unless-stopped
+    env_file:
+      - ${CONTEXTA_ENV_FILE:-.env.production}
+    environment:
+      ENVIRONMENT: production
+      PORT: 8001
+      QDRANT_URL: http://qdrant:6333
+    expose:
+      - "8001"
+    depends_on:
+      qdrant:
+        condition: service_started
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    container_name: contexta-worker
+    restart: unless-stopped
+    env_file:
+      - ${CONTEXTA_ENV_FILE:-.env.production}
+    environment:
+      ENVIRONMENT: production
+      QDRANT_URL: http://qdrant:6333
+      WORKER_POLL_INTERVAL: 5
+    depends_on:
+      qdrant:
+        condition: service_started
+
+  qdrant:
+    image: qdrant/qdrant:v1.12.6
+    container_name: contexta-qdrant
+    restart: unless-stopped
+    env_file:
+      - ${CONTEXTA_ENV_FILE:-.env.production}
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    environment:
+      QDRANT__SERVICE__HTTP_PORT: 6333
+      QDRANT__SERVICE__GRPC_PORT: 6334
+    expose:
+      - "6333"
+      - "6334"
+
+  caddy:
+    image: caddy:2.8-alpine
+    container_name: contexta-caddy
+    restart: unless-stopped
+    env_file:
+      - ${CONTEXTA_ENV_FILE:-.env.production}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/vps/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_started
+
+volumes:
+  qdrant_storage:
+  caddy_data:
+  caddy_config:

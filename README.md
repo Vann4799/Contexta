@@ -30,6 +30,8 @@ See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) before publishing or deploying. The
 - Supabase hosted Auth/Database/Storage.
 - Qdrant Cloud or a private Qdrant service.
 
+For a VPS-based Docker deployment, use [docs/VPS_DEPLOYMENT.md](docs/VPS_DEPLOYMENT.md).
+
 Never commit real `.env` files or API keys.
 
 ## Local Infrastructure
