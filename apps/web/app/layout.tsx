@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { AuthCallbackForwarder } from "@/components/auth/auth-callback-forwarder";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -21,7 +22,10 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
         {/* eslint-disable-next-line @next/next/no-css-tags */}
         <link rel="stylesheet" href="/contexta.css" />
       </head>
-      <body>{children}</body>
+      <body>
+        <AuthCallbackForwarder />
+        {children}
+      </body>
     </html>
   );
 }
