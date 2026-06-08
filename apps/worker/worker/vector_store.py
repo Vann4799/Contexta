@@ -22,11 +22,13 @@ class QdrantVectorStore:
         qdrant_url: str,
         collection_name: str,
         dimensions: int,
+        api_key: str = "",
         client: httpx.Client | None = None,
     ) -> None:
         self._qdrant_url = qdrant_url.rstrip("/")
         self._collection_name = collection_name
         self._dimensions = dimensions
+        self._headers = {"api-key": api_key} if api_key else None
         self._client = client or httpx.Client(timeout=30)
         self._collection_checked = False
 
@@ -56,6 +58,7 @@ class QdrantVectorStore:
 
         response = self._client.put(
             f"{self._qdrant_url}/collections/{self._collection_name}/points",
+            headers=self._headers,
             json={"points": points},
         )
         response.raise_for_status()
@@ -74,11 +77,13 @@ class QdrantVectorStore:
             return
 
         response = self._client.get(
-            f"{self._qdrant_url}/collections/{self._collection_name}"
+            f"{self._qdrant_url}/collections/{self._collection_name}",
+            headers=self._headers,
         )
         if response.status_code == 404:
             create_response = self._client.put(
                 f"{self._qdrant_url}/collections/{self._collection_name}",
+                headers=self._headers,
                 json={
                     "vectors": {
                         "size": self._dimensions,

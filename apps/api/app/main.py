@@ -30,7 +30,7 @@ async def health() -> dict[str, str]:
 @app.get("/health/vector")
 async def vector_health(response: Response) -> dict[str, str]:
     settings = get_settings()
-    health_status = await check_qdrant_health(settings.qdrant_url)
+    health_status = await check_qdrant_health(settings.qdrant_url, settings.qdrant_api_key)
 
     if health_status["status"] == "unavailable":
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE

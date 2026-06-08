@@ -90,7 +90,7 @@ export type ChatSessionMessageResponse = ChatQueryResponse & {
 };
 
 export function apiBaseUrl() {
-  return process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+  return process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8001";
 }
 
 const DEFAULT_REQUEST_TIMEOUT_MS = 15000;

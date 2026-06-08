@@ -117,6 +117,7 @@ def get_retriever(
             model_name=settings.embedding_model_name,
             device=settings.embedding_device or None,
         ),
+        api_key=settings.qdrant_api_key,
     )
 
 

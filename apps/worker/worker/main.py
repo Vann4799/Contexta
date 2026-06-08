@@ -39,6 +39,7 @@ def create_processor() -> WorkerProcessor:
     service_role_key = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
     bucket = os.environ.get("SUPABASE_STORAGE_BUCKET", "contexta-documents")
     qdrant_url = os.environ.get("QDRANT_URL", "http://localhost:6333")
+    qdrant_api_key = os.environ.get("QDRANT_API_KEY", "")
     collection_name = os.environ.get("QDRANT_COLLECTION", "contexta_chunks")
     embedding_provider = os.environ.get("EMBEDDING_PROVIDER", "deterministic")
     embedding_model_name = os.environ.get("EMBEDDING_MODEL_NAME", "BAAI/bge-m3")
@@ -59,6 +60,7 @@ def create_processor() -> WorkerProcessor:
             qdrant_url=qdrant_url,
             collection_name=collection_name,
             dimensions=embedding_dimensions,
+            api_key=qdrant_api_key,
         ),
     )
 

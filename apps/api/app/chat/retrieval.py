@@ -27,11 +27,13 @@ class QdrantRetriever:
         qdrant_url: str,
         collection_name: str,
         embedding_provider: EmbeddingProvider,
+        api_key: str = "",
         client: httpx.Client | None = None,
     ) -> None:
         self._qdrant_url = qdrant_url.rstrip("/")
         self._collection_name = collection_name
         self._embedding_provider = embedding_provider
+        self._headers = {"api-key": api_key} if api_key else None
         self._client = client or httpx.Client(timeout=30)
 
     def retrieve(
@@ -52,6 +54,7 @@ class QdrantRetriever:
 
         response = self._client.post(
             f"{self._qdrant_url}/collections/{self._collection_name}/points/search",
+            headers=self._headers,
             json={
                 "vector": query_vector,
                 "limit": top_k,

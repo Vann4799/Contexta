@@ -6,6 +6,7 @@ from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, Settings
 class Settings(BaseSettings):
     environment: str = "development"
     qdrant_url: str = "http://localhost:6333"
+    qdrant_api_key: str = ""
     qdrant_collection: str = "contexta_chunks"
     supabase_url: str = ""
     supabase_anon_key: str = ""

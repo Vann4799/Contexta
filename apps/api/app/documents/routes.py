@@ -80,6 +80,7 @@ def get_document_vector_cleanup(
     return QdrantDocumentVectorCleanup(
         qdrant_url=settings.qdrant_url,
         collection_name=settings.qdrant_collection,
+        api_key=settings.qdrant_api_key,
     )
 
 

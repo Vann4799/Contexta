@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Bot, Database, FileUp, HardDrive, KeyRound, Server, ShieldCheck, SlidersHorizontal } from "lucide-react";
 
 export default function SettingsPage() {
-  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8001";
   const runtimeItems = [
     { label: "API base URL", value: apiBaseUrl, icon: Server },
     { label: "Vector collection", value: "contexta_chunks", icon: Database },

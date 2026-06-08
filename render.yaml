@@ -1,0 +1,62 @@
+services:
+  - type: web
+    name: contexta-api
+    runtime: docker
+    dockerContext: .
+    dockerfilePath: ./apps/api/Dockerfile
+    healthCheckPath: /health
+    plan: starter
+    envVars:
+      - fromGroup: contexta-production
+      - key: PORT
+        value: 8001
+      - key: ENVIRONMENT
+        value: production
+
+  - type: worker
+    name: contexta-worker
+    runtime: docker
+    dockerContext: .
+    dockerfilePath: ./apps/worker/Dockerfile
+    plan: starter
+    numInstances: 1
+    envVars:
+      - fromGroup: contexta-production
+      - key: ENVIRONMENT
+        value: production
+      - key: WORKER_POLL_INTERVAL
+        value: 5
+
+envVarGroups:
+  - name: contexta-production
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_JWT_SECRET
+        sync: false
+      - key: SUPABASE_JWKS_URL
+        sync: false
+      - key: SUPABASE_STORAGE_BUCKET
+        value: contexta-documents
+      - key: QDRANT_URL
+        sync: false
+      - key: QDRANT_API_KEY
+        sync: false
+      - key: QDRANT_COLLECTION
+        value: contexta_chunks
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: DEEPSEEK_MODEL
+        value: deepseek-v4-pro
+      - key: DEEPSEEK_MAX_TOKENS
+        value: 3500
+      - key: EMBEDDING_PROVIDER
+        value: deterministic
+      - key: EMBEDDING_DIMENSIONS
+        value: 384
+      - key: API_CORS_ORIGINS
+        sync: false

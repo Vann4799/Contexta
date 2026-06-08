@@ -34,6 +34,7 @@ def test_qdrant_vector_store_creates_collection_and_upserts_chunks() -> None:
         qdrant_url="http://qdrant.local",
         collection_name="contexta_chunks",
         dimensions=2,
+        api_key="qdrant-key",
         client=httpx.Client(transport=httpx.MockTransport(handler)),
     )
 
@@ -59,6 +60,7 @@ def test_qdrant_vector_store_creates_collection_and_upserts_chunks() -> None:
 
     UUID(point_ids[0])
     assert [request.method for request in requests] == ["GET", "PUT", "PUT"]
+    assert all(request.headers["api-key"] == "qdrant-key" for request in requests)
     upsert_payload = json.loads(requests[2].content)
     assert upsert_payload["points"][0]["id"] == point_ids[0]
     assert upsert_payload["points"][0]["payload"]["text"] == "hello"

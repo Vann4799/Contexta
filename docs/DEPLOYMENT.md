@@ -5,12 +5,55 @@ This guide is for a first public MVP release. Keep Supabase service role keys, D
 ## Recommended First Release Topology
 
 - Web: Vercel, deployed from `apps/web`.
-- API: Render, Railway, Fly.io, or any Docker host using `apps/api/Dockerfile`.
-- Worker: a separate background worker service using `apps/worker/Dockerfile`.
+- API: Render Docker web service using `apps/api/Dockerfile`.
+- Worker: Render Docker background worker using `apps/worker/Dockerfile`.
 - Database/Auth/Storage: hosted Supabase.
 - Vector database: Qdrant Cloud or a private Qdrant container.
 
 Run only one worker instance for the first public release. The current worker is a polling worker and should not be horizontally scaled until row claiming is made atomic.
+
+## Vercel Web Deployment
+
+1. Import `https://github.com/Vann4799/Contexta` into Vercel.
+2. Set the Vercel project root directory to `apps/web`.
+3. Keep the framework preset as Next.js. `apps/web/vercel.json` sets `npm ci` and `npm run build`.
+4. Add these Vercel environment variables:
+
+```text
+NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<supabase anon key>
+NEXT_PUBLIC_API_BASE_URL=https://<render-api-domain>
+NEXT_PUBLIC_AUTH_CALLBACK_URL=https://<vercel-web-domain>/auth/callback
+```
+
+5. Deploy once. Copy the Vercel production domain.
+6. Add that domain to `API_CORS_ORIGINS` in Render.
+7. Add `https://<vercel-web-domain>/auth/callback` to Supabase Auth redirect URLs.
+
+## Render API and Worker Deployment
+
+`render.yaml` defines:
+
+- `contexta-api`: Docker web service, health checked at `/health`.
+- `contexta-worker`: Docker background worker, one instance only.
+- `contexta-production`: shared env group with secrets marked `sync: false`.
+
+Steps:
+
+1. In Render, create a new Blueprint from `https://github.com/Vann4799/Contexta`.
+2. Render will detect `render.yaml`.
+3. Fill every `sync: false` value in the `contexta-production` env group.
+4. Set `API_CORS_ORIGINS` to the deployed Vercel domain, for example:
+
+```text
+https://contexta.vercel.app
+```
+
+5. Deploy `contexta-api`.
+6. Deploy `contexta-worker`.
+7. Open `https://<render-api-domain>/health` and `https://<render-api-domain>/health/indexing`.
+
+If the Render API domain changes, update `NEXT_PUBLIC_API_BASE_URL` in Vercel and redeploy the web app.
 
 ## GitHub Publish Safety
 
@@ -25,7 +68,7 @@ These paths are ignored by `.gitignore` and `.dockerignore`.
 
 ## Production Environment Variables
 
-### API and Worker
+### API and Worker / Render Env Group
 
 Set these in the API service and worker service:
 
@@ -38,13 +81,14 @@ SUPABASE_JWT_SECRET=<legacy jwt secret, or set SUPABASE_JWKS_URL>
 SUPABASE_JWKS_URL=https://<project-ref>.supabase.co/auth/v1/.well-known/jwks.json
 SUPABASE_STORAGE_BUCKET=contexta-documents
 QDRANT_URL=https://<qdrant-host>
+QDRANT_API_KEY=<qdrant api key, blank only for private unauthenticated Qdrant>
 QDRANT_COLLECTION=contexta_chunks
 DEEPSEEK_API_KEY=<deepseek key>
 DEEPSEEK_MODEL=deepseek-v4-pro
 DEEPSEEK_MAX_TOKENS=3500
 EMBEDDING_PROVIDER=deterministic
 EMBEDDING_DIMENSIONS=384
-API_CORS_ORIGINS=https://<web-domain>
+API_CORS_ORIGINS=https://<vercel-web-domain>
 ```
 
 Optional worker setting:
@@ -53,7 +97,7 @@ Optional worker setting:
 WORKER_POLL_INTERVAL=5
 ```
 
-### Web
+### Web / Vercel
 
 Set these in the web host:
 
@@ -147,5 +191,6 @@ Use `/health` for platform liveness and `/health/indexing` for worker queue visi
 
 - Keep worker replicas at `1`.
 - Use managed Qdrant or a private Qdrant service, not a public unauthenticated container.
+- If using Qdrant Cloud, set `QDRANT_API_KEY` for both API and worker.
 - Do not expose Supabase service role keys to the web app.
 - Rotate any secret that was ever pasted into chat, screenshots, or public issue trackers.

@@ -22,7 +22,7 @@ def test_health_returns_api_status() -> None:
 
 
 def test_vector_health_returns_ok_status(monkeypatch) -> None:
-    async def check_qdrant_health(qdrant_url: str) -> dict[str, str]:
+    async def check_qdrant_health(qdrant_url: str, api_key: str = "") -> dict[str, str]:
         return {"status": "ok", "service": "qdrant"}
 
     monkeypatch.setattr(main, "check_qdrant_health", check_qdrant_health)
@@ -34,7 +34,7 @@ def test_vector_health_returns_ok_status(monkeypatch) -> None:
 
 
 def test_vector_health_returns_unavailable_status(monkeypatch) -> None:
-    async def check_qdrant_health(qdrant_url: str) -> dict[str, str]:
+    async def check_qdrant_health(qdrant_url: str, api_key: str = "") -> dict[str, str]:
         return {"status": "unavailable", "service": "qdrant"}
 
     monkeypatch.setattr(main, "check_qdrant_health", check_qdrant_health)
@@ -151,3 +151,23 @@ async def test_qdrant_health_non_2xx_returns_unavailable(monkeypatch) -> None:
     response = await check_qdrant_health("http://qdrant.example")
 
     assert response == {"status": "unavailable", "service": "qdrant"}
+
+
+async def test_qdrant_health_sends_api_key_header(monkeypatch) -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(200, json={"status": "ok"})
+
+    async_client_class = httpx.AsyncClient
+
+    def async_client(*args, **kwargs) -> httpx.AsyncClient:
+        return async_client_class(transport=httpx.MockTransport(handler), *args, **kwargs)
+
+    monkeypatch.setattr("app.services.qdrant_health.httpx.AsyncClient", async_client)
+
+    response = await check_qdrant_health("http://qdrant.example", "qdrant-key")
+
+    assert response == {"status": "ok", "service": "qdrant"}
+    assert requests[0].headers["api-key"] == "qdrant-key"
