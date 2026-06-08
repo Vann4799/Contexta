@@ -2,12 +2,35 @@
 
 Contexta is a RAG document chatbot for PDF and DOCX files.
 
+## Status
+
+Contexta is currently an MVP for a single-user document intelligence workspace. It supports:
+
+- Supabase email auth.
+- PDF and DOCX uploads.
+- background indexing into Qdrant.
+- grounded chat with citations.
+- document intelligence pages.
+- PDF to Markdown conversion with MarkItDown.
+
 ## Apps
 
 - `apps/web`: Next.js frontend.
 - `apps/api`: FastAPI API service.
 - `apps/worker`: background document processor.
 - `packages/rag`: shared Python RAG utilities.
+
+## Deployment
+
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) before publishing or deploying. The first public release should use:
+
+- Vercel or another Node host for `apps/web`.
+- a Docker host for `apps/api`.
+- one separate worker service for `apps/worker`.
+- Supabase hosted Auth/Database/Storage.
+- Qdrant Cloud or a private Qdrant service.
+
+Never commit real `.env` files or API keys.
 
 ## Local Infrastructure
 
@@ -81,6 +104,7 @@ The frontend expects:
 ```text
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
+NEXT_PUBLIC_API_BASE_URL
 NEXT_PUBLIC_AUTH_CALLBACK_URL
 ```
 
@@ -91,7 +115,12 @@ SUPABASE_URL
 SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY
 SUPABASE_JWT_SECRET
+SUPABASE_JWKS_URL
 SUPABASE_STORAGE_BUCKET
+QDRANT_URL
+QDRANT_COLLECTION
+DEEPSEEK_API_KEY
+API_CORS_ORIGINS
 ```
 
 ## Phase 2 Verification

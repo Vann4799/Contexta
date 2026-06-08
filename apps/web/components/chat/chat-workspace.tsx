@@ -21,8 +21,16 @@ import { ShiningText } from "@/components/ui/shining-text";
 
 type VisibleMessage = Pick<ChatMessage, "role" | "content" | "citations">;
 
+function initialsFromUser(email?: string, fullName?: string) {
+  const source = fullName?.trim() || email?.split("@")[0] || "Contexta";
+  const words = source.split(/[\s._-]+/).filter(Boolean);
+  return words.slice(0, 2).map((word) => word[0]?.toUpperCase()).join("") || "CT";
+}
+
 export function ChatWorkspace() {
   const searchParams = useSearchParams();
+  const requestedQuestion = searchParams.get("question");
+  const requestedDocumentId = searchParams.get("documentId");
   const [question, setQuestion] = useState("");
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
   const [documentSearch, setDocumentSearch] = useState("");
@@ -35,12 +43,16 @@ export function ChatWorkspace() {
   const [isSending, setIsSending] = useState(false);
   const [isSourcesOpen, setIsSourcesOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [userInitials, setUserInitials] = useState("CT");
   const activeRequestRef = useRef<AbortController | null>(null);
   const latestMessageRef = useRef<HTMLDivElement | null>(null);
 
   const getAccessToken = useCallback(async () => {
     const supabase = createSupabaseBrowserClient();
     const { data } = await supabase.auth.getSession();
+    if (data.session?.user) {
+      setUserInitials(initialsFromUser(data.session.user.email, data.session.user.user_metadata?.full_name));
+    }
     return data.session?.access_token ?? null;
   }, []);
 
@@ -63,7 +75,7 @@ export function ChatWorkspace() {
       setMessages(loadedMessages);
       const latestAssistant = [...loadedMessages].reverse().find((message) => message.role === "assistant");
       setCitations(latestAssistant?.citations ?? []);
-      setIsSourcesOpen((latestAssistant?.citations ?? []).length > 0);
+      setIsSourcesOpen(false);
       return loadedMessages;
     },
     [getAccessToken]
@@ -95,8 +107,19 @@ export function ChatWorkspace() {
 
         setSessions(loadedSessions);
         setDocuments(loadedDocuments);
-        setActiveSessionId(loadedSessions[0].id);
-        const loadedMessages = await loadSessionMessages(loadedSessions[0].id, accessToken);
+        if (requestedDocumentId) {
+          const createdSession = await createChatSession(accessToken);
+          setSessions((current) => [createdSession, ...current]);
+          setActiveSessionId(createdSession.id);
+          setMessages([]);
+          setCitations([]);
+          setSelectedDocumentId(requestedDocumentId);
+          return;
+        }
+
+        const firstSession = loadedSessions[0];
+        setActiveSessionId(firstSession.id);
+        const loadedMessages = await loadSessionMessages(firstSession.id, accessToken);
         const sessionDocumentId = inferDocumentIdFromMessages(loadedMessages);
         if (sessionDocumentId) {
           setSelectedDocumentId(sessionDocumentId);
@@ -117,19 +140,17 @@ export function ChatWorkspace() {
     return () => {
       isMounted = false;
     };
-  }, [getAccessToken, loadSessionMessages]);
+  }, [getAccessToken, loadSessionMessages, requestedDocumentId]);
 
   useEffect(() => {
-    const suggestedQuestion = searchParams.get("question");
-    const documentId = searchParams.get("documentId");
-    if (suggestedQuestion) {
-      setQuestion(suggestedQuestion);
+    if (requestedQuestion) {
+      setQuestion(requestedQuestion);
     }
-    if (documentId) {
-      setSelectedDocumentId(documentId);
+    if (requestedDocumentId) {
+      setSelectedDocumentId(requestedDocumentId);
       setDocumentSearch("");
     }
-  }, [searchParams]);
+  }, [requestedDocumentId, requestedQuestion]);
 
   useEffect(() => {
     if (documents.length === 0) {
@@ -206,20 +227,25 @@ export function ChatWorkspace() {
     }
 
     setError(null);
-    setIsSending(true);
-    setQuestion("");
-    const abortController = new AbortController();
-    activeRequestRef.current = abortController;
-    setMessages((current) => [
-      ...current,
-      { role: "user", content: trimmedQuestion, citations: [] }
-    ]);
 
     try {
+      if (!selectedDocumentId) {
+        throw new Error("Please choose one ready document before asking.");
+      }
+
       const accessToken = await getAccessToken();
       if (!accessToken) {
         throw new Error("Sign in to ask questions.");
       }
+
+      setIsSending(true);
+      setQuestion("");
+      const abortController = new AbortController();
+      activeRequestRef.current = abortController;
+      setMessages((current) => [
+        ...current,
+        { role: "user", content: trimmedQuestion, citations: [] }
+      ]);
 
       let sessionId = activeSessionId;
       if (!sessionId) {
@@ -229,10 +255,6 @@ export function ChatWorkspace() {
         setActiveSessionId(sessionId);
       }
 
-      if (!selectedDocumentId) {
-        throw new Error("Please choose one ready document before asking.");
-      }
-
       const response = await sendChatMessage(accessToken, sessionId, trimmedQuestion, [selectedDocumentId], abortController.signal);
       const answer = response.answer.trim() || "Maaf, Contexta belum menerima jawaban yang bisa ditampilkan. Coba kirim ulang pertanyaannya.";
       setMessages((current) => [
@@ -240,7 +262,7 @@ export function ChatWorkspace() {
         { role: "assistant", content: answer, citations: response.citations }
       ]);
       setCitations(response.citations);
-      setIsSourcesOpen(response.citations.length > 0);
+      setIsSourcesOpen(false);
       setSessions(await listChatSessions(accessToken));
     } catch (chatError) {
       const message = chatError instanceof Error ? chatError.message : "Unable to answer question.";
@@ -261,8 +283,7 @@ export function ChatWorkspace() {
   const readyDocuments = documents.filter((document) => document.status === "ready");
   const selectedDocument = readyDocuments.find((document) => document.id === selectedDocumentId) ?? null;
   const chatScopeLabel = selectedDocument?.filename ?? "Choose a document to start";
-  const conversationHasMessages = messages.length > 0;
-  const isComposerDisabled = isLoading || (!selectedDocumentId && !conversationHasMessages);
+  const isComposerDisabled = isLoading || !selectedDocument;
   const normalizedDocumentSearch = documentSearch.trim().toLowerCase();
   const filteredReadyDocuments = normalizedDocumentSearch
     ? readyDocuments.filter((document) => document.filename.toLowerCase().includes(normalizedDocumentSearch))
@@ -312,67 +333,76 @@ export function ChatWorkspace() {
 
         <div className="flex-1 space-y-6 overflow-y-auto pb-6">
           {isLoading ? <p className="text-sm text-subtle">Loading chat...</p> : null}
-          {!isLoading && messages.length === 0 ? (
+          {!isLoading && (!selectedDocument || messages.length === 0) ? (
             <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-white" aria-hidden="true">
-                  AI
-                </div>
-                <div className="max-w-[80%] rounded border border-[#dce2f3] bg-white px-4 py-3 text-sm leading-6 text-ink">
-                  Pilih dokumen yang mau kamu analisa, lalu kita lanjut ke percakapan.
-                </div>
-              </div>
-              {selectedDocument ? (
+              {messages.length === 0 ? (
                 <div className="flex items-start gap-3">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-white" aria-hidden="true">
                     AI
                   </div>
-                  <div className="max-w-[80%] rounded border border-blue-200 bg-blue-50 px-4 py-3 text-sm leading-6 text-blue-700">
-                    Siap, kita bedah <span className="font-semibold">{selectedDocument.filename}</span>. Tulis pertanyaan pertama kamu, misalnya minta ringkasan, poin penting, atau data tertentu dari dokumen ini.
+                  <div className="max-w-[80%] rounded border border-[#dce2f3] bg-white px-4 py-3 text-sm leading-6 text-ink">
+                    Pilih dokumen yang mau kamu analisa, lalu kita lanjut ke percakapan.
                   </div>
                 </div>
-              ) : (
-                <div className="ml-12 rounded border border-[#dce2f3] bg-white p-3 shadow-sm">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-ink">Pilih dokumen</p>
-                      <p className="text-xs text-subtle">{readyDocuments.length} dokumen siap dianalisa</p>
+              ) : null}
+              {selectedDocument ? (
+                messages.length === 0 ? (
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-white" aria-hidden="true">
+                      AI
                     </div>
-                    <input
-                      className="h-9 rounded border border-[#c3c6d7] bg-[#f9f9ff] px-3 text-sm text-ink outline-none transition placeholder:text-subtle focus:border-primary sm:w-64"
-                      placeholder="Cari nama dokumen..."
-                      type="search"
-                      value={documentSearch}
-                      onChange={(event) => setDocumentSearch(event.target.value)}
-                    />
+                    <div className="max-w-[80%] rounded border border-blue-200 bg-blue-50 px-4 py-3 text-sm leading-6 text-blue-700">
+                      Siap, kita bedah <span className="font-semibold">{selectedDocument.filename}</span>. Tulis pertanyaan pertama kamu, misalnya minta ringkasan, poin penting, atau data tertentu dari dokumen ini.
+                    </div>
                   </div>
-                  <div className="mt-3 max-h-72 overflow-y-auto rounded border border-[#dce2f3]">
-                    {readyDocuments.length === 0 ? (
-                      <div className="px-4 py-3 text-sm text-subtle">
-                        Belum ada dokumen ready. Upload atau tunggu proses indexing selesai dulu.
+                ) : null
+              ) : (
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-white" aria-hidden="true">
+                    AI
+                  </div>
+                  <div className="max-w-[80%] rounded border border-[#dce2f3] bg-white p-3 shadow-sm">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-ink">Pilih dokumen</p>
+                        <p className="text-xs text-subtle">{readyDocuments.length} dokumen siap dianalisa</p>
                       </div>
-                    ) : filteredReadyDocuments.length > 0 ? (
-                      filteredReadyDocuments.map((document) => (
-                        <button
-                          key={document.id}
-                          className="flex w-full items-center justify-between gap-3 border-b border-[#dce2f3] px-4 py-3 text-left transition last:border-0 hover:bg-[#f9f9ff]"
-                          type="button"
-                          onClick={() => handleChooseDocument(document.id)}
-                        >
-                          <span className="min-w-0">
-                            <span className="block truncate text-sm font-semibold text-ink">{document.filename}</span>
-                            <span className="mt-1 block text-xs text-subtle">
-                              {document.file_type.toUpperCase()} - {document.chunk_count} chunks
+                      <input
+                        className="h-9 rounded border border-[#c3c6d7] bg-[#f9f9ff] px-3 text-sm text-ink outline-none transition placeholder:text-subtle focus:border-primary sm:w-64"
+                        placeholder="Cari nama dokumen..."
+                        type="search"
+                        value={documentSearch}
+                        onChange={(event) => setDocumentSearch(event.target.value)}
+                      />
+                    </div>
+                    <div className="mt-3 max-h-72 overflow-y-auto rounded border border-[#dce2f3]">
+                      {readyDocuments.length === 0 ? (
+                        <div className="px-4 py-3 text-sm text-subtle">
+                          Belum ada dokumen ready. Upload atau tunggu proses indexing selesai dulu.
+                        </div>
+                      ) : filteredReadyDocuments.length > 0 ? (
+                        filteredReadyDocuments.map((document) => (
+                          <button
+                            key={document.id}
+                            className="flex w-full items-center justify-between gap-3 border-b border-[#dce2f3] px-4 py-3 text-left transition last:border-0 hover:bg-[#f9f9ff]"
+                            type="button"
+                            onClick={() => handleChooseDocument(document.id)}
+                          >
+                            <span className="min-w-0">
+                              <span className="block truncate text-sm font-semibold text-ink">{document.filename}</span>
+                              <span className="mt-1 block text-xs text-subtle">
+                                {document.file_type.toUpperCase()} - {document.chunk_count} chunks
+                              </span>
                             </span>
-                          </span>
-                          <span className="shrink-0 rounded bg-[#dbe1ff] px-2 py-1 text-xs font-semibold text-primary">
-                            Select
-                          </span>
-                        </button>
-                      ))
-                    ) : (
-                      <div className="px-4 py-3 text-sm text-subtle">Tidak ada dokumen yang cocok.</div>
-                    )}
+                            <span className="shrink-0 rounded bg-[#dbe1ff] px-2 py-1 text-xs font-semibold text-primary">
+                              Select
+                            </span>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-4 py-3 text-sm text-subtle">Tidak ada dokumen yang cocok.</div>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -399,7 +429,7 @@ export function ChatWorkspace() {
               </div>
               {message.role === "user" ? (
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-[#dce2f3] text-xs font-bold text-ink" aria-hidden="true">
-                  CT
+                  {userInitials}
                 </div>
               ) : null}
             </div>

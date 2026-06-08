@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ContextaLogo } from "@/components/contexta-logo";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
@@ -18,12 +19,14 @@ function getAuthParams() {
     code: searchParams.get("code") ?? hashParams.get("code"),
     accessToken: searchParams.get("access_token") ?? hashParams.get("access_token"),
     refreshToken: searchParams.get("refresh_token") ?? hashParams.get("refresh_token"),
+    type: searchParams.get("type") ?? hashParams.get("type"),
     error: searchParams.get("error") ?? hashParams.get("error"),
     errorDescription: searchParams.get("error_description") ?? hashParams.get("error_description")
   };
 }
 
 export default function AuthCallbackPage() {
+  const router = useRouter();
   const [callbackState, setCallbackState] = useState<CallbackState>({
     status: "loading",
     message: "Checking your Contexta sign-in session."
@@ -51,6 +54,37 @@ export default function AuthCallbackPage() {
             throw new Error("No authenticated session was returned.");
           }
 
+          if (authParams.type === "recovery") {
+            router.replace("/update-password");
+            return;
+          }
+
+          setCallbackState({
+            status: "success",
+            message: "Authentication complete. Continue to your dashboard."
+          });
+          return;
+        }
+
+        if (authParams.accessToken && authParams.refreshToken) {
+          const { data, error } = await supabase.auth.setSession({
+            access_token: authParams.accessToken,
+            refresh_token: authParams.refreshToken
+          });
+
+          if (error) {
+            throw error;
+          }
+
+          if (!data.session) {
+            throw new Error("No authenticated session was returned.");
+          }
+
+          if (authParams.type === "recovery") {
+            router.replace("/update-password");
+            return;
+          }
+
           setCallbackState({
             status: "success",
             message: "Authentication complete. Continue to your dashboard."
@@ -69,6 +103,11 @@ export default function AuthCallbackPage() {
           throw new Error(hasAuthParams ? "Auth parameters were found, but no active session is available." : "No active sign-in session was found.");
         }
 
+        if (authParams.type === "recovery") {
+          router.replace("/update-password");
+          return;
+        }
+
         setCallbackState({
           status: "success",
           message: "Authentication complete. Continue to your dashboard."
@@ -82,7 +121,7 @@ export default function AuthCallbackPage() {
     }
 
     void handleAuthCallback();
-  }, []);
+  }, [router]);
 
   const isSuccess = callbackState.status === "success";
   const isError = callbackState.status === "error";

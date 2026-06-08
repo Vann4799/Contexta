@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project:
+          - packages/rag
+          - apps/api
+          - apps/worker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          if [ "${{ matrix.project }}" = "apps/api" ]; then
+            python -m pip install -e packages/rag -e apps/api[dev]
+          elif [ "${{ matrix.project }}" = "apps/worker" ]; then
+            python -m pip install -e packages/rag -e apps/worker pytest
+          else
+            python -m pip install -e packages/rag[dev]
+          fi
+      - name: Run tests
+        working-directory: ${{ matrix.project }}
+        run: python -m pytest
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build

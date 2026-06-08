@@ -2,7 +2,17 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { deleteDocument, retryDocument, uploadDocument, listDocuments, type DocumentItem, type DocumentStatus } from "@/lib/api";
+import { CloudUpload } from "lucide-react";
+import {
+  deleteDocument,
+  getIndexingHealth,
+  retryDocument,
+  uploadDocument,
+  listDocuments,
+  type DocumentItem,
+  type DocumentStatus,
+  type IndexingHealth
+} from "@/lib/api";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/status-pill";
@@ -48,6 +58,38 @@ function uploadErrorMessage(error: unknown, fallback: string) {
   return error.message;
 }
 
+function indexingHealthLabel(health: IndexingHealth | null) {
+  if (!health) {
+    return "Indexing health: unknown";
+  }
+
+  if (health.status === "attention") {
+    return "Indexing health: needs attention";
+  }
+
+  return "Indexing health: active";
+}
+
+function indexingHealthDetail(health: IndexingHealth | null) {
+  if (!health) {
+    return "Unable to infer worker health yet.";
+  }
+
+  if (health.status === "attention") {
+    return `${health.stale_processing_documents} processing file${health.stale_processing_documents === 1 ? "" : "s"} stale for ${health.stale_after_minutes}+ minutes.`;
+  }
+
+  if (health.queued_documents > 0) {
+    return `${health.queued_documents} queued file${health.queued_documents === 1 ? "" : "s"} waiting to start.`;
+  }
+
+  if (health.processing_documents > 0) {
+    return `${health.processing_documents} file${health.processing_documents === 1 ? "" : "s"} currently processing.`;
+  }
+
+  return "No stale indexing jobs detected.";
+}
+
 export function DocumentUploadPanel() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
@@ -55,8 +97,10 @@ export function DocumentUploadPanel() {
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [mutatingDocumentId, setMutatingDocumentId] = useState<string | null>(null);
+  const [indexingHealth, setIndexingHealth] = useState<IndexingHealth | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [showAllDocuments, setShowAllDocuments] = useState(false);
 
   const getAccessToken = useCallback(async () => {
     const supabase = createSupabaseBrowserClient();
@@ -69,6 +113,12 @@ export function DocumentUploadPanel() {
     setError(null);
 
     try {
+      try {
+        setIndexingHealth(await getIndexingHealth());
+      } catch {
+        setIndexingHealth(null);
+      }
+
       const accessToken = await getAccessToken();
       if (!accessToken) {
         setDocuments([]);
@@ -131,6 +181,11 @@ export function DocumentUploadPanel() {
 
       const uploadedDocument = await uploadDocument(accessToken, file);
       setDocuments((currentDocuments) => [uploadedDocument, ...currentDocuments]);
+      try {
+        setIndexingHealth(await getIndexingHealth());
+      } catch {
+        setIndexingHealth(null);
+      }
       setSuccess(`${uploadedDocument.filename} uploaded.`);
     } catch (uploadError) {
       setError(uploadErrorMessage(uploadError, "Unable to upload document."));
@@ -194,6 +249,8 @@ export function DocumentUploadPanel() {
   const totalStorage = documents.reduce((sum, document) => sum + document.file_size, 0);
   const queueCount = documents.filter((document) => document.status === "uploaded" || document.status === "processing").length;
   const readyCount = documents.filter((document) => document.status === "ready").length;
+  const recentActivityLimit = 5;
+  const visibleDocuments = showAllDocuments ? documents : documents.slice(0, recentActivityLimit);
 
   return (
     <section className="space-y-8">
@@ -260,10 +317,8 @@ export function DocumentUploadPanel() {
               }
             }}
           />
-          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded bg-[#dbe1ff] text-primary">
-            <svg className="h-9 w-9" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M12 16V7m0 0-4 4m4-4 4 4M7 18a4 4 0 0 1-.9-7.9A6 6 0 0 1 17.8 12H18a3 3 0 0 1 0 6H7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-md bg-[#dbe1ff] text-primary">
+            <CloudUpload className="h-7 w-7" strokeWidth={2.2} aria-hidden="true" />
           </div>
           <h3 className="font-heading text-xl font-semibold text-ink">Drag and drop files here</h3>
           <p className="mt-2 max-w-md text-sm text-subtle">Files will be securely uploaded and automatically indexed for RAG analysis.</p>
@@ -284,7 +339,11 @@ export function DocumentUploadPanel() {
             </div>
             <div className="flex items-center justify-between rounded border border-[#c3c6d7] bg-white p-3 text-sm">
               <span className="font-medium text-ink">Indexing Queue</span>
-              <span className="font-mono text-xs text-ink">{queueCount} file{queueCount === 1 ? "" : "s"}</span>
+              <span className="font-mono text-xs text-ink">{indexingHealth?.queued_documents ?? queueCount} file{(indexingHealth?.queued_documents ?? queueCount) === 1 ? "" : "s"}</span>
+            </div>
+            <div className={`rounded border p-3 text-sm ${indexingHealth?.status === "attention" ? "border-amber-200 bg-amber-50 text-amber-800" : "border-emerald-200 bg-emerald-50 text-emerald-800"}`}>
+              <p className="font-semibold">{indexingHealthLabel(indexingHealth)}</p>
+              <p className="mt-1 text-xs">{indexingHealthDetail(indexingHealth)}</p>
             </div>
             <div className="flex items-center justify-between rounded border border-[#c3c6d7] bg-white p-3 text-sm">
               <span className="font-medium text-ink">Ready</span>
@@ -307,9 +366,11 @@ export function DocumentUploadPanel() {
       <section>
         <div className="mb-3 flex items-center justify-between">
           <h3 className="font-heading text-xl font-semibold text-ink">Recent Activity</h3>
-          <button className="text-sm font-semibold text-primary hover:underline" disabled={isLoading} onClick={() => void loadDocuments()} type="button">
-            View All
-          </button>
+          {documents.length > recentActivityLimit ? (
+            <button className="text-sm font-semibold text-primary hover:underline" disabled={isLoading} onClick={() => setShowAllDocuments((current) => !current)} type="button">
+              {showAllDocuments ? "Show Recent" : "View All"}
+            </button>
+          ) : null}
         </div>
         <div className="overflow-hidden rounded border border-[#c3c6d7] bg-white">
           <div className="grid min-w-[760px] grid-cols-12 border-b border-[#c3c6d7] bg-[#f0f3ff] px-5 py-3 text-xs font-semibold uppercase text-subtle">
@@ -320,8 +381,8 @@ export function DocumentUploadPanel() {
           </div>
           <div className="overflow-x-auto">
             <div className="min-w-[760px] divide-y divide-[#dce2f3]">
-              {documents.length > 0 ? (
-                documents.map((document) => (
+              {visibleDocuments.length > 0 ? (
+                visibleDocuments.map((document) => (
                   <div key={document.id} className="grid grid-cols-12 items-center gap-3 px-5 py-4 transition hover:bg-[#f9f9ff]">
                     <div className="col-span-6 flex min-w-0 items-center gap-3">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-[#dbe1ff] text-primary">
@@ -369,6 +430,11 @@ export function DocumentUploadPanel() {
               )}
             </div>
           </div>
+          {documents.length > recentActivityLimit ? (
+            <div className="border-t border-[#dce2f3] bg-[#f9f9ff] px-5 py-3 text-xs text-subtle">
+              Showing {visibleDocuments.length} of {documents.length} documents.
+            </div>
+          ) : null}
         </div>
       </section>
     </section>

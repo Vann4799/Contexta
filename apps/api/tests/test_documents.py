@@ -6,6 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.documents import routes as document_routes
+from app.chat.llm import DeepSeekAnswerGenerator
 from app.documents.models import DocumentCreate
 from app.documents.repository import InMemoryDocumentRepository
 from app.main import app
@@ -33,6 +34,19 @@ class FakeAnswerGenerator:
     def generate_answer(self, prompt: str) -> str:
         self.prompt = prompt
         return "AI brief: creator responses are dominated by X/Twitter content."
+
+
+def test_document_answer_generator_uses_configured_token_limit() -> None:
+    generator = get_document_answer_generator(
+        Settings(
+            deepseek_api_key="test-key",
+            deepseek_model="deepseek-v4-pro",
+            deepseek_max_tokens=2222,
+        )
+    )
+
+    assert isinstance(generator, DeepSeekAnswerGenerator)
+    assert generator._max_tokens == 2222
 
 
 @pytest.fixture(autouse=True)
@@ -226,6 +240,7 @@ def test_generate_document_ai_brief_uses_document_chunks() -> None:
     }
     assert "creator.pdf" in answer_generator.prompt
     assert "Rifki Mardiyanto uploaded X Twitter content" in answer_generator.prompt
+    assert "Brief selesai" in answer_generator.prompt
 
 
 def test_create_document_with_unsupported_file_type_returns_422() -> None:

@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { listDocuments, type DocumentItem, type DocumentStatus } from "@/lib/api";
+import { FileText, Files, HardDrive, Layers, RefreshCw, Search } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { getIndexingHealth, listDocuments, type DocumentItem, type DocumentStatus, type IndexingHealth } from "@/lib/api";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { StatusPill } from "@/components/ui/status-pill";
 
@@ -45,10 +47,36 @@ function dashboardErrorMessage(error: unknown) {
   return "Unable to load dashboard insights.";
 }
 
+function indexingHealthLabel(health: IndexingHealth | null) {
+  if (!health) {
+    return "Unknown";
+  }
+
+  return health.status === "attention" ? "Needs attention" : "Active";
+}
+
+function indexingHealthDetail(health: IndexingHealth | null) {
+  if (!health) {
+    return "Indexing health could not be inferred.";
+  }
+
+  if (health.status === "attention") {
+    return `${health.stale_processing_documents} stale for ${health.stale_after_minutes}+ min`;
+  }
+
+  if (health.queued_documents > 0) {
+    return `${health.queued_documents} queued`;
+  }
+
+  return "No stale jobs";
+}
+
 export function DashboardInsights() {
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
+  const [indexingHealth, setIndexingHealth] = useState<IndexingHealth | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [libraryFilter, setLibraryFilter] = useState("");
 
   const getAccessToken = useCallback(async () => {
     const supabase = createSupabaseBrowserClient();
@@ -61,6 +89,12 @@ export function DashboardInsights() {
     setError(null);
 
     try {
+      try {
+        setIndexingHealth(await getIndexingHealth());
+      } catch {
+        setIndexingHealth(null);
+      }
+
       const accessToken = await getAccessToken();
       if (!accessToken) {
         setDocuments([]);
@@ -87,15 +121,25 @@ export function DashboardInsights() {
     const totalStorage = documents.reduce((sum, document) => sum + document.file_size, 0);
 
     return [
-      { label: "Total Documents", value: documents.length.toString(), helper: `${readyDocuments} ready`, icon: "M4 6h16v14H4V6Zm2 2v10h12V8H6Zm2-4h8v2H8V4Z" },
-      { label: "Processing", value: processingDocuments.toString(), helper: "Uploads being indexed", icon: "M12 4a8 8 0 0 1 7.4 5H17a6 6 0 1 0-1.2 6.4l1.4 1.4A8 8 0 1 1 12 4Zm4 3h5v5h-2V9.8l-3.1 3.1-1.4-1.4L17.6 8H16V7Z" },
-      { label: "Storage Used", value: formatBytes(totalStorage), helper: "Document file size", icon: "M7 18a5 5 0 0 1 1-9.9A6 6 0 0 1 19.7 11 4 4 0 0 1 19 19H7v-1Zm0-8a3 3 0 1 0 0 6h12a2 2 0 0 0 .1-4H18l-.3-1.1A4 4 0 0 0 10 10.1L9.6 12H7Z" },
-      { label: "Indexed Chunks", value: totalChunks.toString(), helper: "Searchable text blocks", icon: "M5 4h14v3H5V4Zm0 5h14v3H5V9Zm0 5h14v6H5v-6Zm2 2v2h10v-2H7Z" }
+      { label: "Total Documents", value: documents.length.toString(), helper: `${readyDocuments} ready`, icon: Files },
+      { label: "Processing", value: processingDocuments.toString(), helper: "Uploads being indexed", icon: RefreshCw },
+      { label: "Storage Used", value: formatBytes(totalStorage), helper: "Document file size", icon: HardDrive },
+      { label: "Indexed Chunks", value: totalChunks.toString(), helper: "Searchable text blocks", icon: Layers }
     ];
-  }, [documents]);
+  }, [documents]) satisfies Array<{ label: string; value: string; helper: string; icon: LucideIcon }>;
 
   const recentDocuments = documents.slice(0, 3);
-  const libraryDocuments = documents.slice(0, 6);
+  const normalizedLibraryFilter = libraryFilter.trim().toLowerCase();
+  const filteredDocuments = normalizedLibraryFilter
+    ? documents.filter((document) =>
+        [
+          document.filename,
+          document.file_type,
+          document.status
+        ].some((value) => value.toLowerCase().includes(normalizedLibraryFilter))
+      )
+    : documents;
+  const libraryDocuments = filteredDocuments.slice(0, 6);
   const readyDocuments = documents.filter((document) => document.status === "ready").length;
   const processingDocuments = documents.filter((document) => document.status === "processing" || document.status === "uploaded").length;
 
@@ -129,20 +173,21 @@ export function DashboardInsights() {
 
       <section className="grid gap-4 lg:grid-cols-12">
         <div className="grid gap-4 sm:grid-cols-2 lg:col-span-4 lg:grid-cols-1">
-          {stats.slice(0, 3).map((stat) => (
+          {stats.slice(0, 3).map((stat) => {
+            const Icon = stat.icon;
+            return (
             <article key={stat.label} className="flex items-center justify-between rounded border border-[#c3c6d7] bg-white p-5">
               <div>
                 <p className="text-sm font-medium text-subtle">{stat.label}</p>
                 <p className="mt-3 font-heading text-3xl font-semibold text-ink">{isLoading ? "..." : stat.value}</p>
                 <p className="mt-1 text-xs text-subtle">{isLoading ? "Loading dashboard..." : stat.helper}</p>
               </div>
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded bg-[#dbe1ff] text-primary">
-                <svg className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d={stat.icon} />
-                </svg>
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-[#dbe1ff] text-primary">
+                <Icon className="h-5 w-5" strokeWidth={2.2} aria-hidden="true" />
               </div>
             </article>
-          ))}
+            );
+          })}
         </div>
 
         <article className="rounded border border-[#c3c6d7] bg-white p-5 lg:col-span-8">
@@ -159,9 +204,7 @@ export function DashboardInsights() {
               recentDocuments.map((document) => (
                 <Link key={document.id} className="flex items-start gap-3 rounded p-3 transition hover:bg-[#f0f3ff]" href={`/documents/${document.id}`}>
                   <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#dce2f3] text-primary">
-                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                      <path d="M4 5h16v11H8l-4 4V5Zm2 2v8.2L7.2 14H18V7H6Zm3 3h8v2H9v-2Z" />
-                    </svg>
+                    <FileText className="h-4 w-4" strokeWidth={2.1} aria-hidden="true" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold text-ink">{document.filename}</p>
@@ -188,13 +231,13 @@ export function DashboardInsights() {
             </div>
             <label className="relative block w-full sm:max-w-xs">
               <span className="sr-only">Filter library</span>
-              <svg className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="m20 20-4-4m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle" strokeWidth={2} aria-hidden="true" />
               <input
                 className="h-9 w-full rounded border border-[#c3c6d7] bg-[#f9f9ff] px-9 text-sm placeholder:text-subtle focus:border-primary focus:outline-none"
                 placeholder="Filter library..."
                 type="search"
+                value={libraryFilter}
+                onChange={(event) => setLibraryFilter(event.target.value)}
               />
             </label>
           </div>
@@ -236,8 +279,10 @@ export function DashboardInsights() {
                 ) : (
                   <tr>
                     <td className="px-5 py-6" colSpan={6}>
-                      <p className="font-semibold text-ink">No documents yet</p>
-                      <p className="mt-1 text-sm text-subtle">Upload a PDF or DOCX to start building your searchable knowledge base.</p>
+                      <p className="font-semibold text-ink">{documents.length > 0 ? "No matching documents" : "No documents yet"}</p>
+                      <p className="mt-1 text-sm text-subtle">
+                        {documents.length > 0 ? "Try another filename, type, or status." : "Upload a PDF or DOCX to start building your searchable knowledge base."}
+                      </p>
                     </td>
                   </tr>
                 )}
@@ -245,7 +290,7 @@ export function DashboardInsights() {
             </table>
           </div>
           <div className="flex items-center justify-between border-t border-[#c3c6d7] bg-[#f9f9ff] px-5 py-3 text-sm text-subtle">
-            <span>Showing {isLoading ? "..." : `1-${Math.min(libraryDocuments.length, documents.length)} of ${documents.length}`}</span>
+            <span>Showing {isLoading ? "..." : `${libraryDocuments.length} of ${filteredDocuments.length}`}</span>
             <Link className="font-semibold text-primary hover:underline" href="/documents">
               View all
             </Link>
@@ -256,6 +301,13 @@ export function DashboardInsights() {
           <article className="rounded border border-[#c3c6d7] bg-white p-5">
             <h3 className="font-heading text-xl font-semibold text-ink">Workspace Health</h3>
             <div className="mt-4 space-y-3 text-sm">
+              <div className={`rounded px-3 py-2 ${indexingHealth?.status === "attention" ? "bg-amber-50 text-amber-800" : "bg-emerald-50 text-emerald-800"}`}>
+                <div className="flex items-center justify-between gap-3">
+                  <span>Indexing health</span>
+                  <span className="font-semibold">{indexingHealthLabel(indexingHealth)}</span>
+                </div>
+                <p className="mt-1 text-xs">{indexingHealthDetail(indexingHealth)}</p>
+              </div>
               <div className="flex items-center justify-between rounded bg-[#f0f3ff] px-3 py-2">
                 <span className="text-subtle">Ready documents</span>
                 <span className="font-semibold text-ink">{isLoading ? "..." : readyDocuments}</span>

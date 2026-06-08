@@ -42,6 +42,16 @@ export function AuthForm({ mode }: AuthFormProps) {
   const isRegister = mode === "register";
   const needsPassword = mode !== "reset";
 
+  function getSafeNextPath() {
+    const searchParams = new URLSearchParams(window.location.search);
+    const nextPath = searchParams.get("next");
+    if (!nextPath || !nextPath.startsWith("/") || nextPath.startsWith("//")) {
+      return "/";
+    }
+
+    return nextPath;
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage(null);
@@ -70,7 +80,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         }
 
         setMessage({ type: "success", text: copy.login.success });
-        router.push("/");
+        router.push(getSafeNextPath());
         router.refresh();
         return;
       }

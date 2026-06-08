@@ -1,12 +1,25 @@
 .env
 .env.*
 !.env.example
+!*.env.example
+
+# Local planning/design drafts that are not required to run Contexta
+01_PRD.md
+02_SRS.md
+03_SDD.md
+04_UI_UX_FLOW.md
+05_TASK_BREAKDOWN.md
+UI/
+docs/agent-notes/
+tests/artifacts/
 
 node_modules/
 .next/
 out/
 dist/
 coverage/
+test-results/
+playwright-report/
 
 __pycache__/
 *.py[cod]

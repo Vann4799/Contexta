@@ -89,6 +89,7 @@ def get_document_answer_generator(
     return DeepSeekAnswerGenerator(
         api_key=settings.deepseek_api_key,
         model=settings.deepseek_model,
+        max_tokens=settings.deepseek_max_tokens,
     )
 
 
@@ -219,12 +220,14 @@ def build_ai_brief_prompt(
     context = "\n\n".join(context_parts)
     return (
         "Anda adalah analis dokumen untuk produk Contexta.\n"
-        "Buat brief bisnis yang rapi dalam Bahasa Indonesia berdasarkan konteks dokumen saja.\n"
+        "Buat brief bisnis yang rapi, lengkap, dan sangat ringkas dalam Bahasa Indonesia berdasarkan konteks dokumen saja.\n"
+        "Wajib selesaikan semua bagian, jangan berhenti di tengah kalimat, dan akhiri jawaban dengan kalimat 'Brief selesai.'\n"
+        "Target panjang 350-500 kata agar jawaban selesai tanpa terpotong.\n"
         "Format jawaban:\n"
-        "1. Ringkasan singkat\n"
-        "2. Insight utama\n"
-        "3. Pola yang terlihat\n"
-        "4. Rekomendasi pertanyaan lanjutan\n"
+        "1. Ringkasan singkat: 1 paragraf maksimal 5 kalimat.\n"
+        "2. Insight utama: 4 bullet pendek.\n"
+        "3. Pola yang terlihat: 3 bullet pendek.\n"
+        "4. Rekomendasi pertanyaan lanjutan: 3 pertanyaan pendek saja.\n"
         "Jika konteks tidak cukup, jelaskan batasannya.\n\n"
         f"Nama dokumen: {document.filename}\n\n"
         f"Konteks dokumen:\n{context}"

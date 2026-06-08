@@ -33,6 +33,24 @@ export type DocumentAIBrief = {
   brief: string;
 };
 
+export type MarkdownConversion = {
+  filename: string;
+  markdown: string;
+  size_bytes: number;
+  output_filename: string;
+};
+
+export type IndexingHealth = {
+  status: "ok" | "attention";
+  service: "indexing";
+  source: "supabase" | "in_memory" | "unknown";
+  processing_documents: number;
+  queued_documents: number;
+  stale_processing_documents: number;
+  stale_after_minutes: number;
+  checked_at: string;
+};
+
 export type ChatCitation = {
   source_number: number;
   document_id: string;
@@ -194,6 +212,18 @@ export async function listDocuments(accessToken: string) {
   return (await response.json()) as DocumentItem[];
 }
 
+export async function getIndexingHealth() {
+  const response = await fetchApi("/health/indexing", {
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to load indexing health."));
+  }
+
+  return (await response.json()) as IndexingHealth;
+}
+
 export async function getDocument(accessToken: string, documentId: string) {
   const response = await fetchApi(`/documents/${documentId}`, {
     cache: "no-store",
@@ -256,6 +286,25 @@ export async function uploadDocument(accessToken: string, file: File) {
   }
 
   return (await response.json()) as DocumentItem;
+}
+
+export async function convertPdfToMarkdown(accessToken: string, file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetchApi("/convert/markdown", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`
+    },
+    body: formData
+  }, CHAT_ANSWER_TIMEOUT_MS);
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to convert PDF to Markdown."));
+  }
+
+  return (await response.json()) as MarkdownConversion;
 }
 
 export async function deleteDocument(accessToken: string, documentId: string) {
