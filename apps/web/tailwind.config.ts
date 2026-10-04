@@ -5,22 +5,24 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "#f9fafb",
-        surface: "#ffffff",
-        muted: "#f3f4f6",
-        border: "#e5e7eb",
-        primary: "#2563eb",
-        ink: "#111827",
-        subtle: "#6b7280",
-        soft: "#f9f9ff"
+        background: "oklch(0.97 0.012 85 / <alpha-value>)",
+        surface: "oklch(0.945 0.014 85 / <alpha-value>)",
+        muted: "oklch(0.945 0.014 85 / <alpha-value>)",
+        soft: "oklch(0.945 0.014 85 / <alpha-value>)",
+        border: "oklch(0.25 0.012 70 / 0.14)",
+        primary: "oklch(0.52 0.13 45 / <alpha-value>)",
+        accent: "oklch(0.52 0.13 45 / <alpha-value>)",
+        "accent-soft": "oklch(0.52 0.13 45 / 0.12)",
+        ink: "oklch(0.25 0.012 70 / <alpha-value>)",
+        subtle: "oklch(0.45 0.014 70 / <alpha-value>)"
       },
       fontFamily: {
-        sans: ["Inter", "Arial", "sans-serif"],
-        heading: ["Plus Jakarta Sans", "Inter", "Arial", "sans-serif"],
+        sans: ["Public Sans", "Arial", "sans-serif"],
+        heading: ["Fraunces", "Georgia", "serif"],
         mono: ["JetBrains Mono", "Consolas", "monospace"]
       },
       borderRadius: {
-        contexta: "0.5rem"
+        contexta: "4px"
       },
       boxShadow: {
         soft: "0 4px 12px rgba(17, 24, 39, 0.05)"

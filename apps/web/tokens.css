@@ -1,0 +1,38 @@
+/* tokens.css — generated from D:/ALL PROJECT/Contexta/DESIGN.md
+    system: Design — Contexta · ENERGY 1 / RHYTHM 1 / MOTION 2 · locked
+    Do not hand-edit: DESIGN.md :root is the source of truth.  */
+:root {
+  --color-paper: oklch(0.97 0.012 85);
+  --color-paper-2: oklch(0.945 0.014 85);
+  --color-ink: oklch(0.25 0.012 70);
+  --color-ink-2: oklch(0.45 0.014 70);
+  --color-rule: oklch(0.25 0.012 70 / 0.14);
+  --color-accent: oklch(0.52 0.13 45);
+  --color-accent-soft: oklch(0.52 0.13 45 / 0.12);
+  --color-accent-ink: oklch(0.97 0.012 85);
+  --color-focus: oklch(0.52 0.13 45);
+  --font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --font-body: "Public Sans", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --space-2xs: 4px;
+  --space-xs: 8px;
+  --space-s: 12px;
+  --space-m: 16px;
+  --space-l: 24px;
+  --space-xl: 40px;
+  --space-2xl: 56px;
+  --text-xs: 12px;
+  --text-s: 14px;
+  --text-base: 16px;
+  --text-l: 20px;
+  --text-xl: 25px;
+  --text-2xl: 31px;
+  --text-display: 40px;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 180ms;
+  --dur-base: 240ms;
+  --dur-slow: 320ms;
+  --radius-card: 4px;
+  --radius-pill: 999px;
+  --radius-input: 4px;
+}

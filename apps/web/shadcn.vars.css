@@ -1,0 +1,32 @@
+/* shadcn.vars.css — generated from D:/ALL PROJECT/Contexta/DESIGN.md
+    system: Design — Contexta · ENERGY 1 / RHYTHM 1 / MOTION 2 · locked
+    Do not hand-edit: DESIGN.md :root is the source of truth.  */
+:root {
+  --background: oklch(0.97 0.012 85);
+  --foreground: oklch(0.25 0.012 70);
+  --card: oklch(0.945 0.014 85);
+  --card-foreground: oklch(0.25 0.012 70);
+  --popover: oklch(0.97 0.012 85);
+  --popover-foreground: oklch(0.25 0.012 70);
+  --primary: oklch(0.52 0.13 45);
+  --primary-foreground: oklch(0.97 0.012 85);
+  --secondary: oklch(0.945 0.014 85);
+  --secondary-foreground: oklch(0.25 0.012 70);
+  --muted: oklch(0.945 0.014 85);
+  --muted-foreground: oklch(0.45 0.014 70);
+  --accent: oklch(0.52 0.13 45);
+  --accent-foreground: oklch(0.97 0.012 85);
+  --destructive: oklch(0.55 0.19 25);
+  --destructive-foreground: oklch(0.97 0.012 85);
+  --border: oklch(0.25 0.012 70 / 0.14);
+  --input: oklch(0.25 0.012 70 / 0.14);
+  --ring: oklch(0.52 0.13 45);
+  --radius: 0.25rem;
+}
+
+/* --radius from --radius-card. */
+/* color-danger: oklch(0.55 0.19 25) — exporter default, no --color-danger token */
+/* color-danger-ink: reused from --color-paper */
+
+/* No html.dark block: a dark palette is a separate decision, not an
+   inversion. Add --color-*-dark tokens to DESIGN.md, then re-export. */

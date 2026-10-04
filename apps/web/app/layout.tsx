@@ -16,11 +16,9 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         {/* eslint-disable-next-line @next/next/no-page-custom-font */}
         <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..600&family=Public+Sans:wght@400..600&family=JetBrains+Mono:wght@400&display=swap"
           rel="stylesheet"
         />
-        {/* eslint-disable-next-line @next/next/no-css-tags */}
-        <link rel="stylesheet" href="/contexta.css" />
       </head>
       <body>
         <AuthCallbackForwarder />

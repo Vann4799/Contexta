@@ -1,3 +1,4 @@
+@import "../tokens.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -17,9 +18,9 @@ html {
 body {
   margin: 0;
   min-width: 320px;
-  background: #f9fafb;
-  color: #111827;
-  font-family: Inter, Arial, sans-serif;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
   text-rendering: geometricPrecision;
 }
 

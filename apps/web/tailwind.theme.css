@@ -1,0 +1,32 @@
+/* tailwind.theme.css — Tailwind v4 @theme — generated from D:/ALL PROJECT/Contexta/DESIGN.md
+    system: Design — Contexta · ENERGY 1 / RHYTHM 1 / MOTION 2 · locked
+    Do not hand-edit: DESIGN.md :root is the source of truth.  */
+@theme {
+  --color-paper: oklch(0.97 0.012 85);
+  --color-paper-2: oklch(0.945 0.014 85);
+  --color-ink: oklch(0.25 0.012 70);
+  --color-ink-2: oklch(0.45 0.014 70);
+  --color-rule: oklch(0.25 0.012 70 / 0.14);
+  --color-accent: oklch(0.52 0.13 45);
+  --color-accent-soft: oklch(0.52 0.13 45 / 0.12);
+  --color-accent-ink: oklch(0.97 0.012 85);
+  --color-focus: oklch(0.52 0.13 45);
+  --font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --font-body: "Public Sans", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --text-xs: 12px;
+  --text-s: 14px;
+  --text-base: 16px;
+  --text-l: 20px;
+  --text-xl: 25px;
+  --text-2xl: 31px;
+  --text-display: 40px;
+  --radius-card: 4px;
+  --radius-pill: 999px;
+  --radius-input: 4px;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* v4 derives the spacing scale from --spacing; --space-* tokens stay in
+   tokens.css and are used via var(). For Tailwind v3, patch
+   tailwind.config.js theme.extend with rgb() channel values instead. */

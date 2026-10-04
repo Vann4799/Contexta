@@ -3,10 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build:css": "tailwindcss -i ./app/globals.css -o ./public/contexta.css --minify",
-    "predev": "npm run build:css",
     "dev": "next dev",
-    "prebuild": "npm run build:css",
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --max-warnings=0"
