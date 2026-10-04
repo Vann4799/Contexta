@@ -4,8 +4,8 @@ import { ContextaLogo } from "@/components/contexta-logo";
 
 export default function LoginPage() {
   return (
-    <main className="min-h-screen bg-[#f4f6ff] text-ink md:grid md:grid-cols-2">
-      <section className="login-grid-bg relative hidden min-h-screen flex-col justify-between overflow-hidden border-r border-[#c8cfdf] bg-white px-10 py-9 md:flex">
+    <main className="min-h-screen bg-background text-ink md:grid md:grid-cols-2">
+      <section className="login-grid-bg relative hidden min-h-screen flex-col justify-between overflow-hidden border-r border-border bg-surface px-10 py-9 md:flex">
         <ContextaLogo />
 
         <div className="max-w-lg">
@@ -16,13 +16,13 @@ export default function LoginPage() {
             Contexta combines grounded RAG chat, citations, and document intelligence in one focused workspace.
           </p>
 
-          <div className="mt-10 border-t border-[#c8cfdf] pt-6">
+          <div className="mt-10 border-t border-border pt-6">
             <div className="flex items-center gap-4">
               <div className="flex -space-x-2">
                 {["CT", "AI", "RG"].map((label) => (
                   <span
                     key={label}
-                    className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-ink text-xs font-semibold text-white"
+                    className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-border bg-ink text-xs font-semibold text-accent-ink"
                   >
                     {label}
                   </span>
@@ -40,7 +40,7 @@ export default function LoginPage() {
       </section>
 
       <section className="flex min-h-screen items-center justify-center px-5 py-10 sm:px-8">
-        <div className="w-full max-w-md rounded-contexta border border-[#c8cfdf] bg-white p-6 shadow-soft md:border-0 md:bg-transparent md:p-0 md:shadow-none">
+        <div className="w-full max-w-md rounded-contexta border border-border bg-surface p-6 md:border-0 md:bg-transparent md:p-0 md:shadow-none">
           <div className="mb-8 md:hidden">
             <ContextaLogo />
           </div>
@@ -53,15 +53,15 @@ export default function LoginPage() {
           <AuthForm mode="login" />
 
           <div className="mt-5 flex items-center justify-between gap-3 text-sm">
-            <Link href="/register" className="font-medium text-primary hover:text-blue-700">
+            <Link href="/register" className="font-medium text-primary hover:text-accent">
               Request access
             </Link>
-            <Link href="/forgot-password" className="font-medium text-primary hover:text-blue-700">
+            <Link href="/forgot-password" className="font-medium text-primary hover:text-accent">
               Forgot password?
             </Link>
           </div>
 
-          <div className="mt-10 border-t border-[#c8cfdf] pt-6">
+          <div className="mt-10 border-t border-border pt-6">
             <p className="text-center text-sm text-subtle">Secure access for your private RAG document workspace.</p>
           </div>
         </div>

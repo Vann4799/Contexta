@@ -301,15 +301,15 @@ export function ChatWorkspace() {
   return (
     <div className="relative min-h-[calc(100vh-120px)]">
       <section className="mx-auto flex min-h-[calc(100vh-132px)] w-full max-w-4xl flex-col">
-        <div className="mb-5 flex flex-col gap-3 border-b border-[#dce2f3] pb-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mb-5 flex flex-col gap-3 border-b border-border pb-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Ask about</p>
+            <p className="text-xs font-semibold text-primary">Ask about</p>
             <p className="mt-1 truncate text-sm font-medium text-ink">{chatScopeLabel}</p>
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
             {sessions.length > 0 ? (
               <select
-                className="h-9 max-w-xs rounded border border-[#c3c6d7] bg-white px-3 text-sm text-ink outline-none transition focus:border-primary"
+                className="h-9 max-w-xs rounded border border-border bg-surface px-3 text-sm text-ink outline-none transition focus:border-primary"
                 value={activeSessionId ?? ""}
                 disabled={isLoading || isSending}
                 onChange={(event) => void handleSelectSession(event.target.value)}
@@ -337,10 +337,10 @@ export function ChatWorkspace() {
             <div className="space-y-4">
               {messages.length === 0 ? (
                 <div className="flex items-start gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-white" aria-hidden="true">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-accent-ink" aria-hidden="true">
                     AI
                   </div>
-                  <div className="max-w-[80%] rounded border border-[#dce2f3] bg-white px-4 py-3 text-sm leading-6 text-ink">
+                  <div className="max-w-[80%] rounded border border-border bg-surface px-4 py-3 text-sm leading-6 text-ink">
                     Pilih dokumen yang mau kamu analisa, lalu kita lanjut ke percakapan.
                   </div>
                 </div>
@@ -348,34 +348,34 @@ export function ChatWorkspace() {
               {selectedDocument ? (
                 messages.length === 0 ? (
                   <div className="flex items-start gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-white" aria-hidden="true">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-accent-ink" aria-hidden="true">
                       AI
                     </div>
-                    <div className="max-w-[80%] rounded border border-blue-200 bg-blue-50 px-4 py-3 text-sm leading-6 text-blue-700">
+                    <div className="max-w-[80%] rounded border border-accent-soft bg-accent-soft px-4 py-3 text-sm leading-6 text-accent">
                       Siap, kita bedah <span className="font-semibold">{selectedDocument.filename}</span>. Tulis pertanyaan pertama kamu, misalnya minta ringkasan, poin penting, atau data tertentu dari dokumen ini.
                     </div>
                   </div>
                 ) : null
               ) : (
                 <div className="flex items-start gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-white" aria-hidden="true">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-accent-ink" aria-hidden="true">
                     AI
                   </div>
-                  <div className="max-w-[80%] rounded border border-[#dce2f3] bg-white p-3 shadow-sm">
+                  <div className="max-w-[80%] rounded border border-border bg-surface p-3 shadow-sm">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <p className="text-sm font-semibold text-ink">Pilih dokumen</p>
                         <p className="text-xs text-subtle">{readyDocuments.length} dokumen siap dianalisa</p>
                       </div>
                       <input
-                        className="h-9 rounded border border-[#c3c6d7] bg-[#f9f9ff] px-3 text-sm text-ink outline-none transition placeholder:text-subtle focus:border-primary sm:w-64"
+                        className="h-9 rounded border border-border bg-background px-3 text-sm text-ink outline-none transition placeholder:text-subtle focus:border-primary sm:w-64"
                         placeholder="Cari nama dokumen..."
                         type="search"
                         value={documentSearch}
                         onChange={(event) => setDocumentSearch(event.target.value)}
                       />
                     </div>
-                    <div className="mt-3 max-h-72 overflow-y-auto rounded border border-[#dce2f3]">
+                    <div className="mt-3 max-h-72 overflow-y-auto rounded border border-border">
                       {readyDocuments.length === 0 ? (
                         <div className="px-4 py-3 text-sm text-subtle">
                           Belum ada dokumen ready. Upload atau tunggu proses indexing selesai dulu.
@@ -384,7 +384,7 @@ export function ChatWorkspace() {
                         filteredReadyDocuments.map((document) => (
                           <button
                             key={document.id}
-                            className="flex w-full items-center justify-between gap-3 border-b border-[#dce2f3] px-4 py-3 text-left transition last:border-0 hover:bg-[#f9f9ff]"
+                            className="flex w-full items-center justify-between gap-3 border-b border-border px-4 py-3 text-left transition last:border-0 hover:bg-background"
                             type="button"
                             onClick={() => handleChooseDocument(document.id)}
                           >
@@ -394,7 +394,7 @@ export function ChatWorkspace() {
                                 {document.file_type.toUpperCase()} - {document.chunk_count} chunks
                               </span>
                             </span>
-                            <span className="shrink-0 rounded bg-[#dbe1ff] px-2 py-1 text-xs font-semibold text-primary">
+                            <span className="shrink-0 rounded bg-accent-soft px-2 py-1 text-xs font-semibold text-primary">
                               Select
                             </span>
                           </button>
@@ -414,21 +414,21 @@ export function ChatWorkspace() {
               className={`flex items-start gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
             >
               {message.role === "assistant" ? (
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-white" aria-hidden="true">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-accent-ink" aria-hidden="true">
                   AI
                 </div>
               ) : null}
               <div
                 className={`max-w-[78%] rounded border px-4 py-3 text-sm leading-6 ${
                   message.role === "user"
-                    ? "border-primary bg-primary text-white"
-                    : "border-[#dce2f3] bg-white text-ink"
+                    ? "border-primary bg-primary text-accent-ink"
+                    : "border-border bg-surface text-ink"
                 }`}
               >
                 {message.content}
               </div>
               {message.role === "user" ? (
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-[#dce2f3] text-xs font-bold text-ink" aria-hidden="true">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-accent-soft text-xs font-bold text-ink" aria-hidden="true">
                   {userInitials}
                 </div>
               ) : null}
@@ -436,10 +436,10 @@ export function ChatWorkspace() {
           ))}
           {isSending ? (
             <div className="flex items-start gap-3 justify-start">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-white" aria-hidden="true">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-accent-ink" aria-hidden="true">
                 AI
               </div>
-              <div className="min-w-60 max-w-[78%] rounded border border-[#dce2f3] bg-white px-4 py-3">
+              <div className="min-w-60 max-w-[78%] rounded border border-border bg-surface px-4 py-3">
                 <ShiningText className="sr-only" text="Contexta is thinking..." />
                 <span className="text-sm leading-6 text-subtle">Contexta is thinking...</span>
               </div>
@@ -449,7 +449,7 @@ export function ChatWorkspace() {
           <div ref={latestMessageRef} className="h-1" aria-hidden="true" />
         </div>
 
-        <div className="sticky bottom-0 border-t border-[#dce2f3] bg-[#f9f9ff] py-4">
+        <div className="sticky bottom-0 border-t border-border bg-background py-4">
           <AIInputWithLoading
             id="chat-question"
             placeholder={selectedDocumentId ? "Ask Contexta about this document..." : "Choose a document first..."}
@@ -478,18 +478,18 @@ export function ChatWorkspace() {
         />
       ) : null}
       <aside
-        className={`fixed bottom-0 right-0 top-0 z-40 w-full max-w-md border-l border-[#c3c6d7] bg-white shadow-xl transition-transform duration-200 ${
+        className={`fixed bottom-0 right-0 top-0 z-40 w-full max-w-md border-l border-border bg-surface shadow-xl transition-transform duration-200 ${
           isSourcesOpen ? "translate-x-0" : "translate-x-full"
         }`}
         aria-label="Source drawer"
       >
         <div className="flex h-full flex-col">
-          <div className="flex items-center justify-between border-b border-[#c3c6d7] px-5 py-4">
+          <div className="flex items-center justify-between border-b border-border px-5 py-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Source drawer</p>
+              <p className="text-xs font-semibold text-primary">Source drawer</p>
               <h2 className="font-heading text-xl font-semibold text-ink">Sources</h2>
             </div>
-            <button className="rounded border border-[#c3c6d7] px-3 py-1.5 text-sm font-semibold hover:border-primary" type="button" onClick={() => setIsSourcesOpen(false)}>
+            <button className="rounded border border-border px-3 py-1.5 text-sm font-semibold hover:border-primary" type="button" onClick={() => setIsSourcesOpen(false)}>
               Close
             </button>
           </div>
@@ -497,12 +497,12 @@ export function ChatWorkspace() {
             {citations.length > 0 ? (
               <div className="space-y-3">
                 {citations.map((citation) => (
-                  <article key={`${citation.document_id}-${citation.chunk_index}`} className="rounded border border-[#dce2f3] p-3">
+                  <article key={`${citation.document_id}-${citation.chunk_index}`} className="rounded border border-border p-3">
                     <div className="flex items-start justify-between gap-2">
                       <Link className="min-w-0 truncate text-sm font-medium text-primary hover:underline" href={`/documents/${citation.document_id}`}>
                         {citation.document_name}
                       </Link>
-                      <span className="shrink-0 rounded bg-[#dbe1ff] px-2 py-0.5 text-xs font-semibold text-primary">#{citation.source_number}</span>
+                      <span className="shrink-0 rounded bg-accent-soft px-2 py-0.5 text-xs font-semibold text-primary">#{citation.source_number}</span>
                     </div>
                     <p className="mt-1 text-xs text-subtle">
                       {citation.page_number ? `Page ${citation.page_number}` : "Page unknown"} - Score {citation.score.toFixed(2)}

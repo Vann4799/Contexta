@@ -272,7 +272,7 @@ export function DocumentUploadPanel() {
       <div className="grid gap-4 lg:grid-cols-12">
         <div
           className={`flex min-h-[320px] cursor-pointer flex-col items-center justify-center rounded border border-dashed p-8 text-center transition ${
-            isDragging ? "border-primary bg-[#f0f3ff]" : "border-[#737686] bg-white hover:bg-[#f0f3ff]"
+            isDragging ? "border-primary bg-muted" : "border-border bg-surface hover:bg-muted"
           } lg:col-span-8`}
           onClick={() => fileInputRef.current?.click()}
           onDragEnter={(event) => {
@@ -317,27 +317,27 @@ export function DocumentUploadPanel() {
               }
             }}
           />
-          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-md bg-[#dbe1ff] text-primary">
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-contexta bg-accent-soft text-primary">
             <CloudUpload className="h-7 w-7" strokeWidth={2.2} aria-hidden="true" />
           </div>
           <h3 className="font-heading text-xl font-semibold text-ink">Drag and drop files here</h3>
           <p className="mt-2 max-w-md text-sm text-subtle">Files will be securely uploaded and automatically indexed for RAG analysis.</p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-            <span className="inline-flex h-10 items-center justify-center rounded border border-[#c3c6d7] bg-white px-5 text-sm font-semibold text-ink">
+            <span className="inline-flex h-10 items-center justify-center rounded border border-border bg-surface px-5 text-sm font-semibold text-ink">
               Browse Files
             </span>
             <span className="text-sm text-subtle">PDF or DOCX, max 50 MB</span>
           </div>
         </div>
 
-        <aside className="flex rounded border border-[#c3c6d7] bg-[#f9f9ff] p-5 lg:col-span-4">
+        <aside className="flex rounded border border-border bg-background p-5 lg:col-span-4">
           <div className="flex w-full flex-col gap-4">
-            <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-subtle">System Status</h3>
-            <div className="flex items-center justify-between rounded border border-[#c3c6d7] bg-white p-3 text-sm">
+            <h3 className="text-xs font-semibold text-subtle">System Status</h3>
+            <div className="flex items-center justify-between rounded border border-border bg-surface p-3 text-sm">
               <span className="font-medium text-ink">Storage Used</span>
               <span className="font-mono text-xs text-ink">{formatBytes(totalStorage)}</span>
             </div>
-            <div className="flex items-center justify-between rounded border border-[#c3c6d7] bg-white p-3 text-sm">
+            <div className="flex items-center justify-between rounded border border-border bg-surface p-3 text-sm">
               <span className="font-medium text-ink">Indexing Queue</span>
               <span className="font-mono text-xs text-ink">{indexingHealth?.queued_documents ?? queueCount} file{(indexingHealth?.queued_documents ?? queueCount) === 1 ? "" : "s"}</span>
             </div>
@@ -345,11 +345,11 @@ export function DocumentUploadPanel() {
               <p className="font-semibold">{indexingHealthLabel(indexingHealth)}</p>
               <p className="mt-1 text-xs">{indexingHealthDetail(indexingHealth)}</p>
             </div>
-            <div className="flex items-center justify-between rounded border border-[#c3c6d7] bg-white p-3 text-sm">
+            <div className="flex items-center justify-between rounded border border-border bg-surface p-3 text-sm">
               <span className="font-medium text-ink">Ready</span>
               <span className="font-mono text-xs text-ink">{readyCount} file{readyCount === 1 ? "" : "s"}</span>
             </div>
-            <div className="mt-auto rounded border border-[#b4c5ff] bg-[#dbe1ff]/40 p-3 text-sm text-subtle">
+            <div className="mt-auto rounded border border-accent-soft bg-accent-soft p-3 text-sm text-subtle">
               Large PDFs may take up to 2 minutes to fully index for vector search.
             </div>
           </div>
@@ -357,8 +357,8 @@ export function DocumentUploadPanel() {
       </div>
 
       <div className="text-sm">
-        {isLoading ? <p className="rounded border border-[#c3c6d7] bg-white p-3 text-subtle">Loading documents...</p> : null}
-        {isUploading ? <p className="rounded border border-[#c3c6d7] bg-white p-3 text-subtle">Uploading document...</p> : null}
+        {isLoading ? <p className="rounded border border-border bg-surface p-3 text-subtle">Loading documents...</p> : null}
+        {isUploading ? <p className="rounded border border-border bg-surface p-3 text-subtle">Uploading document...</p> : null}
         {success ? <p className="rounded border border-emerald-200 bg-emerald-50 p-3 text-emerald-700">{success}</p> : null}
         {error ? <p className="rounded border border-red-200 bg-red-50 p-3 text-red-700">{error}</p> : null}
       </div>
@@ -372,20 +372,20 @@ export function DocumentUploadPanel() {
             </button>
           ) : null}
         </div>
-        <div className="overflow-hidden rounded border border-[#c3c6d7] bg-white">
-          <div className="grid min-w-[760px] grid-cols-12 border-b border-[#c3c6d7] bg-[#f0f3ff] px-5 py-3 text-xs font-semibold uppercase text-subtle">
+        <div className="overflow-hidden rounded border border-border bg-surface">
+          <div className="grid min-w-[760px] grid-cols-12 border-b border-border bg-muted px-5 py-3 text-xs font-semibold text-subtle">
             <div className="col-span-6">File Name</div>
             <div className="col-span-2">Size</div>
             <div className="col-span-3">Status</div>
             <div className="col-span-1 text-right">Actions</div>
           </div>
           <div className="overflow-x-auto">
-            <div className="min-w-[760px] divide-y divide-[#dce2f3]">
+            <div className="min-w-[760px] divide-y divide-border">
               {visibleDocuments.length > 0 ? (
                 visibleDocuments.map((document) => (
-                  <div key={document.id} className="grid grid-cols-12 items-center gap-3 px-5 py-4 transition hover:bg-[#f9f9ff]">
+                  <div key={document.id} className="grid grid-cols-12 items-center gap-3 px-5 py-4 transition hover:bg-background">
                     <div className="col-span-6 flex min-w-0 items-center gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-[#dbe1ff] text-primary">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-accent-soft text-primary">
                         <span className="text-xs font-bold">{document.file_type.toUpperCase()}</span>
                       </div>
                       <div className="min-w-0">
@@ -431,7 +431,7 @@ export function DocumentUploadPanel() {
             </div>
           </div>
           {documents.length > recentActivityLimit ? (
-            <div className="border-t border-[#dce2f3] bg-[#f9f9ff] px-5 py-3 text-xs text-subtle">
+            <div className="border-t border-border bg-background px-5 py-3 text-xs text-subtle">
               Showing {visibleDocuments.length} of {documents.length} documents.
             </div>
           ) : null}

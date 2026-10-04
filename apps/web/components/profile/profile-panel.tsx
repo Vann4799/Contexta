@@ -209,15 +209,15 @@ export function ProfilePanel() {
   return (
     <div className="space-y-8">
       <section className="grid gap-4 lg:grid-cols-12">
-        <article className="rounded border border-[#c3c6d7] bg-white p-6 lg:col-span-8">
+        <article className="rounded border border-border bg-surface p-6 lg:col-span-8">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex min-w-0 items-center gap-4">
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-md bg-primary text-xl font-semibold text-white">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-contexta bg-primary text-xl font-semibold text-accent-ink">
                 {initialsFromProfile(profile)}
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">User Profile</p>
-                <h2 className="mt-1 truncate font-heading text-3xl font-semibold text-ink">
+                <p className="text-xs font-semibold text-primary">User Profile</p>
+                <h2 className="title-rule mt-1 truncate font-heading text-3xl font-semibold text-ink">
                   {profile?.fullName || profile?.email || "Contexta user"}
                 </h2>
                 <p className="mt-1 truncate text-sm text-subtle">{profile?.email || "Loading account..."}</p>
@@ -232,7 +232,7 @@ export function ProfilePanel() {
             <label className="grid gap-2 text-sm font-semibold text-ink">
               Display name
               <input
-                className="h-11 rounded border border-[#c3c6d7] bg-white px-3 text-sm font-normal text-ink outline-none transition focus:border-primary"
+                className="h-11 rounded border border-border bg-surface px-3 text-sm font-normal text-ink outline-none transition focus:border-primary"
                 disabled={isLoading || isSaving}
                 onChange={(event) => setDisplayName(event.target.value)}
                 placeholder="Add your display name"
@@ -241,7 +241,7 @@ export function ProfilePanel() {
             </label>
             <div className="grid gap-2 text-sm font-semibold text-ink">
               Account email
-              <div className="flex h-11 items-center rounded border border-[#c3c6d7] bg-[#f9f9ff] px-3 text-sm font-normal text-subtle">
+              <div className="flex h-11 items-center rounded border border-border bg-background px-3 text-sm font-normal text-subtle">
                 {profile?.email || "Loading..."}
               </div>
             </div>
@@ -263,8 +263,8 @@ export function ProfilePanel() {
           ) : null}
         </article>
 
-        <aside className="rounded border border-[#c3c6d7] bg-white p-5 lg:col-span-4">
-          <div className="flex h-11 w-11 items-center justify-center rounded-md bg-[#dbe1ff] text-primary">
+        <aside className="rounded border border-border bg-surface p-5 lg:col-span-4">
+          <div className="flex h-11 w-11 items-center justify-center rounded-contexta bg-accent-soft text-primary">
             <UserRound className="h-5 w-5" strokeWidth={2.2} aria-hidden="true" />
           </div>
           <h3 className="mt-4 font-heading text-xl font-semibold text-ink">Account Summary</h3>
@@ -272,8 +272,8 @@ export function ProfilePanel() {
             {accountItems.map((item) => {
               const Icon = item.icon;
               return (
-                <div key={item.label} className="rounded border border-[#dce2f3] bg-[#f9f9ff] p-3">
-                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-subtle">
+                <div key={item.label} className="rounded border border-border bg-background p-3">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-subtle">
                     <Icon className="h-4 w-4 text-primary" strokeWidth={2.1} aria-hidden="true" />
                     {item.label}
                   </div>
@@ -289,14 +289,14 @@ export function ProfilePanel() {
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
-            <article key={stat.label} className="rounded border border-[#c3c6d7] bg-white p-5">
+            <article key={stat.label} className="rounded border border-border bg-surface p-5">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-sm font-medium text-subtle">{stat.label}</p>
-                  <p className="mt-3 font-heading text-3xl font-semibold text-ink">{isLoading ? "..." : stat.value}</p>
+                  <p className="mt-3 nums font-heading text-3xl font-semibold text-ink">{isLoading ? "..." : stat.value}</p>
                   <p className="mt-1 text-xs text-subtle">{isLoading ? "Loading profile..." : stat.helper}</p>
                 </div>
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-[#dbe1ff] text-primary">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-contexta bg-accent-soft text-primary">
                   <Icon className="h-5 w-5" strokeWidth={2.2} aria-hidden="true" />
                 </div>
               </div>
@@ -305,11 +305,11 @@ export function ProfilePanel() {
         })}
       </section>
 
-      <section className="rounded border border-[#c3c6d7] bg-white p-6">
+      <section className="rounded border border-border bg-surface p-6">
         <h3 className="font-heading text-xl font-semibold text-ink">Security & Access</h3>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           {["Email/password authentication", "Private document workspace", "Server-side API keys hidden"].map((item) => (
-            <div key={item} className="flex items-center gap-3 rounded border border-[#dce2f3] bg-[#f9f9ff] px-4 py-3 text-sm text-ink">
+            <div key={item} className="flex items-center gap-3 rounded border border-border bg-background px-4 py-3 text-sm text-ink">
               <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" aria-hidden="true" />
               {item}
             </div>

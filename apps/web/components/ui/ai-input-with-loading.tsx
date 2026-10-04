@@ -62,14 +62,14 @@ export function AIInputWithLoading({
 
   return (
     <form className={cn("w-full", className)} onSubmit={handleFormSubmit}>
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-2 rounded-lg border border-[#c3c6d7] bg-white p-3 shadow-sm">
+      <div className="mx-auto flex w-full max-w-4xl flex-col gap-2 rounded-contexta border border-border bg-surface p-3 shadow-sm">
         {leadingContent ? <div className="flex flex-wrap items-center gap-2">{leadingContent}</div> : null}
         <div className="relative w-full">
           <Textarea
             id={id}
             placeholder={placeholder}
             className={cn(
-              "w-full resize-none rounded-3xl border-none bg-black/5 py-4 pl-6 pr-12 text-ink placeholder:text-subtle focus-visible:ring-1 focus-visible:ring-primary",
+              "w-full resize-none rounded-contexta border-none bg-black/5 py-4 pl-6 pr-12 text-ink placeholder:text-subtle focus-visible:ring-1 focus-visible:ring-primary",
               "min-h-14"
             )}
             style={{ minHeight }}
@@ -96,7 +96,7 @@ export function AIInputWithLoading({
               void handleSubmit();
             }}
             className={cn(
-              "absolute right-3 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-xl transition",
+              "absolute right-3 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-contexta transition",
               isLoading || (inputValue.trim() && !disabled) ? "bg-black/5 text-ink" : "bg-transparent text-subtle"
             )}
             type="button"

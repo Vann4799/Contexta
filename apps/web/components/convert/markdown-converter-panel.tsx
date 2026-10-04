@@ -166,7 +166,7 @@ export function MarkdownConverterPanel() {
     <section className="space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
-          <h2 className="font-heading text-3xl font-semibold text-ink">PDF to Markdown</h2>
+          <h2 className="title-rule font-heading text-3xl font-semibold text-ink">PDF to Markdown</h2>
           <p className="mt-1 text-sm text-subtle">Convert a PDF into clean Markdown without adding it to your document library.</p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -185,7 +185,7 @@ export function MarkdownConverterPanel() {
         <div className="space-y-4">
           <div
             className={`flex min-h-[300px] cursor-pointer flex-col items-center justify-center rounded border border-dashed p-8 text-center transition ${
-              isDragging ? "border-primary bg-[#f0f3ff]" : "border-[#737686] bg-white hover:bg-[#f0f3ff]"
+              isDragging ? "border-primary bg-muted" : "border-border bg-surface hover:bg-muted"
             }`}
             onClick={() => fileInputRef.current?.click()}
             onDragEnter={(event) => {
@@ -230,13 +230,13 @@ export function MarkdownConverterPanel() {
                 }
               }}
             />
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-md bg-[#dbe1ff] text-primary">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-contexta bg-accent-soft text-primary">
               <CloudUpload className="h-7 w-7" strokeWidth={2.2} aria-hidden="true" />
             </div>
             <h3 className="font-heading text-xl font-semibold text-ink">Drag and drop a PDF</h3>
             <p className="mt-2 max-w-sm text-sm text-subtle">The converter accepts one PDF at a time and returns Markdown for preview, copy, or download.</p>
             <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-              <span className="inline-flex h-10 items-center justify-center rounded border border-[#c3c6d7] bg-white px-5 text-sm font-semibold text-ink">
+              <span className="inline-flex h-10 items-center justify-center rounded border border-border bg-surface px-5 text-sm font-semibold text-ink">
                 Browse PDF
               </span>
               <span className="text-sm text-subtle">Max 50 MB</span>
@@ -244,7 +244,7 @@ export function MarkdownConverterPanel() {
           </div>
 
           {file ? (
-            <div className="rounded border border-[#c3c6d7] bg-white p-4">
+            <div className="rounded border border-border bg-surface p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-ink">{file.name}</p>
@@ -273,8 +273,8 @@ export function MarkdownConverterPanel() {
           </div>
         </div>
 
-        <section className="min-h-[520px] rounded border border-[#c3c6d7] bg-white">
-          <div className="flex flex-col gap-3 border-b border-[#c3c6d7] bg-[#f0f3ff] p-4 sm:flex-row sm:items-center sm:justify-between">
+        <section className="min-h-[520px] rounded border border-border bg-surface">
+          <div className="flex flex-col gap-3 border-b border-border bg-muted p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
               <h3 className="font-heading text-lg font-semibold text-ink">Markdown Preview</h3>
               <p className="mt-1 truncate text-xs text-subtle">

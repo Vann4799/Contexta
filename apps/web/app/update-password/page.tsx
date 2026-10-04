@@ -78,7 +78,7 @@ export default function UpdatePasswordPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-4 py-8">
-      <section className="w-full max-w-md rounded-contexta border border-border bg-white p-6 shadow-soft sm:p-8">
+      <section className="w-full max-w-md rounded-contexta border border-border bg-surface p-6 sm:p-8">
         <ContextaLogo />
         <h1 className="mt-8 font-heading text-2xl font-semibold">Create a new password</h1>
         <p className="mt-2 text-sm leading-6 text-subtle">Choose a new password for your Contexta account.</p>
@@ -91,7 +91,7 @@ export default function UpdatePasswordPage() {
               <input
                 id="new-password"
                 autoComplete="new-password"
-                className="h-12 w-full rounded border border-[#c8cfdf] bg-white px-4 pr-16 text-sm leading-5 outline-none transition placeholder:text-subtle focus:border-primary"
+                className="h-12 w-full rounded border border-border bg-background px-4 pr-16 text-sm leading-5 outline-none transition placeholder:text-subtle focus:border-primary"
                 placeholder="New password"
                 type={showPassword ? "text" : "password"}
                 value={password}
@@ -115,7 +115,7 @@ export default function UpdatePasswordPage() {
             <input
               id="confirm-password"
               autoComplete="new-password"
-              className="h-12 w-full rounded border border-[#c8cfdf] bg-white px-4 text-sm leading-5 outline-none transition placeholder:text-subtle focus:border-primary"
+              className="h-12 w-full rounded border border-border bg-background px-4 text-sm leading-5 outline-none transition placeholder:text-subtle focus:border-primary"
               placeholder="Repeat new password"
               type={showPassword ? "text" : "password"}
               value={confirmPassword}
@@ -138,7 +138,7 @@ export default function UpdatePasswordPage() {
           </Button>
         </form>
         <p className="mt-5 text-sm">
-          <Link href="/forgot-password" className="text-primary hover:text-blue-700">
+          <Link href="/forgot-password" className="text-primary hover:text-accent">
             Request a new reset link
           </Link>
         </p>

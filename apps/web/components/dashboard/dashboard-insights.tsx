@@ -147,19 +147,19 @@ export function DashboardInsights() {
     <div className="space-y-8">
       <section className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <h2 className="font-heading text-2xl font-semibold text-ink">Dashboard Overview</h2>
+          <h2 className="title-rule font-heading text-2xl font-semibold text-ink">Dashboard Overview</h2>
           <p className="mt-1 text-sm text-subtle">Manage your document library and recent analyses.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
-            className="inline-flex h-11 items-center justify-center rounded border border-[#c3c6d7] bg-white px-4 text-sm font-semibold text-ink transition hover:border-primary hover:text-primary"
+            className="inline-flex h-11 items-center justify-center rounded border border-border bg-surface px-4 text-sm font-semibold text-ink transition hover:border-primary hover:text-primary"
             disabled={isLoading}
             onClick={() => void loadDocuments()}
             type="button"
           >
             Refresh
           </button>
-          <Link className="inline-flex h-11 items-center justify-center rounded border border-primary bg-primary px-4 text-sm font-semibold text-white transition hover:bg-blue-700" href="/documents">
+          <Link className="inline-flex h-11 items-center justify-center rounded border border-primary bg-primary px-4 text-sm font-semibold text-accent-ink transition hover:bg-accent-strong" href="/documents">
             Upload Document
           </Link>
         </div>
@@ -176,13 +176,13 @@ export function DashboardInsights() {
           {stats.slice(0, 3).map((stat) => {
             const Icon = stat.icon;
             return (
-            <article key={stat.label} className="flex items-center justify-between rounded border border-[#c3c6d7] bg-white p-5">
+            <article key={stat.label} className="flex items-center justify-between rounded border border-border bg-surface p-5">
               <div>
                 <p className="text-sm font-medium text-subtle">{stat.label}</p>
-                <p className="mt-3 font-heading text-3xl font-semibold text-ink">{isLoading ? "..." : stat.value}</p>
+                <p className="mt-3 nums font-heading text-3xl font-semibold text-ink">{isLoading ? "..." : stat.value}</p>
                 <p className="mt-1 text-xs text-subtle">{isLoading ? "Loading dashboard..." : stat.helper}</p>
               </div>
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-[#dbe1ff] text-primary">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-contexta bg-accent-soft text-primary">
                 <Icon className="h-5 w-5" strokeWidth={2.2} aria-hidden="true" />
               </div>
             </article>
@@ -190,8 +190,8 @@ export function DashboardInsights() {
           })}
         </div>
 
-        <article className="rounded border border-[#c3c6d7] bg-white p-5 lg:col-span-8">
-          <div className="mb-4 flex items-center justify-between border-b border-[#c3c6d7] pb-3">
+        <article className="rounded border border-border bg-surface p-5 lg:col-span-8">
+          <div className="mb-4 flex items-center justify-between border-b border-border pb-3">
             <h3 className="font-heading text-xl font-semibold text-ink">Recent Analyses</h3>
             <Link className="text-sm font-semibold text-primary hover:underline" href="/chat">
               Open Chat
@@ -202,8 +202,8 @@ export function DashboardInsights() {
               <p className="text-sm text-subtle">Loading recent analyses...</p>
             ) : recentDocuments.length > 0 ? (
               recentDocuments.map((document) => (
-                <Link key={document.id} className="flex items-start gap-3 rounded p-3 transition hover:bg-[#f0f3ff]" href={`/documents/${document.id}`}>
-                  <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#dce2f3] text-primary">
+                <Link key={document.id} className="flex items-start gap-3 rounded p-3 transition hover:bg-muted" href={`/documents/${document.id}`}>
+                  <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-primary">
                     <FileText className="h-4 w-4" strokeWidth={2.1} aria-hidden="true" />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -216,15 +216,15 @@ export function DashboardInsights() {
                 </Link>
               ))
             ) : (
-              <p className="rounded bg-[#f0f3ff] p-4 text-sm text-subtle">Upload a document to create your first analysis workspace.</p>
+              <p className="rounded bg-muted p-4 text-sm text-subtle">Upload a document to create your first analysis workspace.</p>
             )}
           </div>
         </article>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-12">
-        <article className="rounded border border-[#c3c6d7] bg-white lg:col-span-8">
-          <div className="flex flex-col gap-3 border-b border-[#c3c6d7] p-5 sm:flex-row sm:items-center sm:justify-between">
+        <article className="rounded border border-border bg-surface lg:col-span-8">
+          <div className="flex flex-col gap-3 border-b border-border p-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 className="font-heading text-xl font-semibold text-ink">Document Library</h3>
               <p className="mt-1 text-sm text-subtle">Track indexing status and open document intelligence.</p>
@@ -233,7 +233,7 @@ export function DashboardInsights() {
               <span className="sr-only">Filter library</span>
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle" strokeWidth={2} aria-hidden="true" />
               <input
-                className="h-9 w-full rounded border border-[#c3c6d7] bg-[#f9f9ff] px-9 text-sm placeholder:text-subtle focus:border-primary focus:outline-none"
+                className="h-9 w-full rounded border border-border bg-background px-9 text-sm placeholder:text-subtle focus:border-primary focus:outline-none"
                 placeholder="Filter library..."
                 type="search"
                 value={libraryFilter}
@@ -244,8 +244,8 @@ export function DashboardInsights() {
 
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] border-collapse text-left text-sm">
-              <thead className="bg-[#f0f3ff] text-xs font-semibold uppercase text-subtle">
-                <tr className="border-b border-[#c3c6d7]">
+              <thead className="bg-muted text-xs font-semibold text-subtle">
+                <tr className="border-b border-border">
                   <th className="px-5 py-3 font-semibold">Name</th>
                   <th className="px-4 py-3 font-semibold">Type</th>
                   <th className="px-4 py-3 font-semibold">Size</th>
@@ -261,7 +261,7 @@ export function DashboardInsights() {
                   </tr>
                 ) : libraryDocuments.length > 0 ? (
                   libraryDocuments.map((document) => (
-                    <tr key={document.id} className="border-b border-[#dce2f3] transition last:border-0 hover:bg-[#f0f3ff]">
+                    <tr key={document.id} className="border-b border-border transition last:border-0 hover:bg-muted">
                       <td className="max-w-[320px] truncate px-5 py-4 font-medium text-ink">
                         {document.filename}
                       </td>
@@ -289,7 +289,7 @@ export function DashboardInsights() {
               </tbody>
             </table>
           </div>
-          <div className="flex items-center justify-between border-t border-[#c3c6d7] bg-[#f9f9ff] px-5 py-3 text-sm text-subtle">
+          <div className="flex items-center justify-between border-t border-border bg-background px-5 py-3 text-sm text-subtle">
             <span>Showing {isLoading ? "..." : `${libraryDocuments.length} of ${filteredDocuments.length}`}</span>
             <Link className="font-semibold text-primary hover:underline" href="/documents">
               View all
@@ -298,7 +298,7 @@ export function DashboardInsights() {
         </article>
 
         <aside className="space-y-4 lg:col-span-4">
-          <article className="rounded border border-[#c3c6d7] bg-white p-5">
+          <article className="rounded border border-border bg-surface p-5">
             <h3 className="font-heading text-xl font-semibold text-ink">Workspace Health</h3>
             <div className="mt-4 space-y-3 text-sm">
               <div className={`rounded px-3 py-2 ${indexingHealth?.status === "attention" ? "bg-amber-50 text-amber-800" : "bg-emerald-50 text-emerald-800"}`}>
@@ -308,31 +308,31 @@ export function DashboardInsights() {
                 </div>
                 <p className="mt-1 text-xs">{indexingHealthDetail(indexingHealth)}</p>
               </div>
-              <div className="flex items-center justify-between rounded bg-[#f0f3ff] px-3 py-2">
+              <div className="flex items-center justify-between rounded bg-muted px-3 py-2">
                 <span className="text-subtle">Ready documents</span>
                 <span className="font-semibold text-ink">{isLoading ? "..." : readyDocuments}</span>
               </div>
-              <div className="flex items-center justify-between rounded bg-[#f0f3ff] px-3 py-2">
+              <div className="flex items-center justify-between rounded bg-muted px-3 py-2">
                 <span className="text-subtle">In queue</span>
                 <span className="font-semibold text-ink">{isLoading ? "..." : processingDocuments}</span>
               </div>
-              <div className="flex items-center justify-between rounded bg-[#f0f3ff] px-3 py-2">
+              <div className="flex items-center justify-between rounded bg-muted px-3 py-2">
                 <span className="text-subtle">Indexed chunks</span>
                 <span className="font-semibold text-ink">{isLoading ? "..." : stats[3].value}</span>
               </div>
             </div>
           </article>
 
-          <article className="rounded border border-[#c3c6d7] bg-white p-5">
+          <article className="rounded border border-border bg-surface p-5">
             <h3 className="font-heading text-xl font-semibold text-ink">Next Actions</h3>
             <div className="mt-4 space-y-3">
-              <Link className="block rounded border border-[#dce2f3] px-4 py-3 text-sm font-semibold transition hover:border-primary hover:bg-[#f0f3ff]" href="/documents">
+              <Link className="block rounded border border-border px-4 py-3 text-sm font-semibold transition hover:border-primary hover:bg-muted" href="/documents">
                 Upload or manage documents
               </Link>
-              <Link className="block rounded border border-[#dce2f3] px-4 py-3 text-sm font-semibold transition hover:border-primary hover:bg-[#f0f3ff]" href="/chat">
+              <Link className="block rounded border border-border px-4 py-3 text-sm font-semibold transition hover:border-primary hover:bg-muted" href="/chat">
                 Ask questions with citations
               </Link>
-              <Link className="block rounded border border-[#dce2f3] px-4 py-3 text-sm font-semibold transition hover:border-primary hover:bg-[#f0f3ff]" href="/settings">
+              <Link className="block rounded border border-border px-4 py-3 text-sm font-semibold transition hover:border-primary hover:bg-muted" href="/settings">
                 Review local RAG settings
               </Link>
             </div>

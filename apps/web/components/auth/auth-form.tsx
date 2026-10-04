@@ -136,7 +136,7 @@ export function AuthForm({ mode }: AuthFormProps) {
           <input
             id="register-name"
             autoComplete="name"
-            className="h-12 w-full rounded border border-[#c8cfdf] bg-white px-4 text-sm leading-5 outline-none transition placeholder:text-subtle focus:border-primary"
+            className="h-12 w-full rounded border border-border bg-background px-4 text-sm leading-5 outline-none transition placeholder:text-subtle focus:border-primary"
             placeholder="Your name"
             value={fullName}
             onChange={(event) => setFullName(event.target.value)}
@@ -150,7 +150,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         <input
           id={`${mode}-email`}
           autoComplete="email"
-          className="h-12 w-full rounded border border-[#c8cfdf] bg-white px-4 text-sm leading-5 outline-none transition placeholder:text-subtle focus:border-primary"
+          className="h-12 w-full rounded border border-border bg-background px-4 text-sm leading-5 outline-none transition placeholder:text-subtle focus:border-primary"
           placeholder="you@company.com"
           type="email"
           value={email}
@@ -166,7 +166,7 @@ export function AuthForm({ mode }: AuthFormProps) {
             <input
               id={`${mode}-password`}
               autoComplete={mode === "login" ? "current-password" : "new-password"}
-              className="h-12 w-full rounded border border-[#c8cfdf] bg-white px-4 pr-16 text-sm leading-5 outline-none transition placeholder:text-subtle focus:border-primary"
+              className="h-12 w-full rounded border border-border bg-background px-4 pr-16 text-sm leading-5 outline-none transition placeholder:text-subtle focus:border-primary"
               placeholder="Password"
               type={showPassword ? "text" : "password"}
               value={password}

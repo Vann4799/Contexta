@@ -214,12 +214,12 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
   };
 
   if (isLoading) {
-    return <section className="rounded-contexta border border-border bg-white p-5 text-sm text-subtle">Loading document intelligence...</section>;
+    return <section className="rounded-contexta border border-border bg-surface p-5 text-sm text-subtle">Loading document intelligence...</section>;
   }
 
   if (error || !document) {
     return (
-      <section className="rounded-contexta border border-border bg-white p-5">
+      <section className="rounded-contexta border border-border bg-surface p-5">
         <p className="text-sm text-red-700">{error || "Document not found."}</p>
         <Link className="mt-4 inline-block text-sm text-primary hover:underline" href="/documents">
           Back to documents
@@ -239,7 +239,7 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
         <StatusPill status={normalizedStatus} />
       </div>
 
-      <section className="rounded-contexta border border-border bg-white p-5">
+      <section className="rounded-contexta border border-border bg-surface p-5">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <h2 className="truncate font-heading text-xl font-semibold">{document.filename}</h2>
@@ -251,9 +251,9 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
       </section>
 
       {normalizedStatus === "processing" ? (
-        <section className="rounded-contexta border border-blue-200 bg-blue-50 p-5">
-          <h3 className="font-heading text-lg font-semibold text-blue-700">Indexing in progress</h3>
-          <p className="mt-2 text-sm leading-6 text-blue-700">
+        <section className="rounded-contexta border border-accent-soft bg-accent-soft p-5">
+          <h3 className="font-heading text-lg font-semibold text-accent">Indexing in progress</h3>
+          <p className="mt-2 text-sm leading-6 text-accent">
             Contexta is extracting text and creating searchable chunks. This page refreshes automatically every few seconds.
           </p>
         </section>
@@ -270,13 +270,13 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
       ) : null}
 
       {document.status === "ready" && !intelligence ? (
-        <section className="rounded-contexta border border-border bg-white p-5 text-sm text-subtle">Loading processed document details...</section>
+        <section className="rounded-contexta border border-border bg-surface p-5 text-sm text-subtle">Loading processed document details...</section>
       ) : null}
 
       {document.status === "ready" && intelligence ? (
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4">
-          <article className="rounded-contexta border border-border bg-white p-5">
+          <article className="rounded-contexta border border-border bg-surface p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h3 className="font-heading text-lg font-semibold">Automatic Brief</h3>
               <Button disabled={isGeneratingBrief || document.status !== "ready"} onClick={() => void handleGenerateBrief()}>
@@ -299,7 +299,7 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
             ) : null}
           </article>
 
-          <article className="rounded-contexta border border-border bg-white p-5">
+          <article className="rounded-contexta border border-border bg-surface p-5">
             <h3 className="font-heading text-lg font-semibold">Key Points</h3>
             {intelligence.key_points.length > 0 ? (
               <ul className="mt-3 space-y-2 text-sm leading-6 text-ink">
@@ -316,31 +316,31 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
         </div>
 
         <aside className="space-y-4">
-          <article className="rounded-contexta border border-border bg-white p-5">
+          <article className="rounded-contexta border border-border bg-surface p-5">
             <h3 className="font-heading text-lg font-semibold">Detected Fields</h3>
             <div className="mt-4 space-y-4">
               <div>
-                <p className="mb-2 text-xs font-medium uppercase text-subtle">Names</p>
+                <p className="mb-2 text-xs font-medium text-subtle">Names</p>
                 <FieldList empty="No names detected yet." items={intelligence.candidate_names} />
               </div>
               <div>
-                <p className="mb-2 text-xs font-medium uppercase text-subtle">Emails</p>
+                <p className="mb-2 text-xs font-medium text-subtle">Emails</p>
                 <FieldList empty="No emails detected yet." items={intelligence.emails} />
               </div>
               <div>
-                <p className="mb-2 text-xs font-medium uppercase text-subtle">Links</p>
+                <p className="mb-2 text-xs font-medium text-subtle">Links</p>
                 <FieldList empty="No links detected yet." items={intelligence.links} />
               </div>
             </div>
           </article>
 
-          <article className="rounded-contexta border border-border bg-white p-5">
+          <article className="rounded-contexta border border-border bg-surface p-5">
             <h3 className="font-heading text-lg font-semibold">Suggested Questions</h3>
             <div className="mt-3 space-y-2">
               {intelligence.suggested_questions.map((question) => (
                 <Link
                   key={question}
-                  className="block rounded border border-border bg-muted px-3 py-2 text-sm text-ink hover:border-primary hover:bg-blue-50"
+                  className="block rounded border border-border bg-muted px-3 py-2 text-sm text-ink hover:border-primary hover:bg-accent-soft"
                   href={`/chat?question=${encodeURIComponent(question)}&documentId=${encodeURIComponent(document.id)}`}
                 >
                   {question}

@@ -23,26 +23,26 @@ export default function SettingsPage() {
       <div className="space-y-8">
         <section className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Workspace Settings</p>
-            <h2 className="mt-2 font-heading text-3xl font-semibold text-ink">System controls</h2>
+            <p className="text-xs font-semibold text-primary">Workspace Settings</p>
+            <h2 className="mt-2 title-rule font-heading text-3xl font-semibold text-ink">System controls</h2>
             <p className="mt-2 max-w-2xl text-sm text-subtle">
               Read-only configuration for this local Contexta workspace. Core secrets stay on the API server and are not exposed here.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link className="inline-flex h-10 items-center justify-center rounded border border-[#c3c6d7] bg-white px-4 text-sm font-semibold text-ink transition hover:border-primary hover:text-primary" href="/documents">
+            <Link className="inline-flex h-10 items-center justify-center rounded border border-border bg-surface px-4 text-sm font-semibold text-ink transition hover:border-primary hover:text-primary" href="/documents">
               Manage documents
             </Link>
-            <Link className="inline-flex h-10 items-center justify-center rounded border border-primary bg-primary px-4 text-sm font-semibold text-white transition hover:bg-blue-700" href="/chat">
+            <Link className="inline-flex h-10 items-center justify-center rounded border border-primary bg-primary px-4 text-sm font-semibold text-accent-ink transition hover:bg-accent-strong" href="/chat">
               Open chat
             </Link>
           </div>
         </section>
 
         <section className="grid gap-4 lg:grid-cols-12">
-          <article className="rounded border border-[#c3c6d7] bg-white p-6 lg:col-span-8">
+          <article className="rounded border border-border bg-surface p-6 lg:col-span-8">
             <div className="flex items-start gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-[#dbe1ff] text-primary">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-contexta bg-accent-soft text-primary">
                 <SlidersHorizontal className="h-5 w-5" strokeWidth={2.2} aria-hidden="true" />
               </div>
               <div>
@@ -55,12 +55,12 @@ export default function SettingsPage() {
               {runtimeItems.map((item) => {
                 const Icon = item.icon;
                 return (
-                  <div key={item.label} className="rounded border border-[#dce2f3] bg-[#f9f9ff] p-4">
+                  <div key={item.label} className="rounded border border-border bg-background p-4">
                     <div className="flex items-center gap-2 text-sm font-semibold text-ink">
                       <Icon className="h-4 w-4 text-primary" strokeWidth={2.1} aria-hidden="true" />
                       {item.label}
                     </div>
-                    <div className="mt-3 rounded border border-[#c3c6d7] bg-white px-3 py-2 text-sm text-subtle">
+                    <div className="mt-3 rounded border border-border bg-surface px-3 py-2 text-sm text-subtle">
                       {item.value}
                     </div>
                   </div>
@@ -70,7 +70,7 @@ export default function SettingsPage() {
           </article>
 
           <aside className="space-y-4 lg:col-span-4">
-            <article className="rounded border border-[#c3c6d7] bg-white p-5">
+            <article className="rounded border border-border bg-surface p-5">
               <h3 className="font-heading text-xl font-semibold text-ink">Mode</h3>
               <div className="mt-4 rounded border border-emerald-200 bg-emerald-50 p-4">
                 <p className="text-sm font-semibold text-emerald-800">Single-user phase</p>
@@ -80,7 +80,7 @@ export default function SettingsPage() {
               </div>
             </article>
 
-            <article className="rounded border border-[#c3c6d7] bg-white p-5">
+            <article className="rounded border border-border bg-surface p-5">
               <h3 className="font-heading text-xl font-semibold text-ink">Security Note</h3>
               <p className="mt-3 text-sm leading-6 text-subtle">
                 Supabase service role, DeepSeek key, and database credentials must stay in backend `.env` files. The web app should only receive public client settings.
@@ -93,8 +93,8 @@ export default function SettingsPage() {
           {capabilityItems.map((item) => {
             const Icon = item.icon;
             return (
-              <article key={item.label} className="rounded border border-[#c3c6d7] bg-white p-5">
-                <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[#dbe1ff] text-primary">
+              <article key={item.label} className="rounded border border-border bg-surface p-5">
+                <div className="flex h-10 w-10 items-center justify-center rounded-contexta bg-accent-soft text-primary">
                   <Icon className="h-5 w-5" strokeWidth={2.2} aria-hidden="true" />
                 </div>
                 <h3 className="mt-4 font-heading text-lg font-semibold text-ink">{item.label}</h3>
@@ -104,11 +104,11 @@ export default function SettingsPage() {
           })}
         </section>
 
-        <section className="rounded border border-[#c3c6d7] bg-white p-6">
+        <section className="rounded border border-border bg-surface p-6">
           <h3 className="font-heading text-xl font-semibold text-ink">Operational Checklist</h3>
           <div className="mt-4 grid gap-3 md:grid-cols-3">
             {["API server running on port 8001", "Qdrant Docker container active", "Supabase project keys configured"].map((item) => (
-              <div key={item} className="flex items-center gap-3 rounded border border-[#dce2f3] bg-[#f9f9ff] px-4 py-3 text-sm text-ink">
+              <div key={item} className="flex items-center gap-3 rounded border border-border bg-background px-4 py-3 text-sm text-ink">
                 <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" aria-hidden="true" />
                 {item}
               </div>

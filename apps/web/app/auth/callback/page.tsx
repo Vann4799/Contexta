@@ -128,7 +128,7 @@ export default function AuthCallbackPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-4 py-8">
-      <section className="w-full max-w-md rounded-contexta border border-border bg-white p-6 shadow-soft sm:p-8">
+      <section className="w-full max-w-md rounded-contexta border border-border bg-surface p-6 sm:p-8">
         <ContextaLogo />
         <h1 className="mt-8 font-heading text-2xl font-semibold">{isSuccess ? "Authentication complete" : isError ? "Authentication error" : "Completing authentication"}</h1>
         <p className="mt-2 text-sm leading-6 text-subtle">{callbackState.message}</p>
@@ -136,14 +136,14 @@ export default function AuthCallbackPage() {
           <Link
             href="/"
             className={`inline-flex h-11 max-w-full flex-1 items-center justify-center rounded border px-4 text-sm font-medium leading-none transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
-              isSuccess ? "border-primary bg-primary text-white hover:bg-blue-700" : "border-border bg-white text-ink hover:bg-muted"
+              isSuccess ? "border-primary bg-primary text-accent-ink hover:bg-accent-strong" : "border-border bg-surface text-ink hover:bg-muted"
             }`}
           >
             Dashboard
           </Link>
           <Link
             href="/login"
-            className="inline-flex h-11 max-w-full flex-1 items-center justify-center rounded border border-border bg-white px-4 text-sm font-medium leading-none text-ink transition hover:bg-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="inline-flex h-11 max-w-full flex-1 items-center justify-center rounded border border-border bg-surface px-4 text-sm font-medium leading-none text-ink transition hover:bg-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             Login
           </Link>

@@ -12,7 +12,9 @@ const config: Config = {
         border: "oklch(0.25 0.012 70 / 0.14)",
         primary: "oklch(0.52 0.13 45 / <alpha-value>)",
         accent: "oklch(0.52 0.13 45 / <alpha-value>)",
+        "accent-strong": "oklch(0.45 0.13 45 / <alpha-value>)",
         "accent-soft": "oklch(0.52 0.13 45 / 0.12)",
+        "accent-ink": "oklch(0.97 0.012 85 / <alpha-value>)",
         ink: "oklch(0.25 0.012 70 / <alpha-value>)",
         subtle: "oklch(0.45 0.014 70 / <alpha-value>)"
       },

@@ -36,8 +36,8 @@ export function DesktopNavLinks() {
             href={item.href}
             className={`flex items-center gap-3 rounded px-3 py-3 text-sm font-semibold transition ${
               isActive
-                ? "border-r-2 border-primary bg-[#dce2f3]/70 text-primary"
-                : "text-subtle hover:bg-white/70 hover:text-ink"
+                ? "border-r-2 border-primary bg-accent-soft text-primary"
+                : "text-subtle hover:bg-accent-soft hover:text-ink"
             }`}
             aria-current={isActive ? "page" : undefined}
           >
@@ -54,7 +54,7 @@ export function MobileNavLinks() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t border-[#c3c6d7] bg-white md:hidden" aria-label="Mobile primary">
+    <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t border-border bg-surface md:hidden" aria-label="Mobile primary">
       {navigationItems.map((item) => {
         const isActive = isActiveRoute(pathname, item.href);
         const Icon = navIcons[item.label] ?? FileText;
@@ -63,7 +63,7 @@ export function MobileNavLinks() {
             key={item.href}
             href={item.href}
             className={`min-w-0 px-1 py-2 text-center text-xs font-medium ${
-              isActive ? "bg-[#dce2f3] text-primary" : "text-subtle hover:bg-muted hover:text-ink"
+              isActive ? "bg-accent-soft text-primary" : "text-subtle hover:bg-muted hover:text-ink"
             }`}
             aria-current={isActive ? "page" : undefined}
           >

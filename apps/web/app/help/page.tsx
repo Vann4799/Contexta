@@ -58,17 +58,17 @@ export default function HelpPage() {
       <div className="space-y-8">
         <section className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Contexta Help</p>
-            <h2 className="mt-2 font-heading text-3xl font-semibold text-ink">Panduan workspace</h2>
+            <p className="text-xs font-semibold text-primary">Contexta Help</p>
+            <h2 className="mt-2 title-rule font-heading text-3xl font-semibold text-ink">Panduan workspace</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-subtle">
               Tempat cepat untuk memahami alur Contexta, cara bertanya ke dokumen, dan apa yang harus dicek kalau upload atau chat terasa bermasalah.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link className="inline-flex h-10 items-center justify-center rounded border border-[#c3c6d7] bg-white px-4 text-sm font-semibold text-ink transition hover:border-primary hover:text-primary" href="/documents">
+            <Link className="inline-flex h-10 items-center justify-center rounded border border-border bg-surface px-4 text-sm font-semibold text-ink transition hover:border-primary hover:text-primary" href="/documents">
               Manage documents
             </Link>
-            <Link className="inline-flex h-10 items-center justify-center rounded border border-primary bg-primary px-4 text-sm font-semibold text-white transition hover:bg-blue-700" href="/chat">
+            <Link className="inline-flex h-10 items-center justify-center rounded border border-primary bg-primary px-4 text-sm font-semibold text-accent-ink transition hover:bg-accent-strong" href="/chat">
               Open chat
             </Link>
           </div>
@@ -78,8 +78,8 @@ export default function HelpPage() {
           {workflowSteps.map((step) => {
             const Icon = step.icon;
             return (
-              <article key={step.title} className="rounded border border-[#c3c6d7] bg-white p-5">
-                <div className="flex h-11 w-11 items-center justify-center rounded-md bg-[#dbe1ff] text-primary">
+              <article key={step.title} className="rounded border border-border bg-surface p-5">
+                <div className="flex h-11 w-11 items-center justify-center rounded-contexta bg-accent-soft text-primary">
                   <Icon className="h-5 w-5" strokeWidth={2.2} aria-hidden="true" />
                 </div>
                 <h3 className="mt-4 font-heading text-lg font-semibold text-ink">{step.title}</h3>
@@ -90,9 +90,9 @@ export default function HelpPage() {
         </section>
 
         <section className="grid gap-4 lg:grid-cols-12">
-          <article className="rounded border border-[#c3c6d7] bg-white p-6 lg:col-span-7">
+          <article className="rounded border border-border bg-surface p-6 lg:col-span-7">
             <div className="flex items-start gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-[#dbe1ff] text-primary">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-contexta bg-accent-soft text-primary">
                 <LifeBuoy className="h-5 w-5" strokeWidth={2.2} aria-hidden="true" />
               </div>
               <div>
@@ -104,7 +104,7 @@ export default function HelpPage() {
               {troubleshootingItems.map((item) => {
                 const Icon = item.icon;
                 return (
-                  <div key={item.problem} className="rounded border border-[#dce2f3] bg-[#f9f9ff] p-4">
+                  <div key={item.problem} className="rounded border border-border bg-background p-4">
                     <div className="flex items-center gap-2 text-sm font-semibold text-ink">
                       <Icon className="h-4 w-4 text-primary" strokeWidth={2.1} aria-hidden="true" />
                       {item.problem}
@@ -117,29 +117,29 @@ export default function HelpPage() {
           </article>
 
           <aside className="space-y-4 lg:col-span-5">
-            <article className="rounded border border-[#c3c6d7] bg-white p-5">
+            <article className="rounded border border-border bg-surface p-5">
               <h3 className="font-heading text-xl font-semibold text-ink">Contoh pertanyaan</h3>
               <div className="mt-4 space-y-2">
                 {exampleQuestions.map((question) => (
-                  <div key={question} className="rounded border border-[#dce2f3] bg-[#f9f9ff] px-4 py-3 text-sm text-ink">
+                  <div key={question} className="rounded border border-border bg-background px-4 py-3 text-sm text-ink">
                     {question}
                   </div>
                 ))}
               </div>
             </article>
 
-            <article className="rounded border border-[#c3c6d7] bg-white p-5">
+            <article className="rounded border border-border bg-surface p-5">
               <h3 className="font-heading text-xl font-semibold text-ink">Runtime lokal</h3>
               <div className="mt-4 space-y-2 text-sm">
-                <div className="flex items-center justify-between rounded bg-[#f0f3ff] px-3 py-2">
+                <div className="flex items-center justify-between rounded bg-muted px-3 py-2">
                   <span className="text-subtle">Web</span>
                   <span className="font-mono text-xs text-ink">localhost:3000</span>
                 </div>
-                <div className="flex items-center justify-between rounded bg-[#f0f3ff] px-3 py-2">
+                <div className="flex items-center justify-between rounded bg-muted px-3 py-2">
                   <span className="text-subtle">API</span>
                   <span className="font-mono text-xs text-ink">127.0.0.1:8001</span>
                 </div>
-                <div className="flex items-center justify-between rounded bg-[#f0f3ff] px-3 py-2">
+                <div className="flex items-center justify-between rounded bg-muted px-3 py-2">
                   <span className="text-subtle">Vector DB</span>
                   <span className="font-mono text-xs text-ink">Qdrant Docker</span>
                 </div>

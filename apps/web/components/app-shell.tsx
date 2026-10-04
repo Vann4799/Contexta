@@ -69,9 +69,9 @@ export function AppShell({ title, children }: { title: string; children: ReactNo
 
   if (authState === "checking") {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#f9f9ff] px-4 text-ink">
-        <section className="w-full max-w-sm rounded border border-[#c3c6d7] bg-white p-6 text-center shadow-sm">
-          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-md bg-primary text-white">
+      <main className="flex min-h-screen items-center justify-center bg-background px-4 text-ink">
+        <section className="w-full max-w-sm rounded border border-border bg-surface p-6 text-center shadow-sm">
+          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-contexta bg-primary text-accent-ink">
             <FileSearch className="h-5 w-5" strokeWidth={2.2} aria-hidden="true" />
           </div>
           <h1 className="mt-4 font-heading text-xl font-semibold">Checking access</h1>
@@ -82,21 +82,21 @@ export function AppShell({ title, children }: { title: string; children: ReactNo
   }
 
   return (
-    <div className="min-h-screen bg-[#f9f9ff] text-ink">
-      <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-[#c3c6d7] bg-[#f0f3ff] px-4 py-6 md:flex md:flex-col">
+    <div className="min-h-screen bg-background text-ink">
+      <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-border bg-muted px-4 py-6 md:flex md:flex-col">
         <div className="mb-8">
           <ContextaLogo />
-          <p className="mt-1 pl-10 text-xs font-medium uppercase tracking-[0.16em] text-subtle">Document Workspace</p>
+          <p className="mt-1 pl-10 text-xs font-medium text-subtle">Document Workspace</p>
         </div>
         <DesktopNavLinks />
-        <div className="mt-auto border-t border-[#c3c6d7] pt-3">
-          <Link className="flex items-center rounded px-3 py-2 text-sm font-medium text-subtle transition hover:bg-white/70 hover:text-ink" href="/help">
+        <div className="mt-auto border-t border-border pt-3">
+          <Link className="flex items-center rounded px-3 py-2 text-sm font-medium text-subtle transition hover:bg-accent-soft hover:text-ink" href="/help">
             Help
           </Link>
         </div>
       </aside>
       <main className="min-h-screen pb-20 md:pl-64 md:pb-0">
-        <header className="sticky top-0 z-10 border-b border-[#c3c6d7] bg-[#f9f9ff]/95 px-4 py-3 backdrop-blur md:px-8">
+        <header className="sticky top-0 z-10 border-b border-border bg-surface px-4 py-3 md:px-8">
           <div className="flex min-w-0 items-center justify-between gap-4">
             <div className="md:hidden">
               <ContextaLogo compact />
@@ -105,7 +105,7 @@ export function AppShell({ title, children }: { title: string; children: ReactNo
             <h1 className="min-w-0 flex-1 truncate font-heading text-xl font-semibold lg:hidden">{title}</h1>
             <div className="flex shrink-0 items-center gap-2">
               <Link
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-border bg-muted text-xs font-semibold text-subtle transition hover:border-primary hover:bg-white hover:text-primary"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-border bg-muted text-xs font-semibold text-subtle transition hover:border-primary hover:bg-background hover:text-primary"
                 href="/profile"
                 aria-label="Open profile"
               >
