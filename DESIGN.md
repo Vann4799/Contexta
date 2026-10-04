@@ -34,6 +34,7 @@ Kalem di kedua sumbu adalah keputusan: identitas datang dari tipografi, paper ha
   --color-ink-2:      oklch(0.45 0.014 70);
   --color-rule:       oklch(0.25 0.012 70 / 0.14);
   --color-accent:     oklch(0.52 0.13 45);
+  --color-accent-strong: oklch(0.45 0.13 45);
   --color-accent-soft: oklch(0.52 0.13 45 / 0.12);
   --color-accent-ink: oklch(0.97 0.012 85);
   --color-focus:      oklch(0.52 0.13 45);

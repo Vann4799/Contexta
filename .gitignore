@@ -38,3 +38,7 @@ models/
 *.log
 .DS_Store
 Thumbs.db
+
+# build artifacts & local-only lockfiles
+*.tsbuildinfo
+pnpm-lock.yaml
