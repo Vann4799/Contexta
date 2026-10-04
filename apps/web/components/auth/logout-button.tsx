@@ -37,7 +37,7 @@ export function LogoutButton() {
         {isSigningOut ? "Signing out" : "Sign out"}
       </Button>
       {errorMessage ? (
-        <p className="max-w-40 text-right text-xs leading-4 text-red-700" role="alert">
+        <p className="max-w-40 text-right text-xs leading-4 text-danger" role="alert">
           {errorMessage}
         </p>
       ) : null}

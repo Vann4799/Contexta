@@ -39,6 +39,17 @@ Kalem di kedua sumbu adalah keputusan: identitas datang dari tipografi, paper ha
   --color-accent-ink: oklch(0.97 0.012 85);
   --color-focus:      oklch(0.52 0.13 45);
 
+  /* status · hue terpisah dari clay, diukur lolos AA di atas paper */
+  --color-success:      oklch(0.45 0.1 145);   /* moss */
+  --color-success-soft: oklch(0.45 0.1 145 / 0.12);
+  --color-success-line: oklch(0.45 0.1 145 / 0.3);
+  --color-warning:      oklch(0.48 0.11 78);   /* ochre */
+  --color-warning-soft: oklch(0.48 0.11 78 / 0.14);
+  --color-warning-line: oklch(0.48 0.11 78 / 0.32);
+  --color-danger:       oklch(0.45 0.16 25);   /* brick */
+  --color-danger-soft:  oklch(0.45 0.16 25 / 0.12);
+  --color-danger-line:  oklch(0.45 0.16 25 / 0.3);
+
   --font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
   --font-body:    "Public Sans", system-ui, -apple-system, sans-serif;
   --font-mono:    "JetBrains Mono", ui-monospace, Consolas, monospace;
@@ -74,6 +85,7 @@ Kalem di kedua sumbu adalah keputusan: identitas datang dari tipografi, paper ha
 - Secondary control · outline 1px `--color-ink` transparan, teks `--color-ink` — beda struktur dari primary, bukan cuma beda hue
 - Divider · hairline 1px `--color-rule`, tanpa gradasi
 - Focus · ring 2px `--color-focus` offset 2px — wajib di semua interaktif
+- Status · pill/alert memakai `--color-success|warning|danger` + `-soft` untuk background + `-line` untuk border; status juga selalu punya label teks (warna bukan satu-satunya sinyal)
 - Identity motif · double hairline rule di bawah H1 setiap halaman (gestur editorial print)
 
 ## Motion
@@ -98,6 +110,7 @@ Kalem di kedua sumbu adalah keputusan: identitas datang dari tipografi, paper ha
 - Don't · label mono uppercase mikro ala HUD (hard no dari owner)
 - Don't · kartu putih rounded + `shadow-soft` di atas abu — default Tailwind SaaS (ilfeel owner)
 - Don't · hex lavender hard-coded (`#f9f9ff`, `#dce2f3`, `#dbe1ff`, `#f4f6ff`) — semua warna lewat token
+- Don't · `emerald-*` / `green-*` / `red-*` / `amber-*` Tailwind untuk status & alert — pakai `--color-success|warning|danger`
 - Don't · backdrop-blur glass, radial bloom, aurora/mesh gradient
 - Don't · gradient blue→purple pada apapun; `transition-all` — sebut propertinya
 

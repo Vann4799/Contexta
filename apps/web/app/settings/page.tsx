@@ -72,9 +72,9 @@ export default function SettingsPage() {
           <aside className="space-y-4 lg:col-span-4">
             <article className="rounded border border-border bg-surface p-5">
               <h3 className="font-heading text-xl font-semibold text-ink">Mode</h3>
-              <div className="mt-4 rounded border border-emerald-200 bg-emerald-50 p-4">
-                <p className="text-sm font-semibold text-emerald-800">Single-user phase</p>
-                <p className="mt-1 text-sm text-emerald-700">
+              <div className="mt-4 rounded border border-success-line bg-success-soft p-4">
+                <p className="text-sm font-semibold text-success">Single-user phase</p>
+                <p className="mt-1 text-sm text-success">
                   Workspace is optimized for local development and one owner account.
                 </p>
               </div>
@@ -109,7 +109,7 @@ export default function SettingsPage() {
           <div className="mt-4 grid gap-3 md:grid-cols-3">
             {["API server running on port 8001", "Qdrant Docker container active", "Supabase project keys configured"].map((item) => (
               <div key={item} className="flex items-center gap-3 rounded border border-border bg-background px-4 py-3 text-sm text-ink">
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" aria-hidden="true" />
+                <span className="h-2.5 w-2.5 rounded-full bg-success" aria-hidden="true" />
                 {item}
               </div>
             ))}

@@ -341,7 +341,7 @@ export function DocumentUploadPanel() {
               <span className="font-medium text-ink">Indexing Queue</span>
               <span className="font-mono text-xs text-ink">{indexingHealth?.queued_documents ?? queueCount} file{(indexingHealth?.queued_documents ?? queueCount) === 1 ? "" : "s"}</span>
             </div>
-            <div className={`rounded border p-3 text-sm ${indexingHealth?.status === "attention" ? "border-amber-200 bg-amber-50 text-amber-800" : "border-emerald-200 bg-emerald-50 text-emerald-800"}`}>
+            <div className={`rounded border p-3 text-sm ${indexingHealth?.status === "attention" ? "border-warning-line bg-warning-soft text-warning" : "border-success-line bg-success-soft text-success"}`}>
               <p className="font-semibold">{indexingHealthLabel(indexingHealth)}</p>
               <p className="mt-1 text-xs">{indexingHealthDetail(indexingHealth)}</p>
             </div>
@@ -359,8 +359,8 @@ export function DocumentUploadPanel() {
       <div className="text-sm">
         {isLoading ? <p className="rounded border border-border bg-surface p-3 text-subtle">Loading documents...</p> : null}
         {isUploading ? <p className="rounded border border-border bg-surface p-3 text-subtle">Uploading document...</p> : null}
-        {success ? <p className="rounded border border-emerald-200 bg-emerald-50 p-3 text-emerald-700">{success}</p> : null}
-        {error ? <p className="rounded border border-red-200 bg-red-50 p-3 text-red-700">{error}</p> : null}
+        {success ? <p className="rounded border border-success-line bg-success-soft p-3 text-success">{success}</p> : null}
+        {error ? <p className="rounded border border-danger-line bg-danger-soft p-3 text-danger">{error}</p> : null}
       </div>
 
       <section>
@@ -393,7 +393,7 @@ export function DocumentUploadPanel() {
                           {document.filename}
                         </Link>
                         {document.status === "failed" && document.error_message ? (
-                          <p className="truncate text-xs text-red-700" title={document.error_message}>
+                          <p className="truncate text-xs text-danger" title={document.error_message}>
                             {document.error_message}
                           </p>
                         ) : null}

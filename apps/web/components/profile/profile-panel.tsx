@@ -257,7 +257,7 @@ export function ProfilePanel() {
           </div>
 
           {message ? (
-            <p className={`mt-4 rounded border p-3 text-sm ${message.type === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-red-200 bg-red-50 text-red-700"}`} role="alert">
+            <p className={`mt-4 rounded border p-3 text-sm ${message.type === "success" ? "border-success-line bg-success-soft text-success" : "border-danger-line bg-danger-soft text-danger"}`} role="alert">
               {message.text}
             </p>
           ) : null}
@@ -310,7 +310,7 @@ export function ProfilePanel() {
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           {["Email/password authentication", "Private document workspace", "Server-side API keys hidden"].map((item) => (
             <div key={item} className="flex items-center gap-3 rounded border border-border bg-background px-4 py-3 text-sm text-ink">
-              <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" aria-hidden="true" />
+              <span className="h-2.5 w-2.5 rounded-full bg-success" aria-hidden="true" />
               {item}
             </div>
           ))}

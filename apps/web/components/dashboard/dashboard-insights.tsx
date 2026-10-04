@@ -166,7 +166,7 @@ export function DashboardInsights() {
       </section>
 
       {error ? (
-        <section className="rounded border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+        <section className="rounded border border-danger-line bg-danger-soft p-4 text-sm text-danger">
           {error}
         </section>
       ) : null}
@@ -301,7 +301,7 @@ export function DashboardInsights() {
           <article className="rounded border border-border bg-surface p-5">
             <h3 className="font-heading text-xl font-semibold text-ink">Workspace Health</h3>
             <div className="mt-4 space-y-3 text-sm">
-              <div className={`rounded px-3 py-2 ${indexingHealth?.status === "attention" ? "bg-amber-50 text-amber-800" : "bg-emerald-50 text-emerald-800"}`}>
+              <div className={`rounded px-3 py-2 ${indexingHealth?.status === "attention" ? "bg-warning-soft text-warning" : "bg-success-soft text-success"}`}>
                 <div className="flex items-center justify-between gap-3">
                   <span>Indexing health</span>
                   <span className="font-semibold">{indexingHealthLabel(indexingHealth)}</span>

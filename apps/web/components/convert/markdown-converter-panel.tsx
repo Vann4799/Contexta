@@ -264,12 +264,12 @@ export function MarkdownConverterPanel() {
 
           <div className="space-y-2 text-sm">
             {notice ? (
-              <p className="flex items-center gap-2 rounded border border-emerald-200 bg-emerald-50 p-3 text-emerald-700">
+              <p className="flex items-center gap-2 rounded border border-success-line bg-success-soft p-3 text-success">
                 <Check className="h-4 w-4 shrink-0" strokeWidth={2.2} aria-hidden="true" />
                 {notice}
               </p>
             ) : null}
-            {error ? <p className="rounded border border-red-200 bg-red-50 p-3 text-red-700">{error}</p> : null}
+            {error ? <p className="rounded border border-danger-line bg-danger-soft p-3 text-danger">{error}</p> : null}
           </div>
         </div>
 

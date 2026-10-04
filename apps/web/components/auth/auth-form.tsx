@@ -186,7 +186,7 @@ export function AuthForm({ mode }: AuthFormProps) {
       {message ? (
         <p
           className={`rounded border px-3 py-2 text-sm leading-5 ${
-            message.type === "success" ? "border-green-200 bg-green-50 text-green-800" : "border-red-200 bg-red-50 text-red-800"
+            message.type === "success" ? "border-success-line bg-success-soft text-success" : "border-danger-line bg-danger-soft text-danger"
           }`}
           role={message.type === "error" ? "alert" : "status"}
         >

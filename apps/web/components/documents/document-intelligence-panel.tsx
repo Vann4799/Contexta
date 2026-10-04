@@ -220,7 +220,7 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
   if (error || !document) {
     return (
       <section className="rounded-contexta border border-border bg-surface p-5">
-        <p className="text-sm text-red-700">{error || "Document not found."}</p>
+        <p className="text-sm text-danger">{error || "Document not found."}</p>
         <Link className="mt-4 inline-block text-sm text-primary hover:underline" href="/documents">
           Back to documents
         </Link>
@@ -260,10 +260,10 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
       ) : null}
 
       {document.status === "failed" ? (
-        <section className="rounded-contexta border border-red-200 bg-red-50 p-5">
-          <h3 className="font-heading text-lg font-semibold text-red-800">Processing failed</h3>
-          <p className="mt-2 text-sm leading-6 text-red-800">{document.error_message || "The worker could not process this document."}</p>
-          <Link className="mt-4 inline-block text-sm font-medium text-red-800 hover:underline" href="/documents">
+        <section className="rounded-contexta border border-danger-line bg-danger-soft p-5">
+          <h3 className="font-heading text-lg font-semibold text-danger">Processing failed</h3>
+          <p className="mt-2 text-sm leading-6 text-danger">{document.error_message || "The worker could not process this document."}</p>
+          <Link className="mt-4 inline-block text-sm font-medium text-danger hover:underline" href="/documents">
             Go back to Documents to retry or delete it.
           </Link>
         </section>
@@ -284,7 +284,7 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
               </Button>
             </div>
             <p className="mt-3 text-sm leading-6 text-ink">{intelligence.summary}</p>
-            {briefError ? <p className="mt-3 text-sm text-red-700">{briefError}</p> : null}
+            {briefError ? <p className="mt-3 text-sm text-danger">{briefError}</p> : null}
             {aiBrief ? (
               <div className="mt-4 rounded border border-border bg-muted px-4 py-3">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
