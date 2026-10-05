@@ -11,7 +11,7 @@ export default async function DocumentDetailPage({ params }: DocumentDetailPageP
   const { id } = await params;
 
   return (
-    <AppShell title="Document Intelligence">
+    <AppShell>
       <DocumentIntelligencePanel documentId={id} />
     </AppShell>
   );

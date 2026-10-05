@@ -54,7 +54,7 @@ const exampleQuestions = [
 
 export default function HelpPage() {
   return (
-    <AppShell title="Help">
+    <AppShell>
       <div className="space-y-8">
         <section className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>

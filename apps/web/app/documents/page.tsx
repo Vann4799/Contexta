@@ -3,7 +3,7 @@ import { DocumentUploadPanel } from "@/components/documents/document-upload-pane
 
 export default function DocumentsPage() {
   return (
-    <AppShell title="Documents">
+    <AppShell>
       <DocumentUploadPanel />
     </AppShell>
   );

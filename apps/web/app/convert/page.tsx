@@ -3,7 +3,7 @@ import { MarkdownConverterPanel } from "@/components/convert/markdown-converter-
 
 export default function ConvertPage() {
   return (
-    <AppShell title="Convert">
+    <AppShell>
       <MarkdownConverterPanel />
     </AppShell>
   );

@@ -19,7 +19,7 @@ export default function SettingsPage() {
   ];
 
   return (
-    <AppShell title="Settings">
+    <AppShell>
       <div className="space-y-8">
         <section className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
