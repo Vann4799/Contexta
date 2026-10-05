@@ -301,15 +301,15 @@ export function ChatWorkspace() {
   return (
     <div className="relative min-h-[calc(100vh-120px)]">
       <section className="mx-auto flex min-h-[calc(100vh-132px)] w-full max-w-4xl flex-col">
-        <div className="mb-5 flex flex-col gap-3 border-b border-border pb-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mb-4 flex flex-col gap-3 border-b border-paper-line pb-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <p className="text-xs font-semibold text-primary">Ask about</p>
-            <p className="mt-1 truncate text-sm font-medium text-ink">{chatScopeLabel}</p>
+            <p className="eyebrow">Ask about</p>
+            <p className="mt-1 truncate text-[13.5px] font-medium">{chatScopeLabel}</p>
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
             {sessions.length > 0 ? (
               <select
-                className="h-9 max-w-xs rounded border border-border bg-surface px-3 text-sm text-ink outline-none transition focus:border-primary"
+                className="focus-ring h-9 max-w-xs rounded-control border border-paper-line bg-paper-soft px-3 text-[13px] outline-none"
                 value={activeSessionId ?? ""}
                 disabled={isLoading || isSending}
                 onChange={(event) => void handleSelectSession(event.target.value)}
@@ -331,16 +331,16 @@ export function ChatWorkspace() {
           </div>
         </div>
 
-        <div className="flex-1 space-y-6 overflow-y-auto pb-6">
-          {isLoading ? <p className="text-sm text-subtle">Loading chat...</p> : null}
+        <div className="flex-1 space-y-5 overflow-y-auto pb-6">
+          {isLoading ? <p className="text-[13px] text-ink-muted">Loading chat...</p> : null}
           {!isLoading && (!selectedDocument || messages.length === 0) ? (
-            <div className="space-y-4">
+            <div className="flex flex-col gap-4">
               {messages.length === 0 ? (
                 <div className="flex items-start gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-white" aria-hidden="true">
+                  <div className="grid h-9 w-9 shrink-0 place-items-center rounded-control bg-night font-mono text-[11px] font-bold text-accent" aria-hidden="true">
                     AI
                   </div>
-                  <div className="max-w-[80%] rounded border border-border bg-surface px-4 py-3 text-sm leading-6 text-ink">
+                  <div className="max-w-[80%] rounded-card border border-paper-line bg-paper-card px-4 py-3 text-[13.5px] leading-6 shadow-card">
                     Pilih dokumen yang mau kamu analisa, lalu kita lanjut ke percakapan.
                   </div>
                 </div>
@@ -348,59 +348,59 @@ export function ChatWorkspace() {
               {selectedDocument ? (
                 messages.length === 0 ? (
                   <div className="flex items-start gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-white" aria-hidden="true">
+                    <div className="grid h-9 w-9 shrink-0 place-items-center rounded-control bg-night font-mono text-[11px] font-bold text-accent" aria-hidden="true">
                       AI
                     </div>
-                    <div className="max-w-[80%] rounded border border-accent-soft bg-accent-soft px-4 py-3 text-sm leading-6 text-ink">
+                    <div className="max-w-[80%] rounded-card border border-paper-line bg-accent px-4 py-3 text-[13.5px] leading-6 text-ink shadow-card">
                       Siap, kita bedah <span className="font-semibold">{selectedDocument.filename}</span>. Tulis pertanyaan pertama kamu, misalnya minta ringkasan, poin penting, atau data tertentu dari dokumen ini.
                     </div>
                   </div>
                 ) : null
               ) : (
                 <div className="flex items-start gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-white" aria-hidden="true">
+                  <div className="grid h-9 w-9 shrink-0 place-items-center rounded-control bg-night font-mono text-[11px] font-bold text-accent" aria-hidden="true">
                     AI
                   </div>
-                  <div className="max-w-[80%] rounded border border-border bg-surface p-3 shadow-sm">
+                  <div className="surface max-w-[80%] min-w-0 p-4">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-ink">Pilih dokumen</p>
-                        <p className="text-xs text-subtle">{readyDocuments.length} dokumen siap dianalisa</p>
+                      <div className="min-w-0">
+                        <p className="text-[13.5px] font-semibold">Pilih dokumen</p>
+                        <p className="nums text-[12px] text-ink-muted">{readyDocuments.length} dokumen siap dianalisa</p>
                       </div>
                       <input
-                        className="h-9 rounded border border-border bg-background px-3 text-sm text-ink outline-none transition placeholder:text-subtle focus:border-primary sm:w-64"
+                        className="focus-ring h-9 rounded-control border border-paper-line bg-paper-soft px-3 text-[13px] placeholder:text-ink-faint sm:w-64"
                         placeholder="Cari nama dokumen..."
                         type="search"
                         value={documentSearch}
                         onChange={(event) => setDocumentSearch(event.target.value)}
                       />
                     </div>
-                    <div className="mt-3 max-h-72 overflow-y-auto rounded border border-border">
+                    <div className="mt-3 max-h-72 overflow-y-auto rounded-control border border-paper-line">
                       {readyDocuments.length === 0 ? (
-                        <div className="px-4 py-3 text-sm text-subtle">
+                        <div className="px-4 py-3 text-[13px] text-ink-muted">
                           Belum ada dokumen ready. Upload atau tunggu proses indexing selesai dulu.
                         </div>
                       ) : filteredReadyDocuments.length > 0 ? (
                         filteredReadyDocuments.map((document) => (
                           <button
                             key={document.id}
-                            className="flex w-full items-center justify-between gap-3 border-b border-border px-4 py-3 text-left transition last:border-0 hover:bg-background"
+                            className="flex w-full items-center justify-between gap-3 border-b border-paper-line/60 px-4 py-3 text-left transition-colors last:border-0 hover:bg-paper-chip"
                             type="button"
                             onClick={() => handleChooseDocument(document.id)}
                           >
                             <span className="min-w-0">
-                              <span className="block truncate text-sm font-semibold text-ink">{document.filename}</span>
-                              <span className="mt-1 block text-xs text-subtle">
-                                {document.file_type.toUpperCase()} - {document.chunk_count} chunks
+                              <span className="block truncate text-[13.5px] font-medium">{document.filename}</span>
+                              <span className="nums mt-1 block font-mono text-[11.5px] text-ink-muted">
+                                {document.file_type.toUpperCase()} · {document.chunk_count} chunks
                               </span>
                             </span>
-                            <span className="shrink-0 rounded bg-accent-soft px-2 py-1 text-xs font-semibold text-primary">
+                            <span className="shrink-0 rounded-chip bg-accent px-2 py-1 text-[11px] font-bold text-ink">
                               Select
                             </span>
                           </button>
                         ))
                       ) : (
-                        <div className="px-4 py-3 text-sm text-subtle">Tidak ada dokumen yang cocok.</div>
+                        <div className="px-4 py-3 text-[13px] text-ink-muted">Tidak ada dokumen yang cocok.</div>
                       )}
                     </div>
                   </div>
@@ -414,21 +414,21 @@ export function ChatWorkspace() {
               className={`flex items-start gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
             >
               {message.role === "assistant" ? (
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-white" aria-hidden="true">
+                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-control bg-night font-mono text-[11px] font-bold text-accent" aria-hidden="true">
                   AI
                 </div>
               ) : null}
               <div
-                className={`max-w-[78%] rounded border px-4 py-3 text-sm leading-6 ${
+                className={`max-w-[78%] rounded-card px-4 py-3 text-[13.5px] leading-6 ${
                   message.role === "user"
-                    ? "border-primary bg-primary text-white"
-                    : "border-border bg-surface text-ink"
+                    ? "bg-night text-white shadow-node"
+                    : "border border-paper-line bg-paper-card text-ink shadow-card"
                 }`}
               >
                 {message.content}
               </div>
               {message.role === "user" ? (
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-accent-soft text-xs font-bold text-ink" aria-hidden="true">
+                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-control bg-paper-chip font-mono text-[11px] font-bold text-ink-muted" aria-hidden="true">
                   {userInitials}
                 </div>
               ) : null}
@@ -436,20 +436,24 @@ export function ChatWorkspace() {
           ))}
           {isSending ? (
             <div className="flex items-start gap-3 justify-start">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-white" aria-hidden="true">
+              <div className="grid h-9 w-9 shrink-0 place-items-center rounded-control bg-night font-mono text-[11px] font-bold text-accent" aria-hidden="true">
                 AI
               </div>
-              <div className="min-w-60 max-w-[78%] rounded border border-border bg-surface px-4 py-3">
+              <div className="min-w-60 max-w-[78%] rounded-card border border-paper-line bg-paper-card px-4 py-3 shadow-card">
                 <ShiningText className="sr-only" text="Contexta is thinking..." />
-                <span className="text-sm leading-6 text-subtle">Contexta is thinking...</span>
+                <span className="text-[13.5px] leading-6 text-ink-muted">Contexta is thinking...</span>
               </div>
             </div>
           ) : null}
-          {error ? <p className="rounded border border-danger-line bg-danger-soft px-4 py-3 text-sm text-danger">{error}</p> : null}
+          {error ? (
+            <p className="rounded-card border border-danger-line bg-danger-soft px-4 py-3 text-[13px] text-danger" role="alert">
+              {error}
+            </p>
+          ) : null}
           <div ref={latestMessageRef} className="h-1" aria-hidden="true" />
         </div>
 
-        <div className="sticky bottom-0 border-t border-border bg-background py-4">
+        <div className="sticky bottom-0 border-t border-paper-line bg-paper py-4">
           <AIInputWithLoading
             id="chat-question"
             placeholder={selectedDocumentId ? "Ask Contexta about this document..." : "Choose a document first..."}
@@ -478,41 +482,43 @@ export function ChatWorkspace() {
         />
       ) : null}
       <aside
-        className={`fixed bottom-0 right-0 top-0 z-40 w-full max-w-md border-l border-border bg-surface shadow-xl transition-transform duration-200 ${
+        className={`fixed bottom-0 right-0 top-0 z-40 w-full max-w-md border-l border-paper-line bg-paper-card shadow-root transition-transform duration-200 ${
           isSourcesOpen ? "translate-x-0" : "translate-x-full"
         }`}
         aria-label="Source drawer"
       >
         <div className="flex h-full flex-col">
-          <div className="flex items-center justify-between border-b border-border px-5 py-4">
-            <div>
-              <p className="text-xs font-semibold text-primary">Source drawer</p>
-              <h2 className="font-heading text-xl font-semibold text-ink">Sources</h2>
+          <div className="flex items-center justify-between border-b border-paper-line px-5 py-4">
+            <div className="min-w-0">
+              <p className="eyebrow">Source drawer</p>
+              <h2 className="mt-1 text-[17px] font-semibold tracking-tight">Sources</h2>
             </div>
-            <button className="rounded border border-border px-3 py-1.5 text-sm font-semibold hover:border-primary" type="button" onClick={() => setIsSourcesOpen(false)}>
+            <Button onClick={() => setIsSourcesOpen(false)} type="button" variant="ghost">
               Close
-            </button>
+            </Button>
           </div>
           <div className="flex-1 overflow-y-auto p-5">
             {citations.length > 0 ? (
-              <div className="space-y-3">
+              <div className="flex flex-col gap-3">
                 {citations.map((citation) => (
-                  <article key={`${citation.document_id}-${citation.chunk_index}`} className="rounded border border-border p-3">
+                  <article key={`${citation.document_id}-${citation.chunk_index}`} className="rounded-control border border-paper-line bg-paper-soft p-3">
                     <div className="flex items-start justify-between gap-2">
-                      <Link className="min-w-0 truncate text-sm font-medium text-primary hover:underline" href={`/documents/${citation.document_id}`}>
+                      <Link className="min-w-0 truncate text-[13.5px] font-medium hover:underline" href={`/documents/${citation.document_id}`}>
                         {citation.document_name}
                       </Link>
-                      <span className="shrink-0 rounded bg-accent-soft px-2 py-0.5 text-xs font-semibold text-primary">#{citation.source_number}</span>
+                      <span className="nums shrink-0 rounded-chip bg-accent px-2 py-0.5 text-[11px] font-bold text-ink">
+                        #{citation.source_number}
+                      </span>
                     </div>
-                    <p className="mt-1 text-xs text-subtle">
-                      {citation.page_number ? `Page ${citation.page_number}` : "Page unknown"} - Score {citation.score.toFixed(2)}
+                    <p className="nums mt-1 font-mono text-[11.5px] text-ink-muted">
+                      {citation.page_number ? `Page ${citation.page_number}` : "Page unknown"} · Score {citation.score.toFixed(2)}
                     </p>
-                    <p className="mt-2 line-clamp-6 text-sm leading-5 text-subtle">{citation.text}</p>
+                    <p className="mt-2 line-clamp-6 text-[13px] leading-5 text-ink-muted">{citation.text}</p>
                   </article>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-subtle">Citations and context snippets will appear here after an answer.</p>
+              <p className="text-[13px] text-ink-muted">Citations and context snippets will appear here after an answer.</p>
             )}
           </div>
         </div>
