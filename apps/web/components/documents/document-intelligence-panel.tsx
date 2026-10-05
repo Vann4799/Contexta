@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Fragment, useCallback, useEffect, useState } from "react";
+import { ArrowLeft, ArrowUpRight, Copy, FileText, Sparkles } from "lucide-react";
 import {
   generateDocumentAIBrief,
   getDocument,
@@ -34,13 +35,13 @@ function formatBytes(bytes: number) {
 
 function FieldList({ empty, items }: { empty: string; items: string[] }) {
   if (items.length === 0) {
-    return <p className="text-sm text-subtle">{empty}</p>;
+    return <p className="text-[13px] text-ink-muted">{empty}</p>;
   }
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-1.5">
       {items.map((item) => (
-        <span key={item} className="max-w-full truncate rounded border border-border bg-muted px-2 py-1 text-xs text-ink">
+        <span key={item} className="max-w-full truncate rounded-chip bg-paper-chip px-2 py-1 font-mono text-[11.5px] text-ink">
           {item}
         </span>
       ))}
@@ -87,7 +88,7 @@ function FormattedBrief({ text }: { text: string }) {
         if (line.startsWith("*")) {
           return (
             <div key={`${line}-${index}`} className="flex gap-2">
-              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-night" />
               <p>{renderInlineMarkdown(normalizedLine)}</p>
             </div>
           );
@@ -214,14 +215,14 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
   };
 
   if (isLoading) {
-    return <section className="rounded-contexta border border-border bg-surface p-5 text-sm text-subtle">Loading document intelligence...</section>;
+    return <section className="surface p-5 text-[13px] text-ink-muted">Loading document intelligence...</section>;
   }
 
   if (error || !document) {
     return (
-      <section className="rounded-contexta border border-border bg-surface p-5">
-        <p className="text-sm text-danger">{error || "Document not found."}</p>
-        <Link className="mt-4 inline-block text-sm text-primary hover:underline" href="/documents">
+      <section className="surface p-5">
+        <p className="text-[13px] text-danger">{error || "Document not found."}</p>
+        <Link className="mt-4 inline-block text-[13px] font-medium hover:underline" href="/documents">
           Back to documents
         </Link>
       </section>
@@ -231,119 +232,137 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
   const normalizedStatus = document.status === "uploaded" ? "processing" : document.status;
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Link className="text-sm text-primary hover:underline" href="/documents">
-          Back to documents
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-3">
+        <Link
+          className="focus-ring inline-flex h-8 items-center gap-1.5 rounded-control px-2 text-[13px] font-medium text-ink-muted transition-colors hover:bg-paper-chip hover:text-ink"
+          href="/documents"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          All documents
         </Link>
         <StatusPill status={normalizedStatus} />
       </div>
 
-      <section className="rounded-contexta border border-border bg-surface p-5">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+      <section className="surface flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between lg:px-7">
+        <div className="flex min-w-0 items-center gap-4">
+          <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-night shadow-root">
+            <FileText className="h-6 w-6 text-accent" strokeWidth={2.2} aria-hidden="true" />
+          </div>
           <div className="min-w-0">
-            <h2 className="truncate font-heading text-xl font-semibold">{document.filename}</h2>
-            <p className="mt-1 text-sm text-subtle">
-              {document.file_type.toUpperCase()} - {formatBytes(document.file_size)} - {(intelligence?.chunk_count ?? document.chunk_count)} chunks
+            <p className="eyebrow">Document intelligence</p>
+            <h2 className="mt-1 truncate text-[20px] font-semibold leading-tight tracking-tight">{document.filename}</h2>
+            <p className="mt-0.5 truncate font-mono text-[12px] text-ink-muted">
+              {document.file_type.toUpperCase()} · {formatBytes(document.file_size)} ·{" "}
+              {intelligence?.chunk_count ?? document.chunk_count} chunks
             </p>
           </div>
         </div>
       </section>
 
       {normalizedStatus === "processing" ? (
-        <section className="rounded-contexta border border-accent-soft bg-accent-soft p-5">
-          <h3 className="font-heading text-lg font-semibold text-ink">Indexing in progress</h3>
-          <p className="mt-2 text-sm leading-6 text-ink">
+        <section className="surface border-ink/15 px-5 py-4">
+          <h3 className="text-[15px] font-semibold tracking-tight">Indexing in progress</h3>
+          <p className="mt-1 text-[13px] leading-6 text-ink-muted">
             Contexta is extracting text and creating searchable chunks. This page refreshes automatically every few seconds.
           </p>
         </section>
       ) : null}
 
       {document.status === "failed" ? (
-        <section className="rounded-contexta border border-danger-line bg-danger-soft p-5">
-          <h3 className="font-heading text-lg font-semibold text-danger">Processing failed</h3>
-          <p className="mt-2 text-sm leading-6 text-danger">{document.error_message || "The worker could not process this document."}</p>
-          <Link className="mt-4 inline-block text-sm font-medium text-danger hover:underline" href="/documents">
-            Go back to Documents to retry or delete it.
+        <section className="rounded-card border border-danger-line bg-danger-soft p-5">
+          <h3 className="text-[15px] font-semibold tracking-tight text-danger">Processing failed</h3>
+          <p className="mt-1 text-[13px] leading-6 text-danger">{document.error_message || "The worker could not process this document."}</p>
+          <Link className="mt-3 inline-block text-[13px] font-medium text-danger hover:underline" href="/documents">
+            Go back to documents to retry or delete it.
           </Link>
         </section>
       ) : null}
 
       {document.status === "ready" && !intelligence ? (
-        <section className="rounded-contexta border border-border bg-surface p-5 text-sm text-subtle">Loading processed document details...</section>
+        <section className="surface p-5 text-[13px] text-ink-muted">Loading processed document details...</section>
       ) : null}
 
       {document.status === "ready" && intelligence ? (
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="space-y-4">
-          <article className="rounded-contexta border border-border bg-surface p-5">
+      <section className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="flex min-w-0 flex-col gap-3">
+          <article className="surface p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <h3 className="font-heading text-lg font-semibold">Automatic Brief</h3>
+              <div className="min-w-0">
+                <p className="eyebrow">Summary</p>
+                <h3 className="mt-1 text-[17px] font-semibold tracking-tight">Automatic brief</h3>
+              </div>
               <Button disabled={isGeneratingBrief || document.status !== "ready"} onClick={() => void handleGenerateBrief()}>
-                {isGeneratingBrief ? "Generating..." : "Generate AI Brief"}
+                <Sparkles className="h-4 w-4" aria-hidden="true" />
+                {isGeneratingBrief ? "Generating..." : "Generate AI brief"}
               </Button>
             </div>
-            <p className="mt-3 text-sm leading-6 text-ink">{intelligence.summary}</p>
-            {briefError ? <p className="mt-3 text-sm text-danger">{briefError}</p> : null}
+            <p className="mt-3 text-[13.5px] leading-6 text-ink">{intelligence.summary}</p>
+            {briefError ? <p className="mt-3 text-[13px] text-danger">{briefError}</p> : null}
             {aiBrief ? (
-              <div className="mt-4 rounded border border-border bg-muted px-4 py-3">
+              <div className="mt-4 rounded-card border border-paper-line bg-paper-soft px-4 py-3">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <h4 className="text-sm font-semibold text-ink">AI Brief</h4>
-                  <Button className="w-full sm:w-auto" onClick={() => void handleCopyBrief()}>
-                    Copy Brief
+                  <h4 className="text-[13.5px] font-semibold">AI brief</h4>
+                  <Button className="w-full sm:w-auto" onClick={() => void handleCopyBrief()} variant="secondary">
+                    <Copy className="h-4 w-4" aria-hidden="true" />
+                    Copy brief
                   </Button>
                 </div>
                 <FormattedBrief text={aiBrief} />
-                {copyMessage ? <p className="mt-3 text-xs text-subtle">{copyMessage}</p> : null}
+                {copyMessage ? <p className="mt-3 text-[12px] text-ink-muted">{copyMessage}</p> : null}
               </div>
             ) : null}
           </article>
 
-          <article className="rounded-contexta border border-border bg-surface p-5">
-            <h3 className="font-heading text-lg font-semibold">Key Points</h3>
+          <article className="surface p-5">
+            <p className="eyebrow">Extracted</p>
+            <h3 className="mt-1 text-[17px] font-semibold tracking-tight">Key points</h3>
             {intelligence.key_points.length > 0 ? (
-              <ul className="mt-3 space-y-2 text-sm leading-6 text-ink">
+              <ul className="mt-3 flex flex-col gap-2 text-[13.5px] leading-6">
                 {intelligence.key_points.map((point) => (
-                  <li key={point} className="rounded border border-border bg-muted px-3 py-2">
+                  <li key={point} className="rounded-control bg-paper-chip px-3 py-2">
                     {point}
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="mt-3 text-sm text-subtle">No text has been extracted yet.</p>
+              <p className="mt-3 text-[13px] text-ink-muted">No text has been extracted yet.</p>
             )}
           </article>
         </div>
 
-        <aside className="space-y-4">
-          <article className="rounded-contexta border border-border bg-surface p-5">
-            <h3 className="font-heading text-lg font-semibold">Detected Fields</h3>
-            <div className="mt-4 space-y-4">
+        <aside className="flex min-w-0 flex-col gap-3">
+          <article className="surface p-5">
+            <p className="eyebrow">Entities</p>
+            <h3 className="mt-1 text-[17px] font-semibold tracking-tight">Detected fields</h3>
+            <div className="mt-4 flex flex-col gap-4">
               <div>
-                <p className="mb-2 text-xs font-medium text-subtle">Names</p>
+                <p className="mb-2 text-[12px] font-medium text-ink-muted">Names</p>
                 <FieldList empty="No names detected yet." items={intelligence.candidate_names} />
               </div>
               <div>
-                <p className="mb-2 text-xs font-medium text-subtle">Emails</p>
+                <p className="mb-2 text-[12px] font-medium text-ink-muted">Emails</p>
                 <FieldList empty="No emails detected yet." items={intelligence.emails} />
               </div>
               <div>
-                <p className="mb-2 text-xs font-medium text-subtle">Links</p>
+                <p className="mb-2 text-[12px] font-medium text-ink-muted">Links</p>
                 <FieldList empty="No links detected yet." items={intelligence.links} />
               </div>
             </div>
           </article>
 
-          <article className="rounded-contexta border border-border bg-surface p-5">
-            <h3 className="font-heading text-lg font-semibold">Suggested Questions</h3>
-            <div className="mt-3 space-y-2">
+          <article className="surface p-5">
+            <p className="eyebrow">Ask</p>
+            <h3 className="mt-1 text-[17px] font-semibold tracking-tight">Suggested questions</h3>
+            <div className="mt-3 flex flex-col gap-2">
               {intelligence.suggested_questions.map((question) => (
                 <Link
                   key={question}
-                  className="block rounded border border-border bg-muted px-3 py-2 text-sm text-ink hover:border-primary hover:bg-accent-soft"
+                  className="focus-ring flex items-start gap-2 rounded-control border border-paper-line bg-paper-soft px-3 py-2 text-[13px] transition-colors hover:bg-paper-card"
                   href={`/chat?question=${encodeURIComponent(question)}&documentId=${encodeURIComponent(document.id)}`}
                 >
-                  {question}
+                  <ArrowUpRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ink-faint" aria-hidden="true" />
+                  <span className="min-w-0">{question}</span>
                 </Link>
               ))}
             </div>

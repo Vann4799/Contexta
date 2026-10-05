@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { CloudUpload } from "lucide-react";
+import { CloudUpload, RefreshCw, Upload } from "lucide-react";
 import {
   deleteDocument,
   getIndexingHealth,
@@ -16,6 +16,7 @@ import {
 import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/status-pill";
+import { cn } from "@/lib/utils";
 
 const allowedExtensions = new Set(["pdf", "docx"]);
 const maxUploadBytes = 50 * 1024 * 1024;
@@ -253,27 +254,35 @@ export function DocumentUploadPanel() {
   const visibleDocuments = showAllDocuments ? documents : documents.slice(0, recentActivityLimit);
 
   return (
-    <section className="space-y-8">
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h2 className="font-heading text-3xl font-semibold text-ink">Upload & Manage</h2>
-          <p className="mt-1 text-sm text-subtle">Add new documents to your knowledge base. Supported formats: PDF and DOCX.</p>
+    <section className="flex flex-col gap-3">
+      <div className="surface flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-end sm:justify-between lg:px-7">
+        <div className="min-w-0">
+          <p className="eyebrow">Knowledge base</p>
+          <h2 className="mt-1 text-[22px] font-semibold leading-tight tracking-tight">Upload &amp; manage</h2>
+          <p className="mt-1 text-[13px] text-ink-muted">
+            Add documents to the index. Supported formats: PDF and DOCX.
+          </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex shrink-0 gap-2">
           <Button disabled={isLoading || isUploading} onClick={() => void loadDocuments()} variant="secondary">
+            <RefreshCw className="h-4 w-4" aria-hidden="true" />
             Refresh
           </Button>
           <Button disabled={isUploading} onClick={() => fileInputRef.current?.click()}>
-            {isUploading ? "Uploading..." : "Browse Files"}
+            <Upload className="h-4 w-4" aria-hidden="true" />
+            {isUploading ? "Uploading..." : "Browse files"}
           </Button>
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-12">
+      <div className="grid gap-3 lg:grid-cols-12">
         <div
-          className={`flex min-h-[320px] cursor-pointer flex-col items-center justify-center rounded border border-dashed p-8 text-center transition ${
-            isDragging ? "border-primary bg-muted" : "border-border bg-surface hover:bg-muted"
-          } lg:col-span-8`}
+          className={cn(
+            "focus-ring flex min-h-[320px] cursor-pointer flex-col items-center justify-center rounded-card border border-dashed p-8 text-center shadow-card transition-colors lg:col-span-8",
+            isDragging
+              ? "border-ink bg-paper-chip"
+              : "border-paper-edge bg-paper-card hover:border-ink/40 hover:bg-paper-soft"
+          )}
           onClick={() => fileInputRef.current?.click()}
           onDragEnter={(event) => {
             event.preventDefault();
@@ -317,95 +326,125 @@ export function DocumentUploadPanel() {
               }
             }}
           />
-          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-contexta bg-accent-soft text-primary">
-            <CloudUpload className="h-7 w-7" strokeWidth={2.2} aria-hidden="true" />
+          <div className="mb-4 grid h-16 w-16 place-items-center rounded-2xl bg-night shadow-root">
+            <CloudUpload className="h-7 w-7 text-accent" strokeWidth={2.2} aria-hidden="true" />
           </div>
-          <h3 className="font-heading text-xl font-semibold text-ink">Drag and drop files here</h3>
-          <p className="mt-2 max-w-md text-sm text-subtle">Files will be securely uploaded and automatically indexed for RAG analysis.</p>
+          <h3 className="text-[19px] font-semibold tracking-tight">Drag and drop files here</h3>
+          <p className="mt-2 max-w-md text-[13px] text-ink-muted">
+            Files are uploaded to your workspace and indexed automatically for grounded answers.
+          </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-            <span className="inline-flex h-10 items-center justify-center rounded border border-border bg-surface px-5 text-sm font-semibold text-ink">
-              Browse Files
+            <span className="inline-flex h-10 items-center justify-center rounded-control bg-accent px-5 text-[13.5px] font-medium text-ink shadow-node">
+              Browse files
             </span>
-            <span className="text-sm text-subtle">PDF or DOCX, max 50 MB</span>
+            <span className="chip">PDF or DOCX · max 50 MB</span>
           </div>
         </div>
 
-        <aside className="flex rounded border border-border bg-background p-5 lg:col-span-4">
-          <div className="flex w-full flex-col gap-4">
-            <h3 className="text-xs font-semibold text-subtle">System Status</h3>
-            <div className="flex items-center justify-between rounded border border-border bg-surface p-3 text-sm">
-              <span className="font-medium text-ink">Storage Used</span>
-              <span className="font-mono text-xs text-ink">{formatBytes(totalStorage)}</span>
+        <aside className="surface flex p-5 lg:col-span-4">
+          <div className="flex w-full flex-col gap-2.5">
+            <p className="eyebrow">System status</p>
+            <div className="flex items-center justify-between rounded-control bg-paper-chip px-3 py-2 text-[13px]">
+              <span className="text-ink-muted">Storage used</span>
+              <span className="nums font-semibold">{formatBytes(totalStorage)}</span>
             </div>
-            <div className="flex items-center justify-between rounded border border-border bg-surface p-3 text-sm">
-              <span className="font-medium text-ink">Indexing Queue</span>
-              <span className="font-mono text-xs text-ink">{indexingHealth?.queued_documents ?? queueCount} file{(indexingHealth?.queued_documents ?? queueCount) === 1 ? "" : "s"}</span>
+            <div className="flex items-center justify-between rounded-control bg-paper-chip px-3 py-2 text-[13px]">
+              <span className="text-ink-muted">Indexing queue</span>
+              <span className="nums font-semibold">
+                {indexingHealth?.queued_documents ?? queueCount} file{(indexingHealth?.queued_documents ?? queueCount) === 1 ? "" : "s"}
+              </span>
             </div>
-            <div className={`rounded border p-3 text-sm ${indexingHealth?.status === "attention" ? "border-warning-line bg-warning-soft text-warning" : "border-success-line bg-success-soft text-success"}`}>
+            <div
+              className={cn(
+                "rounded-control px-3 py-2 text-[13px]",
+                indexingHealth?.status === "attention" ? "bg-warning-soft text-warning" : "bg-success-soft text-success-ink"
+              )}
+            >
               <p className="font-semibold">{indexingHealthLabel(indexingHealth)}</p>
-              <p className="mt-1 text-xs">{indexingHealthDetail(indexingHealth)}</p>
+              <p className="mt-0.5 text-[11.5px]">{indexingHealthDetail(indexingHealth)}</p>
             </div>
-            <div className="flex items-center justify-between rounded border border-border bg-surface p-3 text-sm">
-              <span className="font-medium text-ink">Ready</span>
-              <span className="font-mono text-xs text-ink">{readyCount} file{readyCount === 1 ? "" : "s"}</span>
+            <div className="flex items-center justify-between rounded-control bg-paper-chip px-3 py-2 text-[13px]">
+              <span className="text-ink-muted">Ready</span>
+              <span className="nums font-semibold">{readyCount} file{readyCount === 1 ? "" : "s"}</span>
             </div>
-            <div className="mt-auto rounded border border-accent-soft bg-accent-soft p-3 text-sm text-subtle">
+            <p className="mt-auto rounded-control border border-paper-line px-3 py-2 text-[12px] leading-relaxed text-ink-muted">
               Large PDFs may take up to 2 minutes to fully index for vector search.
-            </div>
+            </p>
           </div>
         </aside>
       </div>
 
-      <div className="text-sm">
-        {isLoading ? <p className="rounded border border-border bg-surface p-3 text-subtle">Loading documents...</p> : null}
-        {isUploading ? <p className="rounded border border-border bg-surface p-3 text-subtle">Uploading document...</p> : null}
-        {success ? <p className="rounded border border-success-line bg-success-soft p-3 text-success">{success}</p> : null}
-        {error ? <p className="rounded border border-danger-line bg-danger-soft p-3 text-danger">{error}</p> : null}
+      <div className="flex flex-col gap-2 text-[13px]">
+        {isLoading ? <p className="chip w-fit">Loading documents...</p> : null}
+        {isUploading ? <p className="chip w-fit">Uploading document...</p> : null}
+        {success ? (
+          <p className="rounded-control bg-success-soft px-3 py-2 text-success-ink" role="status">
+            {success}
+          </p>
+        ) : null}
+        {error ? (
+          <p className="rounded-control bg-danger-soft px-3 py-2 text-danger" role="alert">
+            {error}
+          </p>
+        ) : null}
       </div>
 
-      <section>
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-heading text-xl font-semibold text-ink">Recent Activity</h3>
+      <section className="surface p-5">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="min-w-0">
+            <p className="eyebrow">Activity</p>
+            <h3 className="mt-1 text-[17px] font-semibold tracking-tight">Recent documents</h3>
+          </div>
           {documents.length > recentActivityLimit ? (
-            <button className="text-sm font-semibold text-primary hover:underline" disabled={isLoading} onClick={() => setShowAllDocuments((current) => !current)} type="button">
-              {showAllDocuments ? "Show Recent" : "View All"}
-            </button>
+            <Button disabled={isLoading} onClick={() => setShowAllDocuments((current) => !current)} variant="ghost">
+              {showAllDocuments ? "Show recent" : "View all"}
+            </Button>
           ) : null}
         </div>
-        <div className="overflow-hidden rounded border border-border bg-surface">
-          <div className="grid min-w-[760px] grid-cols-12 border-b border-border bg-muted px-5 py-3 text-xs font-semibold text-subtle">
-            <div className="col-span-6">File Name</div>
-            <div className="col-span-2">Size</div>
-            <div className="col-span-3">Status</div>
-            <div className="col-span-1 text-right">Actions</div>
-          </div>
-          <div className="overflow-x-auto">
-            <div className="min-w-[760px] divide-y divide-border">
+
+        <div className="mt-4 overflow-x-auto">
+          <div className="min-w-[720px]">
+            <div className="grid grid-cols-12 gap-3 border-b border-paper-line pb-2">
+              <div className="eyebrow col-span-6">File name</div>
+              <div className="eyebrow col-span-2">Size</div>
+              <div className="eyebrow col-span-3">Status</div>
+              <div className="eyebrow col-span-1 text-right">Actions</div>
+            </div>
+            <div>
               {visibleDocuments.length > 0 ? (
                 visibleDocuments.map((document) => (
-                  <div key={document.id} className="grid grid-cols-12 items-center gap-3 px-5 py-4 transition hover:bg-background">
+                  <div
+                    key={document.id}
+                    className="grid grid-cols-12 items-center gap-3 border-b border-paper-line/60 py-3 last:border-0"
+                  >
                     <div className="col-span-6 flex min-w-0 items-center gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-accent-soft text-primary">
-                        <span className="text-xs font-bold">{document.file_type.toUpperCase()}</span>
+                      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-control bg-night">
+                        <span className="font-mono text-[9.5px] font-bold tracking-[0.06em] text-accent">
+                          {document.file_type.toUpperCase()}
+                        </span>
                       </div>
                       <div className="min-w-0">
-                        <Link className="block truncate font-medium text-ink hover:text-primary hover:underline" href={`/documents/${document.id}`}>
+                        <Link
+                          className="block truncate text-[13.5px] font-medium hover:underline"
+                          href={`/documents/${document.id}`}
+                        >
                           {document.filename}
                         </Link>
                         {document.status === "failed" && document.error_message ? (
-                          <p className="truncate text-xs text-danger" title={document.error_message}>
+                          <p className="truncate text-[11.5px] text-danger" title={document.error_message}>
                             {document.error_message}
                           </p>
                         ) : null}
                       </div>
                     </div>
-                    <div className="col-span-2 font-mono text-xs text-subtle">{formatBytes(document.file_size)}</div>
+                    <div className="nums col-span-2 text-[12.5px] text-ink-muted">{formatBytes(document.file_size)}</div>
                     <div className="col-span-3">
                       <StatusPill status={statusForPill(document.status)} />
                     </div>
-                    <div className="col-span-1 flex justify-end gap-2">
+                    <div className="col-span-1 flex justify-end gap-1">
                       {document.status === "failed" ? (
                         <Button
+                          className="h-8 px-2.5 text-[12.5px]"
                           disabled={mutatingDocumentId === document.id}
                           onClick={() => void handleRetry(document)}
                           variant="secondary"
@@ -414,6 +453,7 @@ export function DocumentUploadPanel() {
                         </Button>
                       ) : null}
                       <Button
+                        className="h-8 px-2.5 text-[12.5px]"
                         disabled={mutatingDocumentId === document.id}
                         onClick={() => void handleDelete(document)}
                         variant="ghost"
@@ -424,18 +464,19 @@ export function DocumentUploadPanel() {
                   </div>
                 ))
               ) : (
-                <div className="px-5 py-10 text-center text-sm text-subtle">
+                <div className="py-10 text-center text-[13px] text-ink-muted">
                   {isLoading ? "Loading documents..." : "No documents uploaded yet."}
                 </div>
               )}
             </div>
           </div>
-          {documents.length > recentActivityLimit ? (
-            <div className="border-t border-border bg-background px-5 py-3 text-xs text-subtle">
-              Showing {visibleDocuments.length} of {documents.length} documents.
-            </div>
-          ) : null}
         </div>
+
+        {documents.length > recentActivityLimit ? (
+          <p className="nums mt-3 border-t border-paper-line pt-3 text-[12px] text-ink-muted">
+            Showing {visibleDocuments.length} of {documents.length} documents.
+          </p>
+        ) : null}
       </section>
     </section>
   );
