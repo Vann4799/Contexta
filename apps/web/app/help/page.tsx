@@ -55,61 +55,61 @@ const exampleQuestions = [
 export default function HelpPage() {
   return (
     <AppShell>
-      <div className="space-y-8">
-        <section className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <div className="space-y-3">
+        <section className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-xs font-semibold text-primary">Contexta Help</p>
-            <h2 className="mt-2 title-rule font-heading text-3xl font-semibold text-ink">Panduan workspace</h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-subtle">
+            <p className="eyebrow">Contexta Help</p>
+            <h2 className="mt-2 text-[26px] font-semibold text-ink">Panduan workspace</h2>
+            <p className="mt-2 max-w-2xl text-[13px] leading-6 text-ink-muted">
               Tempat cepat untuk memahami alur Contexta, cara bertanya ke dokumen, dan apa yang harus dicek kalau upload atau chat terasa bermasalah.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link className="inline-flex h-10 items-center justify-center rounded border border-border bg-surface px-4 text-sm font-semibold text-ink transition hover:border-primary hover:text-primary" href="/documents">
+            <Link className="inline-flex h-10 items-center justify-center rounded-card border border-paper-line bg-paper-card px-4 text-[13px] font-semibold text-ink transition hover:border-ink hover:text-ink" href="/documents">
               Manage documents
             </Link>
-            <Link className="inline-flex h-10 items-center justify-center rounded border border-primary bg-primary px-4 text-sm font-semibold text-white transition hover:bg-accent-strong" href="/chat">
+            <Link className="inline-flex h-10 items-center justify-center rounded-card border border-ink bg-night px-4 text-[13px] font-semibold text-white transition hover:bg-night-raised" href="/chat">
               Open chat
             </Link>
           </div>
         </section>
 
-        <section className="grid gap-4 md:grid-cols-3">
+        <section className="grid gap-3 md:grid-cols-3">
           {workflowSteps.map((step) => {
             const Icon = step.icon;
             return (
-              <article key={step.title} className="rounded border border-border bg-surface p-5">
-                <div className="flex h-11 w-11 items-center justify-center rounded-contexta bg-accent-soft text-primary">
+              <article key={step.title} className="rounded-card border border-paper-line bg-paper-card p-5">
+                <div className="flex h-10 w-10 items-center justify-center rounded-card bg-paper-chip text-ink">
                   <Icon className="h-5 w-5" strokeWidth={2.2} aria-hidden="true" />
                 </div>
-                <h3 className="mt-4 font-heading text-lg font-semibold text-ink">{step.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-subtle">{step.description}</p>
+                <h3 className="mt-4 text-[15px] font-semibold text-ink">{step.title}</h3>
+                <p className="mt-2 text-[13px] leading-6 text-ink-muted">{step.description}</p>
               </article>
             );
           })}
         </section>
 
-        <section className="grid gap-4 lg:grid-cols-12">
-          <article className="rounded border border-border bg-surface p-6 lg:col-span-7">
+        <section className="grid gap-3 lg:grid-cols-12">
+          <article className="rounded-card border border-paper-line bg-paper-card p-6 lg:col-span-7">
             <div className="flex items-start gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-contexta bg-accent-soft text-primary">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-card bg-paper-chip text-ink">
                 <LifeBuoy className="h-5 w-5" strokeWidth={2.2} aria-hidden="true" />
               </div>
               <div>
-                <h3 className="font-heading text-xl font-semibold text-ink">Troubleshooting</h3>
-                <p className="mt-1 text-sm text-subtle">Masalah yang paling sering muncul saat memakai Contexta lokal.</p>
+                <h3 className="text-[17px] font-semibold text-ink">Troubleshooting</h3>
+                <p className="mt-1 text-[13px] text-ink-muted">Masalah yang paling sering muncul saat memakai Contexta lokal.</p>
               </div>
             </div>
             <div className="mt-5 space-y-3">
               {troubleshootingItems.map((item) => {
                 const Icon = item.icon;
                 return (
-                  <div key={item.problem} className="rounded border border-border bg-background p-4">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-ink">
-                      <Icon className="h-4 w-4 text-primary" strokeWidth={2.1} aria-hidden="true" />
+                  <div key={item.problem} className="rounded-control border border-paper-line bg-paper p-4">
+                    <div className="flex items-center gap-2 text-[13px] font-semibold text-ink">
+                      <Icon className="h-4 w-4 text-ink" strokeWidth={2.1} aria-hidden="true" />
                       {item.problem}
                     </div>
-                    <p className="mt-2 text-sm leading-6 text-subtle">{item.answer}</p>
+                    <p className="mt-2 text-[13px] leading-6 text-ink-muted">{item.answer}</p>
                   </div>
                 );
               })}
@@ -117,31 +117,31 @@ export default function HelpPage() {
           </article>
 
           <aside className="space-y-4 lg:col-span-5">
-            <article className="rounded border border-border bg-surface p-5">
-              <h3 className="font-heading text-xl font-semibold text-ink">Contoh pertanyaan</h3>
+            <article className="rounded-card border border-paper-line bg-paper-card p-5">
+              <h3 className="text-[17px] font-semibold text-ink">Contoh pertanyaan</h3>
               <div className="mt-4 space-y-2">
                 {exampleQuestions.map((question) => (
-                  <div key={question} className="rounded border border-border bg-background px-4 py-3 text-sm text-ink">
+                  <div key={question} className="rounded-card border border-paper-line bg-paper px-4 py-3 text-[13px] text-ink">
                     {question}
                   </div>
                 ))}
               </div>
             </article>
 
-            <article className="rounded border border-border bg-surface p-5">
-              <h3 className="font-heading text-xl font-semibold text-ink">Runtime lokal</h3>
-              <div className="mt-4 space-y-2 text-sm">
-                <div className="flex items-center justify-between rounded bg-muted px-3 py-2">
-                  <span className="text-subtle">Web</span>
-                  <span className="font-mono text-xs text-ink">localhost:3000</span>
+            <article className="rounded-card border border-paper-line bg-paper-card p-5">
+              <h3 className="text-[17px] font-semibold text-ink">Runtime lokal</h3>
+              <div className="mt-4 space-y-2 text-[13px]">
+                <div className="flex items-center justify-between rounded-control bg-paper-chip px-3 py-2">
+                  <span className="text-ink-muted">Web</span>
+                  <span className="font-mono text-[11.5px] text-ink">localhost:3000</span>
                 </div>
-                <div className="flex items-center justify-between rounded bg-muted px-3 py-2">
-                  <span className="text-subtle">API</span>
-                  <span className="font-mono text-xs text-ink">127.0.0.1:8001</span>
+                <div className="flex items-center justify-between rounded-control bg-paper-chip px-3 py-2">
+                  <span className="text-ink-muted">API</span>
+                  <span className="font-mono text-[11.5px] text-ink">127.0.0.1:8001</span>
                 </div>
-                <div className="flex items-center justify-between rounded bg-muted px-3 py-2">
-                  <span className="text-subtle">Vector DB</span>
-                  <span className="font-mono text-xs text-ink">Qdrant Docker</span>
+                <div className="flex items-center justify-between rounded-control bg-paper-chip px-3 py-2">
+                  <span className="text-ink-muted">Vector DB</span>
+                  <span className="font-mono text-[11.5px] text-ink">Qdrant Docker</span>
                 </div>
               </div>
             </article>

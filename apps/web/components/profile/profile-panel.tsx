@@ -207,20 +207,20 @@ export function ProfilePanel() {
   ];
 
   return (
-    <div className="space-y-8">
-      <section className="grid gap-4 lg:grid-cols-12">
-        <article className="rounded border border-border bg-surface p-6 lg:col-span-8">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex min-w-0 items-center gap-4">
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-contexta bg-primary text-xl font-semibold text-white">
+    <div className="space-y-3">
+      <section className="grid gap-3 lg:grid-cols-12">
+        <article className="rounded-card border border-paper-line bg-paper-card p-6 lg:col-span-8">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-card bg-night text-[17px] font-semibold text-white">
                 {initialsFromProfile(profile)}
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-primary">User Profile</p>
-                <h2 className="title-rule mt-1 truncate font-heading text-3xl font-semibold text-ink">
+                <p className="eyebrow">User Profile</p>
+                <h2 className="mt-1 truncate text-[26px] font-semibold text-ink">
                   {profile?.fullName || profile?.email || "Contexta user"}
                 </h2>
-                <p className="mt-1 truncate text-sm text-subtle">{profile?.email || "Loading account..."}</p>
+                <p className="mt-1 truncate text-[13px] text-ink-muted">{profile?.email || "Loading account..."}</p>
               </div>
             </div>
             <Button disabled={isSigningOut} onClick={handleSignOut} variant="secondary">
@@ -228,20 +228,20 @@ export function ProfilePanel() {
             </Button>
           </div>
 
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            <label className="grid gap-2 text-sm font-semibold text-ink">
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            <label className="grid gap-2 text-[13px] font-semibold text-ink">
               Display name
               <input
-                className="h-11 rounded border border-border bg-surface px-3 text-sm font-normal text-ink outline-none transition focus:border-primary"
+                className="h-10 rounded-control border border-paper-line bg-paper-card px-3 text-[13px] font-normal text-ink outline-none transition focus:border-ink"
                 disabled={isLoading || isSaving}
                 onChange={(event) => setDisplayName(event.target.value)}
                 placeholder="Add your display name"
                 value={displayName}
               />
             </label>
-            <div className="grid gap-2 text-sm font-semibold text-ink">
+            <div className="grid gap-2 text-[13px] font-semibold text-ink">
               Account email
-              <div className="flex h-11 items-center rounded border border-border bg-background px-3 text-sm font-normal text-subtle">
+              <div className="flex h-10 items-center rounded-control border border-paper-line bg-paper px-3 text-[13px] font-normal text-ink-muted">
                 {profile?.email || "Loading..."}
               </div>
             </div>
@@ -257,27 +257,27 @@ export function ProfilePanel() {
           </div>
 
           {message ? (
-            <p className={`mt-4 rounded border p-3 text-sm ${message.type === "success" ? "border-success-line bg-success-soft text-success" : "border-danger-line bg-danger-soft text-danger"}`} role="alert">
+            <p className={`mt-4 rounded-card border p-3 text-[13px] ${message.type === "success" ? "border-success-line bg-success-soft text-success-ink" : "border-danger-line bg-danger-soft text-danger"}`} role="alert">
               {message.text}
             </p>
           ) : null}
         </article>
 
-        <aside className="rounded border border-border bg-surface p-5 lg:col-span-4">
-          <div className="flex h-11 w-11 items-center justify-center rounded-contexta bg-accent-soft text-primary">
+        <aside className="rounded-card border border-paper-line bg-paper-card p-5 lg:col-span-4">
+          <div className="flex h-10 w-10 items-center justify-center rounded-card bg-paper-chip text-ink">
             <UserRound className="h-5 w-5" strokeWidth={2.2} aria-hidden="true" />
           </div>
-          <h3 className="mt-4 font-heading text-xl font-semibold text-ink">Account Summary</h3>
+          <h3 className="mt-4 text-[17px] font-semibold text-ink">Account Summary</h3>
           <div className="mt-4 space-y-3">
             {accountItems.map((item) => {
               const Icon = item.icon;
               return (
-                <div key={item.label} className="rounded border border-border bg-background p-3">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-subtle">
-                    <Icon className="h-4 w-4 text-primary" strokeWidth={2.1} aria-hidden="true" />
+                <div key={item.label} className="rounded-control border border-paper-line bg-paper p-3">
+                  <div className="flex items-center gap-2 text-[11.5px] font-semibold text-ink-muted">
+                    <Icon className="h-4 w-4 text-ink" strokeWidth={2.1} aria-hidden="true" />
                     {item.label}
                   </div>
-                  <p className="mt-2 break-words text-sm font-medium text-ink">{item.value}</p>
+                  <p className="mt-2 break-words text-[13px] font-medium text-ink">{item.value}</p>
                 </div>
               );
             })}
@@ -285,18 +285,18 @@ export function ProfilePanel() {
         </aside>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
-            <article key={stat.label} className="rounded border border-border bg-surface p-5">
-              <div className="flex items-start justify-between gap-4">
+            <article key={stat.label} className="rounded-card border border-paper-line bg-paper-card p-5">
+              <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm font-medium text-subtle">{stat.label}</p>
-                  <p className="mt-3 nums font-heading text-3xl font-semibold text-ink">{isLoading ? "..." : stat.value}</p>
-                  <p className="mt-1 text-xs text-subtle">{isLoading ? "Loading profile..." : stat.helper}</p>
+                  <p className="text-[13px] font-medium text-ink-muted">{stat.label}</p>
+                  <p className="mt-3 nums text-[26px] font-semibold text-ink">{isLoading ? "..." : stat.value}</p>
+                  <p className="mt-1 text-[11.5px] text-ink-muted">{isLoading ? "Loading profile..." : stat.helper}</p>
                 </div>
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-contexta bg-accent-soft text-primary">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-card bg-paper-chip text-ink">
                   <Icon className="h-5 w-5" strokeWidth={2.2} aria-hidden="true" />
                 </div>
               </div>
@@ -305,11 +305,11 @@ export function ProfilePanel() {
         })}
       </section>
 
-      <section className="rounded border border-border bg-surface p-6">
-        <h3 className="font-heading text-xl font-semibold text-ink">Security & Access</h3>
+      <section className="rounded-card border border-paper-line bg-paper-card p-6">
+        <h3 className="text-[17px] font-semibold text-ink">Security & Access</h3>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           {["Email/password authentication", "Private document workspace", "Server-side API keys hidden"].map((item) => (
-            <div key={item} className="flex items-center gap-3 rounded border border-border bg-background px-4 py-3 text-sm text-ink">
+            <div key={item} className="flex items-center gap-3 rounded-card border border-paper-line bg-paper px-4 py-3 text-[13px] text-ink">
               <span className="h-2.5 w-2.5 rounded-full bg-success" aria-hidden="true" />
               {item}
             </div>
