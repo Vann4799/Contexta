@@ -12,6 +12,7 @@ import {
   MessageSquare,
   Settings,
   User,
+  Waypoints,
   type LucideIcon
 } from "lucide-react";
 import { LogoutButton } from "@/components/auth/logout-button";
@@ -21,6 +22,7 @@ import { cn } from "@/lib/utils";
 
 const NAV_ICONS: Record<NavIcon, LucideIcon> = {
   dashboard: LayoutDashboard,
+  pipeline: Waypoints,
   documents: FileText,
   chat: MessageSquare,
   convert: FileCode,
