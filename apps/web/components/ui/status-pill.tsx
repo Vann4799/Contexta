@@ -1,8 +1,10 @@
+import { cn } from "@/lib/utils";
+
 type Status = "ready" | "processing" | "failed";
 
 const styles: Record<Status, string> = {
-  ready: "border-success-line bg-success-soft text-success",
-  processing: "border-accent-soft bg-accent-soft text-ink",
+  ready: "border-transparent bg-accent text-ink",
+  processing: "border-transparent bg-night text-accent",
   failed: "border-danger-line bg-danger-soft text-danger"
 };
 
@@ -12,9 +14,15 @@ const labels: Record<Status, string> = {
   failed: "Failed"
 };
 
-export function StatusPill({ status }: { status: Status }) {
+export function StatusPill({ status, className = "" }: { status: Status; className?: string }) {
   return (
-    <span className={`inline-flex whitespace-nowrap rounded border px-2 py-0.5 text-xs font-medium ${styles[status]}`}>
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 whitespace-nowrap rounded-chip border px-1.5 py-0.5 text-[11.5px] font-semibold leading-none",
+        styles[status],
+        className
+      )}
+    >
       {labels[status]}
     </span>
   );

@@ -1,4 +1,4 @@
-import { FileSearch } from "lucide-react";
+import Image from "next/image";
 
 type ContextaLogoProps = {
   compact?: boolean;
@@ -6,11 +6,13 @@ type ContextaLogoProps = {
 
 export function ContextaLogo({ compact = false }: ContextaLogoProps) {
   return (
-    <div className="flex min-w-0 items-center gap-2" aria-label="Contexta">
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-contexta bg-primary text-white shadow-sm">
-        <FileSearch className="h-5 w-5" strokeWidth={2.2} aria-hidden="true" />
-      </span>
-      {!compact ? <span className="truncate font-heading text-lg font-semibold text-ink">Contexta</span> : null}
-    </div>
+    <Image
+      src="/contexta-neon-logo.png"
+      alt="Contexta"
+      width={1064}
+      height={337}
+      priority
+      className={compact ? "h-auto w-[104px] object-contain" : "h-auto w-[142px] object-contain"}
+    />
   );
 }

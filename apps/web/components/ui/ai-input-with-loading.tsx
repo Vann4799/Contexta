@@ -62,14 +62,14 @@ export function AIInputWithLoading({
 
   return (
     <form className={cn("w-full", className)} onSubmit={handleFormSubmit}>
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-2 rounded-contexta border border-border bg-surface p-3 shadow-sm">
+      <div className="mx-auto flex w-full max-w-4xl flex-col gap-2 rounded-card border border-paper-line bg-paper-card p-3 shadow-card">
         {leadingContent ? <div className="flex flex-wrap items-center gap-2">{leadingContent}</div> : null}
         <div className="relative w-full">
           <Textarea
             id={id}
             placeholder={placeholder}
             className={cn(
-              "w-full resize-none rounded-contexta border-none bg-black/5 py-4 pl-6 pr-12 text-ink placeholder:text-subtle focus-visible:ring-1 focus-visible:ring-primary",
+              "w-full resize-none rounded-control border-none bg-paper-soft py-4 pl-5 pr-12 text-ink placeholder:text-ink-faint focus-visible:ring-2 focus-visible:ring-ink/80 focus-visible:ring-offset-0",
               "min-h-14"
             )}
             style={{ minHeight }}
@@ -96,8 +96,8 @@ export function AIInputWithLoading({
               void handleSubmit();
             }}
             className={cn(
-              "absolute right-3 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-contexta transition",
-              isLoading || (inputValue.trim() && !disabled) ? "bg-black/5 text-ink" : "bg-transparent text-subtle"
+              "absolute right-3 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-control transition-colors",
+              isLoading || (inputValue.trim() && !disabled) ? "bg-night text-accent" : "bg-transparent text-ink-faint"
             )}
             type="button"
             disabled={disabled || (!isLoading && !inputValue.trim())}
@@ -105,7 +105,7 @@ export function AIInputWithLoading({
           >
             {isLoading ? (
               <div
-                className="size-4 animate-spin rounded-sm bg-ink transition duration-700"
+                className="size-4 animate-spin rounded-chip bg-accent transition duration-700"
                 style={{ animationDuration: "3s" }}
               />
             ) : (
@@ -113,7 +113,7 @@ export function AIInputWithLoading({
             )}
           </button>
         </div>
-        {helperText ? <p className="px-4 text-xs text-subtle">{helperText}</p> : null}
+        {helperText ? <p className="px-4 text-[11.5px] text-ink-muted">{helperText}</p> : null}
       </div>
     </form>
   );
