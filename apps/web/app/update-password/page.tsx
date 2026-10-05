@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ContextaLogo } from "@/components/contexta-logo";
+import { AuthCard } from "@/components/auth/auth-card";
 import { Button } from "@/components/ui/button";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
 
@@ -77,72 +77,71 @@ export default function UpdatePasswordPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-4 py-8">
-      <section className="w-full max-w-md rounded-contexta border border-border bg-surface p-6 sm:p-8">
-        <ContextaLogo />
-        <h1 className="mt-8 font-heading text-2xl font-semibold">Create a new password</h1>
-        <p className="mt-2 text-sm leading-6 text-subtle">Choose a new password for your Contexta account.</p>
-        <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-ink" htmlFor="new-password">
-              New password
-            </label>
-            <div className="relative">
-              <input
-                id="new-password"
-                autoComplete="new-password"
-                className="h-12 w-full rounded border border-border bg-background px-4 pr-16 text-sm leading-5 outline-none transition placeholder:text-subtle focus:border-primary"
-                placeholder="New password"
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                disabled={isChecking || isSubmitting}
-              />
-              <button
-                aria-label={showPassword ? "Hide password" : "Show password"}
-                className="absolute inset-y-0 right-0 flex items-center px-4 text-xs font-medium text-subtle hover:text-ink"
-                type="button"
-                onClick={() => setShowPassword((current) => !current)}
-              >
-                {showPassword ? "Hide" : "Show"}
-              </button>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-ink" htmlFor="confirm-password">
-              Confirm password
-            </label>
+    <AuthCard
+      description="Choose a new password for your Contexta account."
+      eyebrow="Account security"
+      title="Create a new password"
+    >
+      <form className="mt-5 space-y-3" onSubmit={handleSubmit}>
+        <div className="space-y-1.5">
+          <label className="eyebrow" htmlFor="new-password">
+            New password
+          </label>
+          <div className="relative">
             <input
-              id="confirm-password"
+              id="new-password"
               autoComplete="new-password"
-              className="h-12 w-full rounded border border-border bg-background px-4 text-sm leading-5 outline-none transition placeholder:text-subtle focus:border-primary"
-              placeholder="Repeat new password"
+              className="focus-ring h-11 w-full rounded-control border border-paper-line bg-paper-soft px-3.5 pr-16 text-[13.5px] leading-5 text-ink transition placeholder:text-ink-faint focus:border-paper-edge focus:bg-paper-card"
+              placeholder="New password"
               type={showPassword ? "text" : "password"}
-              value={confirmPassword}
-              onChange={(event) => setConfirmPassword(event.target.value)}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
               disabled={isChecking || isSubmitting}
             />
-          </div>
-          {message ? (
-            <p
-              className={`rounded border px-3 py-2 text-sm leading-5 ${
-                message.type === "success" ? "border-success-line bg-success-soft text-success" : "border-danger-line bg-danger-soft text-danger"
-              }`}
-              role={message.type === "error" ? "alert" : "status"}
+            <button
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              className="absolute inset-y-0 right-0 flex items-center px-3.5 font-mono text-[11px] uppercase tracking-[0.08em] text-ink-faint transition-colors hover:text-ink"
+              type="button"
+              onClick={() => setShowPassword((current) => !current)}
             >
-              {message.text}
-            </p>
-          ) : null}
-          <Button className="h-12 w-full" disabled={isChecking || isSubmitting || Boolean(message?.type === "error" && isChecking)} type="submit">
-            {isSubmitting ? "Updating..." : isChecking ? "Checking session..." : "Update password"}
-          </Button>
-        </form>
-        <p className="mt-5 text-sm">
-          <Link href="/forgot-password" className="text-primary hover:text-ink">
-            Request a new reset link
-          </Link>
-        </p>
-      </section>
-    </main>
+              {showPassword ? "Hide" : "Show"}
+            </button>
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <label className="eyebrow" htmlFor="confirm-password">
+            Confirm password
+          </label>
+          <input
+            id="confirm-password"
+            autoComplete="new-password"
+            className="focus-ring h-11 w-full rounded-control border border-paper-line bg-paper-soft px-3.5 text-[13.5px] leading-5 text-ink transition placeholder:text-ink-faint focus:border-paper-edge focus:bg-paper-card"
+            placeholder="Repeat new password"
+            type={showPassword ? "text" : "password"}
+            value={confirmPassword}
+            onChange={(event) => setConfirmPassword(event.target.value)}
+            disabled={isChecking || isSubmitting}
+          />
+        </div>
+        {message ? (
+          <p
+            className={`rounded-control px-3 py-2 text-[13px] leading-5 ${
+              message.type === "success" ? "bg-success-soft text-success-ink" : "bg-danger-soft text-danger"
+            }`}
+            role={message.type === "error" ? "alert" : "status"}
+          >
+            {message.text}
+          </p>
+        ) : null}
+        <Button className="h-11 w-full" disabled={isChecking || isSubmitting || Boolean(message?.type === "error" && isChecking)} type="submit">
+          {isSubmitting ? "Updating..." : isChecking ? "Checking session..." : "Update password"}
+        </Button>
+      </form>
+      <p className="mt-5 text-[13px]">
+        <Link href="/forgot-password" className="font-semibold text-ink underline-offset-4 hover:underline">
+          Request a new reset link
+        </Link>
+      </p>
+    </AuthCard>
   );
 }

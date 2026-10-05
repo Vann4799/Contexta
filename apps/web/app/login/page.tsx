@@ -1,68 +1,78 @@
 import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
 import { AuthForm } from "@/components/auth/auth-form";
 import { ContextaLogo } from "@/components/contexta-logo";
 
+const capabilities = [
+  { label: "Grounded RAG chat", note: "every answer carries page-level citations" },
+  { label: "Document intelligence", note: "briefs, key points and detected fields" },
+  { label: "Markdown conversion", note: "PDF and DOCX out to portable text" }
+];
+
 export default function LoginPage() {
   return (
-    <main className="min-h-screen bg-background text-ink md:grid md:grid-cols-2">
-      <section className="login-grid-bg relative hidden min-h-screen flex-col justify-between overflow-hidden border-r border-border bg-surface px-10 py-9 md:flex">
-        <ContextaLogo />
+    <main className="min-h-screen bg-paper p-3 text-ink lg:grid lg:grid-cols-[minmax(0,1fr)_460px] lg:gap-3 lg:p-4">
+      <section className="relative hidden flex-col justify-between overflow-hidden rounded-card bg-night p-9 shadow-root lg:flex">
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            backgroundImage: "linear-gradient(to right, rgb(255 255 255 / 0.05) 1px, transparent 1px)",
+            backgroundSize: "80px 100%"
+          }}
+        />
+        <div className="relative w-fit rounded-control bg-paper-card p-3 shadow-node">
+          <ContextaLogo />
+        </div>
 
-        <div className="max-w-lg">
-          <h1 className="font-heading text-5xl font-semibold leading-tight text-ink">
-            Turn private documents into clear decisions.
+        <div className="relative max-w-xl">
+          <p className="eyebrow text-white/45">Private document intelligence</p>
+          <h1 className="mt-3 text-[40px] font-semibold leading-[1.08] tracking-tight text-white">
+            Turn private documents into <span className="text-accent">clear decisions</span>.
           </h1>
-          <p className="mt-6 max-w-md text-lg leading-7 text-subtle">
+          <p className="mt-4 max-w-md text-[14px] leading-6 text-white/60">
             Contexta combines grounded RAG chat, citations, and document intelligence in one focused workspace.
           </p>
 
-          <div className="mt-10 border-t border-border pt-6">
-            <div className="flex items-center gap-4">
-              <div className="flex -space-x-2">
-                {["CT", "AI", "RG"].map((label) => (
-                  <span
-                    key={label}
-                    className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-border bg-ink text-xs font-semibold text-white"
-                  >
-                    {label}
-                  </span>
-                ))}
-              </div>
-              <p className="text-sm leading-5 text-subtle">
-                <span className="font-semibold text-ink">Built for focused analysis</span> across PDF and DOCX knowledge bases.
-              </p>
-            </div>
-          </div>
+          <ul className="mt-9 space-y-3 border-t border-white/10 pt-6">
+            {capabilities.map((capability) => (
+              <li className="flex items-baseline gap-3" key={capability.label}>
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
+                <p className="text-[13px] leading-5 text-white/70">
+                  <span className="font-semibold text-white">{capability.label}</span> - {capability.note}
+                </p>
+              </li>
+            ))}
+          </ul>
         </div>
 
-        <p className="text-xs text-subtle">© 2026 Contexta. Private document intelligence.</p>
-        <div className="pointer-events-none absolute bottom-[-140px] right-[-120px] h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
+        <p className="relative font-mono text-[11px] text-white/35">© 2026 Contexta. Private document intelligence.</p>
       </section>
 
-      <section className="flex min-h-screen items-center justify-center px-5 py-10 sm:px-8">
-        <div className="w-full max-w-md rounded-contexta border border-border bg-surface p-6 md:border-0 md:bg-transparent md:p-0 md:shadow-none">
-          <div className="mb-8 md:hidden">
+      <section className="flex min-h-[80vh] items-center justify-center lg:min-h-0">
+        <div className="w-full max-w-md rounded-card border border-paper-line bg-paper-card p-6 shadow-card sm:p-8 lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none">
+          <div className="mb-8 lg:hidden">
             <ContextaLogo />
           </div>
 
-          <div className="mb-8">
-            <h2 className="font-heading text-4xl font-semibold leading-tight">Welcome back</h2>
-            <p className="mt-2 text-sm leading-6 text-subtle">Sign in to continue your document intelligence workspace.</p>
+          <div>
+            <p className="eyebrow">Sign in</p>
+            <h2 className="mt-2 text-[26px] font-semibold tracking-tight">Welcome back</h2>
+            <p className="mt-2 text-[13px] leading-6 text-ink-muted">Continue your document intelligence workspace.</p>
           </div>
 
           <AuthForm mode="login" />
 
-          <div className="mt-5 flex items-center justify-between gap-3 text-sm">
-            <Link href="/register" className="font-medium text-primary hover:text-ink">
-              Request access
+          <div className="mt-5 flex items-center justify-between gap-3 text-[13px]">
+            <Link className="font-semibold text-ink inline-flex items-center gap-1 hover:text-ink-muted" href="/register">
+              Request access <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
             </Link>
-            <Link href="/forgot-password" className="font-medium text-primary hover:text-ink">
+            <Link className="font-medium text-ink-muted underline-offset-4 hover:text-ink hover:underline" href="/forgot-password">
               Forgot password?
             </Link>
           </div>
 
-          <div className="mt-10 border-t border-border pt-6">
-            <p className="text-center text-sm text-subtle">Secure access for your private RAG document workspace.</p>
+          <div className="mt-8 border-t border-paper-line pt-5">
+            <p className="text-center text-[11.5px] text-ink-faint">Secure access for your private RAG document workspace.</p>
           </div>
         </div>
       </section>

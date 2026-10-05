@@ -127,30 +127,30 @@ export function AuthForm({ mode }: AuthFormProps) {
   }
 
   return (
-    <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
+    <form className="mt-5 space-y-3" onSubmit={handleSubmit}>
       {isRegister ? (
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-ink" htmlFor="register-name">
+        <div className="space-y-1.5">
+          <label className="eyebrow" htmlFor="register-name">
             Full name
           </label>
           <input
             id="register-name"
             autoComplete="name"
-            className="h-12 w-full rounded border border-border bg-background px-4 text-sm leading-5 outline-none transition placeholder:text-subtle focus:border-primary"
+            className="focus-ring h-11 w-full rounded-control border border-paper-line bg-paper-soft px-3.5 text-[13.5px] leading-5 text-ink transition placeholder:text-ink-faint focus:border-paper-edge focus:bg-paper-card"
             placeholder="Your name"
             value={fullName}
             onChange={(event) => setFullName(event.target.value)}
           />
         </div>
       ) : null}
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-ink" htmlFor={`${mode}-email`}>
+      <div className="space-y-1.5">
+        <label className="eyebrow" htmlFor={`${mode}-email`}>
           {mode === "login" ? "Email address" : "Email"}
         </label>
         <input
           id={`${mode}-email`}
           autoComplete="email"
-          className="h-12 w-full rounded border border-border bg-background px-4 text-sm leading-5 outline-none transition placeholder:text-subtle focus:border-primary"
+          className="focus-ring h-11 w-full rounded-control border border-paper-line bg-paper-soft px-3.5 text-[13.5px] leading-5 text-ink transition placeholder:text-ink-faint focus:border-paper-edge focus:bg-paper-card"
           placeholder="you@company.com"
           type="email"
           value={email}
@@ -158,15 +158,15 @@ export function AuthForm({ mode }: AuthFormProps) {
         />
       </div>
       {needsPassword ? (
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-ink" htmlFor={`${mode}-password`}>
+        <div className="space-y-1.5">
+          <label className="eyebrow" htmlFor={`${mode}-password`}>
             Password
           </label>
           <div className="relative">
             <input
               id={`${mode}-password`}
               autoComplete={mode === "login" ? "current-password" : "new-password"}
-              className="h-12 w-full rounded border border-border bg-background px-4 pr-16 text-sm leading-5 outline-none transition placeholder:text-subtle focus:border-primary"
+              className="focus-ring h-11 w-full rounded-control border border-paper-line bg-paper-soft px-3.5 pr-16 text-[13.5px] leading-5 text-ink transition placeholder:text-ink-faint focus:border-paper-edge focus:bg-paper-card"
               placeholder="Password"
               type={showPassword ? "text" : "password"}
               value={password}
@@ -174,7 +174,7 @@ export function AuthForm({ mode }: AuthFormProps) {
             />
             <button
               aria-label={showPassword ? "Hide password" : "Show password"}
-              className="absolute inset-y-0 right-0 flex items-center px-4 text-xs font-medium text-subtle hover:text-ink"
+              className="absolute inset-y-0 right-0 flex items-center px-3.5 font-mono text-[11px] uppercase tracking-[0.08em] text-ink-faint transition-colors hover:text-ink"
               type="button"
               onClick={() => setShowPassword((current) => !current)}
             >
@@ -185,15 +185,15 @@ export function AuthForm({ mode }: AuthFormProps) {
       ) : null}
       {message ? (
         <p
-          className={`rounded border px-3 py-2 text-sm leading-5 ${
-            message.type === "success" ? "border-success-line bg-success-soft text-success" : "border-danger-line bg-danger-soft text-danger"
+          className={`rounded-control px-3 py-2 text-[13px] leading-5 ${
+            message.type === "success" ? "bg-success-soft text-success-ink" : "bg-danger-soft text-danger"
           }`}
           role={message.type === "error" ? "alert" : "status"}
         >
           {message.text}
         </p>
       ) : null}
-      <Button className="h-12 w-full" disabled={isSubmitting} type="submit">
+      <Button className="h-11 w-full" disabled={isSubmitting} type="submit">
         {isSubmitting ? "Working..." : copy[mode].button}
       </Button>
     </form>

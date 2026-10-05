@@ -1,21 +1,20 @@
 import Link from "next/link";
+import { AuthCard } from "@/components/auth/auth-card";
 import { AuthForm } from "@/components/auth/auth-form";
-import { ContextaLogo } from "@/components/contexta-logo";
 
 export default function ForgotPasswordPage() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-4 py-8">
-      <section className="w-full max-w-md rounded-contexta border border-border bg-surface p-6 sm:p-8">
-        <ContextaLogo />
-        <h1 className="mt-8 font-heading text-2xl font-semibold">Reset password</h1>
-        <p className="mt-2 text-sm text-subtle">Enter your email and Contexta will send a reset link.</p>
-        <AuthForm mode="reset" />
-        <p className="mt-5 text-sm">
-          <Link href="/login" className="text-primary hover:text-ink">
-            Back to sign in
-          </Link>
-        </p>
-      </section>
-    </main>
+    <AuthCard
+      description="Enter your email and Contexta will send a reset link."
+      eyebrow="Recovery"
+      title="Reset password"
+    >
+      <AuthForm mode="reset" />
+      <p className="mt-5 text-[13px]">
+        <Link href="/login" className="font-medium text-ink underline decoration-paper-edge underline-offset-4 hover:decoration-ink">
+          Back to sign in
+        </Link>
+      </p>
+    </AuthCard>
   );
 }

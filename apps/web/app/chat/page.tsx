@@ -5,7 +5,7 @@ import { ChatWorkspace } from "@/components/chat/chat-workspace";
 export default function ChatPage() {
   return (
     <AppShell>
-      <Suspense fallback={<section className="rounded-contexta border border-border bg-surface p-5 text-sm text-subtle">Loading chat...</section>}>
+      <Suspense fallback={<section className="surface p-5 text-[13px] text-ink-muted">Loading chat...</section>}>
         <ChatWorkspace />
       </Suspense>
     </AppShell>

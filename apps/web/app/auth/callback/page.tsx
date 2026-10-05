@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ContextaLogo } from "@/components/contexta-logo";
+import { AuthCard } from "@/components/auth/auth-card";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
 
 type CallbackState =
@@ -127,28 +127,27 @@ export default function AuthCallbackPage() {
   const isError = callbackState.status === "error";
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-4 py-8">
-      <section className="w-full max-w-md rounded-contexta border border-border bg-surface p-6 sm:p-8">
-        <ContextaLogo />
-        <h1 className="mt-8 font-heading text-2xl font-semibold">{isSuccess ? "Authentication complete" : isError ? "Authentication error" : "Completing authentication"}</h1>
-        <p className="mt-2 text-sm leading-6 text-subtle">{callbackState.message}</p>
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-          <Link
-            href="/"
-            className={`inline-flex h-11 max-w-full flex-1 items-center justify-center rounded border px-4 text-sm font-medium leading-none transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
-              isSuccess ? "border-primary bg-primary text-white hover:bg-accent-strong" : "border-border bg-surface text-ink hover:bg-muted"
-            }`}
-          >
-            Dashboard
-          </Link>
-          <Link
-            href="/login"
-            className="inline-flex h-11 max-w-full flex-1 items-center justify-center rounded border border-border bg-surface px-4 text-sm font-medium leading-none text-ink transition hover:bg-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-          >
-            Login
-          </Link>
-        </div>
-      </section>
-    </main>
+    <AuthCard
+      description={callbackState.message}
+      eyebrow={isError ? "Sign-in failed" : "Workspace session"}
+      title={isSuccess ? "Authentication complete" : isError ? "Authentication error" : "Completing authentication"}
+    >
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+        <Link
+          className={`focus-ring inline-flex h-10 max-w-full flex-1 items-center justify-center rounded-control px-4 text-[13.5px] font-medium leading-none transition-colors ${
+            isSuccess ? "bg-night text-white shadow-node hover:bg-night-raised" : "border border-paper-line bg-paper-soft text-ink hover:bg-paper-card"
+          }`}
+          href="/"
+        >
+          Dashboard
+        </Link>
+        <Link
+          className="focus-ring inline-flex h-10 max-w-full flex-1 items-center justify-center rounded-control border border-paper-line bg-paper-soft px-4 text-[13.5px] font-medium leading-none text-ink transition-colors hover:bg-paper-card"
+          href="/login"
+        >
+          Login
+        </Link>
+      </div>
+    </AuthCard>
   );
 }

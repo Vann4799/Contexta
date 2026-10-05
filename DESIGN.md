@@ -160,12 +160,11 @@ token di-echo di `apps/web/tailwind.config.ts` (`theme.extend.colors /
 fontFamily / borderRadius / boxShadow`). Jangan edit `tokens.css` tangan — ubah
 `:root` di file ini lalu sinkronkan.
 
-**Jembatan migrasi v1→v2 (fase B–I):** `tailwind.config.ts` masih mengekspor
-nama lama (`background surface muted soft border primary accent accent-strong
-accent-soft accent-ink ink subtle success warning danger`) yang menunjuk ke nilai
-v2, supaya halaman yang belum dirombak tetap terbaca benar. Hapus blok alias itu
-di Fase I setelah sweep kelas lama selesai, dan ganti pemakaian `--font-display`
-serif bila masih ada.
+**Jembatan migrasi v1→v2: sudah dihapus (Fase I).** `tailwind.config.ts` kini
+hanya mengekspor token v2 — nama lama (`background surface muted soft border
+primary accent-strong accent-soft subtle`), `font-heading`, `rounded-contexta`,
+serta motif `.login-grid-bg` / `.title-rule` tidak ada lagi. Kalau masih ada
+komponen yang memakainya, rombak ke token v2; jangan tambahkan alias baru.
 
 ## Variants
 - Dark (belum di-wire, disiapkan) · paper `#141416`, paper-deep `#1b1b1b`, card `#232325`, paper-soft `#2b2b2b`, paper-chip `#333336`, paper-line `#3a3a3e`, ink `#f1efe8`, ink-muted `#a9a9ae`, accent tetap `#f2fb48` dengan teks `#131315`. Diaktifkan lewat `[data-theme="dark"]`.

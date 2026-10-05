@@ -51,33 +51,16 @@ const v2 = {
   }
 };
 
-/* Jembatan migrasi v1→v2 (DESIGN.md `## Exports`): nama lama tetap ada tapi
-   menunjuk ke nilai v2, supaya halaman yang belum dirombak tidak rusak.
-   Hapus blok ini di Fase I setelah sweep kelas lama selesai. */
-const v1Aliases = {
-  background: withAlpha("#ebe8df"),
-  surface: withAlpha("#fdfdfb"),
-  muted: withAlpha("#f7f6f2"),
-  soft: withAlpha("#f3f0e5"),
-  border: "rgb(221 215 203)",
-  primary: withAlpha("#1b1b1b"),
-  "accent-strong": withAlpha("#2b2b2b"),
-  "accent-soft": withAlpha("#f3f0e5"),
-  subtle: withAlpha("#68686c")
-};
-
 const config: Config = {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./lib/**/*.{ts,tsx}"],
   theme: {
     extend: {
-      colors: { ...v2, ...v1Aliases },
+      colors: v2,
       fontFamily: {
         sans: ["var(--font-sans)", "Inter", "ui-sans-serif", "system-ui", "sans-serif"],
-        heading: ["var(--font-sans)", "Inter", "ui-sans-serif", "system-ui", "sans-serif"],
         mono: ["var(--font-mono)", "JetBrains Mono", "ui-monospace", "SFMono-Regular", "Consolas", "monospace"]
       },
       borderRadius: {
-        contexta: "8px",
         card: "16px",
         control: "8px",
         chip: "6px"
