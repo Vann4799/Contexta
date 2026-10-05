@@ -71,7 +71,7 @@ export function AppShell({ title, children }: { title: string; children: ReactNo
     return (
       <main className="flex min-h-screen items-center justify-center bg-background px-4 text-ink">
         <section className="w-full max-w-sm rounded border border-border bg-surface p-6 text-center shadow-sm">
-          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-contexta bg-primary text-accent-ink">
+          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-contexta bg-primary text-white">
             <FileSearch className="h-5 w-5" strokeWidth={2.2} aria-hidden="true" />
           </div>
           <h1 className="mt-4 font-heading text-xl font-semibold">Checking access</h1>

@@ -136,7 +136,7 @@ export default function AuthCallbackPage() {
           <Link
             href="/"
             className={`inline-flex h-11 max-w-full flex-1 items-center justify-center rounded border px-4 text-sm font-medium leading-none transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
-              isSuccess ? "border-primary bg-primary text-accent-ink hover:bg-accent-strong" : "border-border bg-surface text-ink hover:bg-muted"
+              isSuccess ? "border-primary bg-primary text-white hover:bg-accent-strong" : "border-border bg-surface text-ink hover:bg-muted"
             }`}
           >
             Dashboard

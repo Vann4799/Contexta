@@ -252,8 +252,8 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
 
       {normalizedStatus === "processing" ? (
         <section className="rounded-contexta border border-accent-soft bg-accent-soft p-5">
-          <h3 className="font-heading text-lg font-semibold text-accent">Indexing in progress</h3>
-          <p className="mt-2 text-sm leading-6 text-accent">
+          <h3 className="font-heading text-lg font-semibold text-ink">Indexing in progress</h3>
+          <p className="mt-2 text-sm leading-6 text-ink">
             Contexta is extracting text and creating searchable chunks. This page refreshes automatically every few seconds.
           </p>
         </section>

@@ -1,7 +1,7 @@
 ---
-version: 1
-name: Contexta Reading Room
-dials: ENERGY 1 / RHYTHM 1 / MOTION 2
+version: 2
+name: Contexta Acid Lab
+dials: ENERGY 2 / RHYTHM 2 / MOTION 2
 ---
 
 # Design — Contexta
@@ -9,118 +9,164 @@ dials: ENERGY 1 / RHYTHM 1 / MOTION 2
 Locked design system. Semua halaman baru baca file ini dulu dan tunduk ke dia.
 Amend secara sengaja — file ini aturannya, bukan catatan.
 
+> **v2 (2026-10-06)** menggantikan v1 "Reading Room" (paper krem + Fraunces + clay).
+> Arah baru diambil dari UI pipeline yang di-build owner di
+> `C:/Users/M S I/contexta-dashboard`: kertas abu-kuning bergaris, Inter + JetBrains
+> Mono, satu aksen acid lime, tile hitam sebagai elemen fokus, kartu shadow lembut,
+> top-nav pill. v1 tidak dipakai lagi — jangan campur dua bahasa.
+
 ## System
-- Kind · web app (workspace document-intelligence / RAG chat) untuk profesional yang "ngobrol" sama dokumennya
-- Genre · editorial print — ruang baca, bukan dashboard
-- Axes · paper band terang hangat / display serif / accent clay
-- Anchor · majalah cetak editorial · counter-anchor · kertas arsip & alat ukur fisik (bentuk non-software)
-- Dark mode · terang utama; token dark disiapkan di `## Variants`, belum di-wire
+- Kind · web app (workspace document-intelligence / RAG chat) — kini juga dashboard pipeline retrieval
+- Genre · lab instrument / control panel cetak — kertas teknis + marker stabilo, bukan SaaS gradien
+- Axes · paper band terang netral / sans geometris + mono / satu aksen acid lime
+- Anchor · lembar kerja lab & panel instrumen (garis kisi, label kecil, angka besar) · counter-anchor · dashboard SaaS gelap bergradien
+- Dark mode · tidak ada tema gelap; `night` dipakai sebagai **blok fokus di atas terang**, bukan sebagai mode
 
 ## Design Read
-> Membaca ini sebagai: web app kerja untuk membaca & menanyai dokumen, dalam bahasa visual ruang baca cetak, dial 1 / 1 / 2.
+> Membaca ini sebagai: alat kerja harian yang mengukur pipeline RAG, dalam bahasa visual instrumen lab di kertas, dial 2 / 2 / 2.
 
-Differentiator · Fraunces di atas kertas hangat, garis hairline, satu aksen clay — Contexta terbaca seperti ruang baca cetak untuk dokumen lu, bukan dashboard AI: tanpa label uppercase mono, tanpa kartu shadow abu-abu, tanpa biru default.
+Differentiator · kertas `#ebe8df` bergaris vertikal 80px, angka besar Inter di atas label eyebrow kecil, mono untuk semua ID/metrik, dan satu marker lime di atas tile hitam — Contexta terbaca seperti lembar ukur, bukan dashboard AI: tanpa gradien, tanpa glass, tanpa biru default.
 
-Dial: ENERGY 1 / RHYTHM 1 / MOTION 2
+Dial: ENERGY 2 / RHYTHM 2 / MOTION 2
 Status: locked
-Kalem di kedua sumbu adalah keputusan: identitas datang dari tipografi, paper hangat, dan clay — bukan dari komposisi berani.
+Energi datang dari kontras (hitam pekat + lime di atas kertas) dan skala tipografi (30px vs 10.5px), bukan dari warna pelangi atau animasi berisik.
 
 ## Tokens
 ```css
 :root {
-  --color-paper:      oklch(0.97 0.012 85);
-  --color-paper-2:    oklch(0.945 0.014 85);
-  --color-ink:        oklch(0.25 0.012 70);
-  --color-ink-2:      oklch(0.45 0.014 70);
-  --color-rule:       oklch(0.25 0.012 70 / 0.14);
-  --color-accent:     oklch(0.52 0.13 45);
-  --color-accent-strong: oklch(0.45 0.13 45);
-  --color-accent-soft: oklch(0.52 0.13 45 / 0.12);
-  --color-accent-ink: oklch(0.97 0.012 85);
-  --color-focus:      oklch(0.52 0.13 45);
+  /* paper · permukaan terang */
+  --color-paper:        #ebe8df;  /* background halaman */
+  --color-paper-deep:   #e7e3d8;  /* kanvas graph */
+  --color-card:         #fdfdfb;  /* permukaan kartu/panel */
+  --color-paper-soft:   #f7f6f2;  /* nav pill non-aktif */
+  --color-paper-chip:   #f3f0e5;  /* chip / tag / tab */
+  --color-paper-line:   #ddd7cb;  /* semua border */
+  --color-paper-edge:   #c9c4b6;  /* konektor abu, border dashed */
 
-  /* status · hue terpisah dari clay, diukur lolos AA di atas paper */
-  --color-success:      oklch(0.45 0.1 145);   /* moss */
-  --color-success-soft: oklch(0.45 0.1 145 / 0.12);
-  --color-success-line: oklch(0.45 0.1 145 / 0.3);
-  --color-warning:      oklch(0.48 0.11 78);   /* ochre */
-  --color-warning-soft: oklch(0.48 0.11 78 / 0.14);
-  --color-warning-line: oklch(0.48 0.11 78 / 0.32);
-  --color-danger:       oklch(0.45 0.16 25);   /* brick */
-  --color-danger-soft:  oklch(0.45 0.16 25 / 0.12);
-  --color-danger-line:  oklch(0.45 0.16 25 / 0.3);
+  /* ink · teks */
+  --color-ink:          #131315;
+  --color-ink-muted:    #68686c;  /* dinaikkan dari #6e6e72 biar lolos AA di paper */
+  --color-ink-faint:    #9a9a9e;  /* HANYA dekoratif / disabled, bukan teks informasi */
+  --color-rule:         rgba(19, 19, 21, 0.045); /* garis kisi vertikal */
 
-  --font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
-  --font-body:    "Public Sans", system-ui, -apple-system, sans-serif;
-  --font-mono:    "JetBrains Mono", ui-monospace, Consolas, monospace;
+  /* night · blok fokus */
+  --color-night:        #1b1b1b;
+  --color-night-raised: #2b2b2b;
+  --color-night-line:   #333333;
+
+  /* accent · acid lime. SELALU berpasangan teks di atasnya, tidak pernah teks */
+  --color-accent:       #f2fb48;
+  --color-accent-deep:  #d9e23a;  /* garis konektor graph */
+  --color-accent-ink:   #131315;  /* teks di atas lime */
+  --color-focus:        #131315;
+
+  /* status · label teks selalu ada, warna bukan satu-satunya sinyal */
+  --color-success:      #f2fb48;              /* pill: bg lime + teks ink (16.5:1) */
+  --color-success-ink:  #2f6b46;              /* teks hijau di paper (5.2:1) */
+  --color-success-soft: #e3edda;
+  --color-success-line: rgba(47, 107, 70, 0.3);
+  --color-warning:      #7c5210;              /* teks ochre di paper (5.6:1) */
+  --color-warning-soft: #f4e3cd;
+  --color-warning-line: rgba(124, 82, 16, 0.32);
+  --color-danger:       #a3231b;              /* teks brick di paper (6.1:1) */
+  --color-danger-soft:  #fadfd9;
+  --color-danger-line:  rgba(163, 35, 27, 0.3);
+
+  --font-display: "Inter", ui-sans-serif, system-ui, sans-serif; /* = sans, tanpa serif lagi */
+  --font-body:    "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
 
   --space-2xs: 4px;  --space-xs: 8px;  --space-s: 12px;  --space-m: 16px;
   --space-l: 24px;   --space-xl: 40px; --space-2xl: 56px;
 
-  --text-xs: 12px;  --text-s: 14px;  --text-base: 16px;
-  --text-l: 20px;   --text-xl: 25px; --text-2xl: 31px; --text-display: 40px;
+  --text-eyebrow: 10.5px; --text-xs: 11.5px; --text-s: 12.5px;
+  --text-ui: 13.5px;  --text-base: 16px;  --text-l: 20px;
+  --text-metric: 30px; --text-xl: 22px;  --text-2xl: 31px;
 
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --dur-fast: 180ms;  --dur-base: 240ms;  --dur-slow: 320ms;
 
-  --radius-card: 4px;  --radius-pill: 999px;  --radius-input: 4px;
+  --radius-card: 16px;  /* rounded-2xl — panel & kartu besar */
+  --radius-control: 8px; /* rounded-lg — tombol, pill nav, input */
+  --radius-chip: 6px;   /* rounded-md — chip, tab kecil, ikon btn */
+  --radius-pill: 999px;
+
+  --shadow-card: 0 1px 0 rgba(20,20,20,0.04), 0 8px 24px -12px rgba(20,20,20,0.12);
+  --shadow-node: 0 1px 2px rgba(20,20,20,0.06), 0 4px 12px -6px rgba(20,20,20,0.12);
+  --shadow-root: 0 18px 40px -16px rgba(0,0,0,0.45);
 }
 ```
 
 ## Type
-- Display · `Fraunces` · judul halaman & judul jawaban AI (h1–h2), tidak untuk kontrol · 2 weight (SemiBold, Regular)
-- Body · `Public Sans` · semua teks UI, chat, form, tabel · 3 weight (400/500/600)
-- Mono · `JetBrains Mono` · markdown preview, kode, ID dokumen · sudah dimuat via Google Fonts
-- Fallback logic · system-ui dipakai lebih dulu saat jaringan lambat; Georgia menggantikan Fraunces; budget total 5 file font
+- Display · `Inter` · judul halaman & angka metrik — weight 600, `tracking-tight`, tidak untuk badan teks
+- Body · `Inter` · semua UI, chat, form, tabel · 400/500/600
+- Mono · `JetBrains Mono` · ID indeks, nama file/chunk, token count, skor, timestamp, nilai metrik kecil
+- Eyebrow · `Inter` 10.5px / 600 / `tracking-[0.12em]` / `--color-ink-muted` · label di atas angka stat — satu-satunya tempat uppercase boleh
+- Fallback logic · dimuat via `next/font` (bukan `<link>`) jadi ada class variable `--font-sans` / `--font-mono`; fallback system saat lambat
 
 ## Layout
-- Grid · app shell: sidebar nav desktop (240px) + bottom nav mobile; konten satu kolom
-- Measure · jawaban chat & preview dokumen max 68ch; halaman max 1100px
-- Section rhythm · `--space-l` antar blok dalam halaman, `--space-xl` antar section
-- Focal rule · satu focal point per layar: di Chat = kolom percakapan; di Documents = daftar dokumen; dashboard = panel utama
+- Grid · top-nav satu baris + kolom `max-w-[1440px]`, padding `px-3 sm:px-4`, antar blok `gap-3`
+- Surface · panel = `.surface` (card, radius 16px, border `--color-paper-line`, `--shadow-card`) di atas kertas bergaris
+- Measure · jawaban chat & preview dokumen max 68ch; metrik pakai grid 2→3→5 kolom
+- Section rhythm · `--space-s` antar blok dalam panel, `--space-l` antar panel, `--space-xl` header ke konten
+- Focal rule · satu tile `night` per layar sebagai titik fokus (avatar, root node, badge metrik) — lebih dari satu = tidak ada yang fokus
+- Latar · garis vertikal 1px tiap 80px di `body` (`--color-rule`); `dot-grid` hanya untuk area kosong/kanvas
 
 ## Components
-- Card · border hairline `--color-rule` di atas `--color-paper-2`; tanpa shadow (shadow hanya elemen mengambang: drawer, popover, bubble chat)
-- Primary control · fill `--color-accent`, teks `--color-accent-ink`, `--radius-input`, padding `--space-xs --space-m`
-- Secondary control · outline 1px `--color-ink` transparan, teks `--color-ink` — beda struktur dari primary, bukan cuma beda hue
-- Divider · hairline 1px `--color-rule`, tanpa gradasi
-- Focus · ring 2px `--color-focus` offset 2px — wajib di semua interaktif
-- Status · pill/alert memakai `--color-success|warning|danger` + `-soft` untuk background + `-line` untuk border; status juga selalu punya label teks (warna bukan satu-satunya sinyal)
-- Identity motif · double hairline rule di bawah H1 setiap halaman (gestur editorial print)
+- Card / surface · `--color-card` + border `--color-paper-line` + `--shadow-card`, radius `--radius-card`
+- Primary control · fill `--color-night`, teks `#fdfdfb`, radius `--radius-control`, `--shadow-node`; hover `--color-night-raised`
+- Accent control · fill `--color-accent`, teks `--color-accent-ink` — khusus CTA utama & badge status aktif, maksimal satu per layar
+- Secondary control · fill `--color-paper-soft`, border transparan → `--color-paper-line` saat hover, teks `--color-ink`
+- Pill nav / tab · h-9 (nav) / h-7 (tab); aktif = `--color-card` + border + `--shadow-node`, non-aktif = `--color-paper-soft` / `--color-paper-chip`
+- Chip · `--color-paper-chip`, radius `--radius-chip`, teks `--text-xs` mono bila berupa ID/angka
+- Badge · lime = aktif/tersinkron; `night` = penanda teknis; tidak pernah gradien
+- Divider · 1px `--color-paper-line` (di atas night pakai `--color-night-line`)
+- Focus · `focus-visible:ring-2 ring-ink/80 ring-offset-2 ring-offset-paper` — wajib di semua interaktif
+- Status · Ready = lime bg + ink teks, Processing = `night` bg + lime teks, Failed = `--color-danger` di `--color-danger-soft`; selalu ada label kata
+- Data viz · konektor kurva S: trunk `--color-accent-deep` 2.25px + jalur abu 4px, branch `--color-paper-edge` → `--color-ink` saat hover; garis putus-putus beranimasi = aliran hidup
+- Avatar · lingkaran `--color-night` ring putih 2px + titik dalam lime
 
 ## Motion
-- Stance · 1–2 reveal primitives, semuanya kalem
-- Primitives · fade-up ≤200ms saat konten masuk; crossfade state (upload → ready); shimmer tipis untuk loading LLM
-- Reduced-motion · ≤150 ms opacity crossfade, tanpa transform
+- Stance · gerak kecil yang menandakan "alat ini hidup", bukan dekorasi
+- Primitives · `animate-dash` (aliran konektor, linear tak terbatas), `animate-pulse-dot` (status hidup, 1.8s), transisi `transform`/`opacity` ≤240ms `--ease-out` pada pill & kartu
+- Reduced-motion · matikan `animate-dash` dan `animate-pulse-dot`, sisakan opacity ≤150ms
 
 ## Decisions
-- **color** · paper hangat + ink gelap hangat karena produknya membaca dokumen — mata harus nyaman di teks panjang, bukan kanvas dingin
-- **type** · Fraunces jadi identitas ruang baca cetak; Public Sans pendukung diam supaya transkrip chat tetap enak dibaca kecil
-- **layout** · satu kolom + measure 68ch karena jawaban RAG adalah long-form reading, bukan grid widget
-- **spacing** · skala 4pt kompak karena ini alat kerja harian, bukan landing marketing
-- **radius** · satu angka 4px ala form cetak — tidak ada keputusan radius per komponen
-- **motion** · MOTION 2 halus karena latency LLM butuh feedback lembut, bukan arcade
-- **accent** · satu hue clay (tinta terracotta) hanya untuk kontrol utama, link, dan sitasi — tidak pernah jadi background section
+- **color** · kertas netral + hitam pekat + satu lime karena produknya mengukur (metrik, status, graph) — butuh penanda, bukan nuansa
+- **type** · Inter untuk segala hal struktural, JetBrains Mono untuk segala hal yang berupa data; serif dibuang karena v1 sudah bukan arah produk
+- **layout** · top-nav pill menggantikan sidebar: halaman pipeline & dashboard butuh lebar penuh, dan nav horizontal bikin satu titik fokus per layar
+- **spacing** · `gap-3` antar panel supaya layar 1440px tetap muat banyak tanpa terasa padat
+- **radius** · tiga angka (16/8/6) — kartu, kontrol, chip; tidak ada keputusan radius per komponen
+- **elevation** · shadow lembut dua lapis, bukan hairline-only: kartu harus terasa melayang di atas kertas bergaris
+- **accent** · lime hanya di atas hitam atau sebagai teks-nya-hitam; di paper kontrasnya 1.09:1 jadi tidak pernah jadi warna teks
+- **night-blocks** · tile gelap dipakai sebagai focal point, maksimal satu per layar
 
 ## Do's and Don'ts
-- Do · sentence case untuk semua label & status (Ready, Processing) — bukan UPPERCASE mono (ilfeel owner)
-- Do · `font-variant-numeric: tabular-nums` untuk angka stat & tabel hitungan
-- Do · empty state pakai diagram garis manual (digambar, bukan AI-generated illustration)
-- Don't · Tailwind `blue-600` + Inter sebagai identitas (diganti clay + Fraunces/Public Sans)
-- Don't · label mono uppercase mikro ala HUD (hard no dari owner)
-- Don't · kartu putih rounded + `shadow-soft` di atas abu — default Tailwind SaaS (ilfeel owner)
-- Don't · hex lavender hard-coded (`#f9f9ff`, `#dce2f3`, `#dbe1ff`, `#f4f6ff`) — semua warna lewat token
-- Don't · `emerald-*` / `green-*` / `red-*` / `amber-*` Tailwind untuk status & alert — pakai `--color-success|warning|danger`
-- Don't · backdrop-blur glass, radial bloom, aurora/mesh gradient
-- Don't · gradient blue→purple pada apapun; `transition-all` — sebut propertinya
+- Do · angka metrik `tabular-nums` + `tracking-tight` + `--text-metric`
+- Do · semua ID / nama file / skor / timestamp pakai mono
+- Do · eyebrow uppercase 10.5px hanya untuk label stat & section kecil
+- Do · status pakai label kata, bukan warna saja
+- Don't · teks `--color-accent` / lime di atas paper (kontras 1.09:1)
+- Don't · `--color-ink-faint` untuk teks informasi (2.29:1) — disabled atau ornamen saja
+- Don't · Fraunces / serif, clay `#…45 hue`, hairline-only card — semua milik v1
+- Don't · Tailwind `blue-*`, `emerald-*`, `green-*`, `red-*`, `amber-*` — pakai token
+- Don't · hex baru di komponen; kalau butuh warna, tambah token di file ini dulu
+- Don't · gradien, backdrop-blur glass, aurora/mesh, shadow keras satu arah
+- Don't · `transition-all` — sebut propertinya
 
 ## Exports
-`tokens.css`, `tailwind.theme.css`, `tokens.json`, `shadcn.vars.css` — dihasilkan
-`scripts/export_design.mjs`, di `apps/web/`. Yang aktif di-pake cuma `tokens.css`
-(import di `app/globals.css`) + nilai token di-echo di `tailwind.config.ts`
-`theme.extend.colors/fontFamily`. Jangan edit export tangan — ubah `:root` di
-file ini lalu generate ulang. Bundle lama `public/contexta.css` + script
-`build:css` sudah dihapus (double-CSS warisan, Next compile `globals.css` sendiri).
+Yang aktif di-pake: `apps/web/tokens.css` (import di `app/globals.css`) + nilai
+token di-echo di `apps/web/tailwind.config.ts` (`theme.extend.colors /
+fontFamily / borderRadius / boxShadow`). Jangan edit `tokens.css` tangan — ubah
+`:root` di file ini lalu sinkronkan.
+
+**Jembatan migrasi v1→v2 (fase B–I):** `tailwind.config.ts` masih mengekspor
+nama lama (`background surface muted soft border primary accent accent-strong
+accent-soft accent-ink ink subtle success warning danger`) yang menunjuk ke nilai
+v2, supaya halaman yang belum dirombak tetap terbaca benar. Hapus blok alias itu
+di Fase I setelah sweep kelas lama selesai, dan ganti pemakaian `--font-display`
+serif bila masih ada.
 
 ## Variants
-- Dark (disiapkan, belum di-wire) · paper oklch(0.22 0.01 70), paper-2 oklch(0.26 0.012 70), ink oklch(0.93 0.008 85), ink-2 oklch(0.72 0.012 70), rule oklch(0.93 0.008 85 / 0.18), accent oklch(0.72 0.11 50), accent-ink oklch(0.22 0.01 70). Diaktifkan lewat `[data-theme="dark"]` saat wiring.
+- Dark (belum di-wire, disiapkan) · paper `#141416`, paper-deep `#1b1b1b`, card `#232325`, paper-soft `#2b2b2b`, paper-chip `#333336`, paper-line `#3a3a3e`, ink `#f1efe8`, ink-muted `#a9a9ae`, accent tetap `#f2fb48` dengan teks `#131315`. Diaktifkan lewat `[data-theme="dark"]`.
+- Print / export dokumen · buang garis kisi, `--color-card` jadi putih, shadow mati, mono dipertahankan.

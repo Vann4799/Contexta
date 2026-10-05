@@ -11,7 +11,7 @@ export default function ForgotPasswordPage() {
         <p className="mt-2 text-sm text-subtle">Enter your email and Contexta will send a reset link.</p>
         <AuthForm mode="reset" />
         <p className="mt-5 text-sm">
-          <Link href="/login" className="text-primary hover:text-accent">
+          <Link href="/login" className="text-primary hover:text-ink">
             Back to sign in
           </Link>
         </p>

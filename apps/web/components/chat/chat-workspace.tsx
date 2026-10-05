@@ -337,7 +337,7 @@ export function ChatWorkspace() {
             <div className="space-y-4">
               {messages.length === 0 ? (
                 <div className="flex items-start gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-accent-ink" aria-hidden="true">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-white" aria-hidden="true">
                     AI
                   </div>
                   <div className="max-w-[80%] rounded border border-border bg-surface px-4 py-3 text-sm leading-6 text-ink">
@@ -348,17 +348,17 @@ export function ChatWorkspace() {
               {selectedDocument ? (
                 messages.length === 0 ? (
                   <div className="flex items-start gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-accent-ink" aria-hidden="true">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-white" aria-hidden="true">
                       AI
                     </div>
-                    <div className="max-w-[80%] rounded border border-accent-soft bg-accent-soft px-4 py-3 text-sm leading-6 text-accent">
+                    <div className="max-w-[80%] rounded border border-accent-soft bg-accent-soft px-4 py-3 text-sm leading-6 text-ink">
                       Siap, kita bedah <span className="font-semibold">{selectedDocument.filename}</span>. Tulis pertanyaan pertama kamu, misalnya minta ringkasan, poin penting, atau data tertentu dari dokumen ini.
                     </div>
                   </div>
                 ) : null
               ) : (
                 <div className="flex items-start gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-accent-ink" aria-hidden="true">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-white" aria-hidden="true">
                     AI
                   </div>
                   <div className="max-w-[80%] rounded border border-border bg-surface p-3 shadow-sm">
@@ -414,14 +414,14 @@ export function ChatWorkspace() {
               className={`flex items-start gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
             >
               {message.role === "assistant" ? (
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-accent-ink" aria-hidden="true">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-white" aria-hidden="true">
                   AI
                 </div>
               ) : null}
               <div
                 className={`max-w-[78%] rounded border px-4 py-3 text-sm leading-6 ${
                   message.role === "user"
-                    ? "border-primary bg-primary text-accent-ink"
+                    ? "border-primary bg-primary text-white"
                     : "border-border bg-surface text-ink"
                 }`}
               >
@@ -436,7 +436,7 @@ export function ChatWorkspace() {
           ))}
           {isSending ? (
             <div className="flex items-start gap-3 justify-start">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-accent-ink" aria-hidden="true">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-sm font-bold text-white" aria-hidden="true">
                 AI
               </div>
               <div className="min-w-60 max-w-[78%] rounded border border-border bg-surface px-4 py-3">

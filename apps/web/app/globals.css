@@ -19,9 +19,19 @@ body {
   margin: 0;
   min-width: 320px;
   background: var(--color-paper);
+  background-image: linear-gradient(to right, var(--color-rule) 1px, transparent 1px);
+  background-size: 80px 100%;
+  background-position: 0 0;
   color: var(--color-ink);
   font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   text-rendering: geometricPrecision;
+}
+
+::selection {
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
 }
 
 button,
@@ -36,6 +46,55 @@ a {
   text-decoration: none;
 }
 
+@layer components {
+  .surface {
+    border-radius: var(--radius-card);
+    border: 1px solid var(--color-paper-line);
+    background: var(--color-card);
+    box-shadow: var(--shadow-card);
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: var(--radius-chip);
+    background: var(--color-paper-chip);
+    padding: 2px 8px;
+    font-size: var(--text-xs);
+    font-weight: 500;
+    color: var(--color-ink-muted);
+  }
+
+  .eyebrow {
+    font-size: var(--text-eyebrow);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--color-ink-muted);
+  }
+
+  .focus-ring {
+    outline: none;
+  }
+
+  .focus-ring:focus-visible {
+    box-shadow: 0 0 0 2px var(--color-card), 0 0 0 4px rgb(19 19 21 / 0.8);
+  }
+}
+
+@layer utilities {
+  .dot-grid {
+    background-image: radial-gradient(rgb(19 19 21 / 0.09) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  .nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* @deprecated motif v1 "Reading Room" — hapus setelah Fase I. */
 .login-grid-bg {
   background-size: 24px 24px;
   background-image:
@@ -43,13 +102,7 @@ a {
     linear-gradient(to bottom, var(--color-rule) 1px, transparent 1px);
 }
 
-/* Identity motif: double hairline under every page title (print editorial). */
 .title-rule {
-  border-bottom: 1px solid var(--color-rule);
-  box-shadow: 0 3px 0 -1px var(--color-rule);
+  border-bottom: 1px solid var(--color-paper-line);
   padding-bottom: var(--space-s);
-}
-
-.nums {
-  font-variant-numeric: tabular-nums;
 }

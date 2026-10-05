@@ -212,7 +212,7 @@ export function ProfilePanel() {
         <article className="rounded border border-border bg-surface p-6 lg:col-span-8">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex min-w-0 items-center gap-4">
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-contexta bg-primary text-xl font-semibold text-accent-ink">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-contexta bg-primary text-xl font-semibold text-white">
                 {initialsFromProfile(profile)}
               </div>
               <div className="min-w-0">

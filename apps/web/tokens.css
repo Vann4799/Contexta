@@ -1,29 +1,44 @@
 /* tokens.css — generated from D:/ALL PROJECT/Contexta/DESIGN.md
-    system: Design — Contexta · ENERGY 1 / RHYTHM 1 / MOTION 2 · locked
+    system: Contexta Acid Lab (v2) · ENERGY 2 / RHYTHM 2 / MOTION 2 · locked
     Do not hand-edit: DESIGN.md :root is the source of truth.  */
 :root {
-  --color-paper: oklch(0.97 0.012 85);
-  --color-paper-2: oklch(0.945 0.014 85);
-  --color-ink: oklch(0.25 0.012 70);
-  --color-ink-2: oklch(0.45 0.014 70);
-  --color-rule: oklch(0.25 0.012 70 / 0.14);
-  --color-accent: oklch(0.52 0.13 45);
-  --color-accent-strong: oklch(0.45 0.13 45);
-  --color-accent-soft: oklch(0.52 0.13 45 / 0.12);
-  --color-accent-ink: oklch(0.97 0.012 85);
-  --color-focus: oklch(0.52 0.13 45);
-  --color-success: oklch(0.45 0.1 145);
-  --color-success-soft: oklch(0.45 0.1 145 / 0.12);
-  --color-success-line: oklch(0.45 0.1 145 / 0.3);
-  --color-warning: oklch(0.48 0.11 78);
-  --color-warning-soft: oklch(0.48 0.11 78 / 0.14);
-  --color-warning-line: oklch(0.48 0.11 78 / 0.32);
-  --color-danger: oklch(0.45 0.16 25);
-  --color-danger-soft: oklch(0.45 0.16 25 / 0.12);
-  --color-danger-line: oklch(0.45 0.16 25 / 0.3);
-  --font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
-  --font-body: "Public Sans", system-ui, -apple-system, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --color-paper: #ebe8df;
+  --color-paper-deep: #e7e3d8;
+  --color-card: #fdfdfb;
+  --color-paper-soft: #f7f6f2;
+  --color-paper-chip: #f3f0e5;
+  --color-paper-line: #ddd7cb;
+  --color-paper-edge: #c9c4b6;
+
+  --color-ink: #131315;
+  --color-ink-muted: #68686c;
+  --color-ink-faint: #9a9a9e;
+  --color-rule: rgba(19, 19, 21, 0.045);
+
+  --color-night: #1b1b1b;
+  --color-night-raised: #2b2b2b;
+  --color-night-line: #333333;
+
+  --color-accent: #f2fb48;
+  --color-accent-deep: #d9e23a;
+  --color-accent-ink: #131315;
+  --color-focus: #131315;
+
+  --color-success: #f2fb48;
+  --color-success-ink: #2f6b46;
+  --color-success-soft: #e3edda;
+  --color-success-line: rgba(47, 107, 70, 0.3);
+  --color-warning: #7c5210;
+  --color-warning-soft: #f4e3cd;
+  --color-warning-line: rgba(124, 82, 16, 0.32);
+  --color-danger: #a3231b;
+  --color-danger-soft: #fadfd9;
+  --color-danger-line: rgba(163, 35, 27, 0.3);
+
+  --font-display: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+
   --space-2xs: 4px;
   --space-xs: 8px;
   --space-s: 12px;
@@ -31,18 +46,28 @@
   --space-l: 24px;
   --space-xl: 40px;
   --space-2xl: 56px;
-  --text-xs: 12px;
-  --text-s: 14px;
+
+  --text-eyebrow: 10.5px;
+  --text-xs: 11.5px;
+  --text-s: 12.5px;
+  --text-ui: 13.5px;
   --text-base: 16px;
   --text-l: 20px;
-  --text-xl: 25px;
+  --text-metric: 30px;
+  --text-xl: 22px;
   --text-2xl: 31px;
-  --text-display: 40px;
+
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --dur-fast: 180ms;
   --dur-base: 240ms;
   --dur-slow: 320ms;
-  --radius-card: 4px;
+
+  --radius-card: 16px;
+  --radius-control: 8px;
+  --radius-chip: 6px;
   --radius-pill: 999px;
-  --radius-input: 4px;
+
+  --shadow-card: 0 1px 0 rgba(20, 20, 20, 0.04), 0 8px 24px -12px rgba(20, 20, 20, 0.12);
+  --shadow-node: 0 1px 2px rgba(20, 20, 20, 0.06), 0 4px 12px -6px rgba(20, 20, 20, 0.12);
+  --shadow-root: 0 18px 40px -16px rgba(0, 0, 0, 0.45);
 }

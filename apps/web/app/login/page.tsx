@@ -22,7 +22,7 @@ export default function LoginPage() {
                 {["CT", "AI", "RG"].map((label) => (
                   <span
                     key={label}
-                    className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-border bg-ink text-xs font-semibold text-accent-ink"
+                    className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-border bg-ink text-xs font-semibold text-white"
                   >
                     {label}
                   </span>
@@ -53,10 +53,10 @@ export default function LoginPage() {
           <AuthForm mode="login" />
 
           <div className="mt-5 flex items-center justify-between gap-3 text-sm">
-            <Link href="/register" className="font-medium text-primary hover:text-accent">
+            <Link href="/register" className="font-medium text-primary hover:text-ink">
               Request access
             </Link>
-            <Link href="/forgot-password" className="font-medium text-primary hover:text-accent">
+            <Link href="/forgot-password" className="font-medium text-primary hover:text-ink">
               Forgot password?
             </Link>
           </div>

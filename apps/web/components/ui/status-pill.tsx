@@ -2,7 +2,7 @@ type Status = "ready" | "processing" | "failed";
 
 const styles: Record<Status, string> = {
   ready: "border-success-line bg-success-soft text-success",
-  processing: "border-accent-soft bg-accent-soft text-accent",
+  processing: "border-accent-soft bg-accent-soft text-ink",
   failed: "border-danger-line bg-danger-soft text-danger"
 };
 

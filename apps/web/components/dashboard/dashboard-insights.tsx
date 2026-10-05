@@ -159,7 +159,7 @@ export function DashboardInsights() {
           >
             Refresh
           </button>
-          <Link className="inline-flex h-11 items-center justify-center rounded border border-primary bg-primary px-4 text-sm font-semibold text-accent-ink transition hover:bg-accent-strong" href="/documents">
+          <Link className="inline-flex h-11 items-center justify-center rounded border border-primary bg-primary px-4 text-sm font-semibold text-white transition hover:bg-accent-strong" href="/documents">
             Upload Document
           </Link>
         </div>

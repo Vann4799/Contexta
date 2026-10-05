@@ -138,7 +138,7 @@ export default function UpdatePasswordPage() {
           </Button>
         </form>
         <p className="mt-5 text-sm">
-          <Link href="/forgot-password" className="text-primary hover:text-accent">
+          <Link href="/forgot-password" className="text-primary hover:text-ink">
             Request a new reset link
           </Link>
         </p>

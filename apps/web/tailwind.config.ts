@@ -1,42 +1,102 @@
 import type { Config } from "tailwindcss";
 
+const rgb = (hex: string) => {
+  const value = hex.replace("#", "");
+  const [r, g, b] = value.match(/../g) ?? [];
+  return `${parseInt(r ?? "0", 16)} ${parseInt(g ?? "0", 16)} ${parseInt(b ?? "0", 16)}`;
+};
+
+const withAlpha = (hex: string) => `rgb(${rgb(hex)} / <alpha-value>)`;
+
+const v2 = {
+  paper: {
+    DEFAULT: withAlpha("#ebe8df"),
+    deep: withAlpha("#e7e3d8"),
+    card: withAlpha("#fdfdfb"),
+    soft: withAlpha("#f7f6f2"),
+    chip: withAlpha("#f3f0e5"),
+    line: withAlpha("#ddd7cb"),
+    edge: withAlpha("#c9c4b6")
+  },
+  ink: {
+    DEFAULT: withAlpha("#131315"),
+    muted: withAlpha("#68686c"),
+    faint: withAlpha("#9a9a9e")
+  },
+  night: {
+    DEFAULT: withAlpha("#1b1b1b"),
+    raised: withAlpha("#2b2b2b"),
+    line: withAlpha("#333333")
+  },
+  accent: {
+    DEFAULT: withAlpha("#f2fb48"),
+    deep: withAlpha("#d9e23a"),
+    ink: withAlpha("#131315")
+  },
+  success: {
+    DEFAULT: withAlpha("#f2fb48"),
+    ink: withAlpha("#2f6b46"),
+    soft: withAlpha("#e3edda"),
+    line: "rgb(47 107 70 / 0.3)"
+  },
+  warning: {
+    DEFAULT: withAlpha("#7c5210"),
+    soft: withAlpha("#f4e3cd"),
+    line: "rgb(124 82 16 / 0.32)"
+  },
+  danger: {
+    DEFAULT: withAlpha("#a3231b"),
+    soft: withAlpha("#fadfd9"),
+    line: "rgb(163 35 27 / 0.3)"
+  }
+};
+
+/* Jembatan migrasi v1→v2 (DESIGN.md `## Exports`): nama lama tetap ada tapi
+   menunjuk ke nilai v2, supaya halaman yang belum dirombak tidak rusak.
+   Hapus blok ini di Fase I setelah sweep kelas lama selesai. */
+const v1Aliases = {
+  background: withAlpha("#ebe8df"),
+  surface: withAlpha("#fdfdfb"),
+  muted: withAlpha("#f7f6f2"),
+  soft: withAlpha("#f3f0e5"),
+  border: "rgb(221 215 203)",
+  primary: withAlpha("#1b1b1b"),
+  "accent-strong": withAlpha("#2b2b2b"),
+  "accent-soft": withAlpha("#f3f0e5"),
+  subtle: withAlpha("#68686c")
+};
+
 const config: Config = {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./lib/**/*.{ts,tsx}"],
   theme: {
     extend: {
-      colors: {
-        background: "oklch(0.97 0.012 85 / <alpha-value>)",
-        surface: "oklch(0.945 0.014 85 / <alpha-value>)",
-        muted: "oklch(0.945 0.014 85 / <alpha-value>)",
-        soft: "oklch(0.945 0.014 85 / <alpha-value>)",
-        border: "oklch(0.25 0.012 70 / 0.14)",
-        primary: "oklch(0.52 0.13 45 / <alpha-value>)",
-        accent: "oklch(0.52 0.13 45 / <alpha-value>)",
-        "accent-strong": "oklch(0.45 0.13 45 / <alpha-value>)",
-        "accent-soft": "oklch(0.52 0.13 45 / 0.12)",
-        "accent-ink": "oklch(0.97 0.012 85 / <alpha-value>)",
-        ink: "oklch(0.25 0.012 70 / <alpha-value>)",
-        subtle: "oklch(0.45 0.014 70 / <alpha-value>)",
-        success: "oklch(0.45 0.1 145 / <alpha-value>)",
-        "success-soft": "oklch(0.45 0.1 145 / 0.12)",
-        "success-line": "oklch(0.45 0.1 145 / 0.3)",
-        warning: "oklch(0.48 0.11 78 / <alpha-value>)",
-        "warning-soft": "oklch(0.48 0.11 78 / 0.14)",
-        "warning-line": "oklch(0.48 0.11 78 / 0.32)",
-        danger: "oklch(0.45 0.16 25 / <alpha-value>)",
-        "danger-soft": "oklch(0.45 0.16 25 / 0.12)",
-        "danger-line": "oklch(0.45 0.16 25 / 0.3)"
-      },
+      colors: { ...v2, ...v1Aliases },
       fontFamily: {
-        sans: ["Public Sans", "Arial", "sans-serif"],
-        heading: ["Fraunces", "Georgia", "serif"],
-        mono: ["JetBrains Mono", "Consolas", "monospace"]
+        sans: ["var(--font-sans)", "Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        heading: ["var(--font-sans)", "Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono)", "JetBrains Mono", "ui-monospace", "SFMono-Regular", "Consolas", "monospace"]
       },
       borderRadius: {
-        contexta: "4px"
+        contexta: "8px",
+        card: "16px",
+        control: "8px",
+        chip: "6px"
       },
       boxShadow: {
-        soft: "0 4px 12px rgba(17, 24, 39, 0.05)"
+        card: "0 1px 0 rgba(20,20,20,0.04), 0 8px 24px -12px rgba(20,20,20,0.12)",
+        node: "0 1px 2px rgba(20,20,20,0.06), 0 4px 12px -6px rgba(20,20,20,0.12)",
+        root: "0 18px 40px -16px rgba(0,0,0,0.45)"
+      },
+      keyframes: {
+        dash: { to: { strokeDashoffset: "-24" } },
+        pulseDot: {
+          "0%, 100%": { opacity: "1", transform: "scale(1)" },
+          "50%": { opacity: "0.55", transform: "scale(0.8)" }
+        }
+      },
+      animation: {
+        dash: "dash 1.2s linear infinite",
+        "pulse-dot": "pulseDot 1.8s ease-in-out infinite"
       }
     }
   },
