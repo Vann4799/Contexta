@@ -134,7 +134,7 @@ export function DashboardInsights() {
   return (
     <div className="flex flex-col gap-3">
       <section className="surface flex flex-col gap-7 px-5 py-6 lg:flex-row lg:items-start lg:gap-9 lg:px-7">
-        <div className="flex shrink-0 items-center gap-4 lg:w-[300px]">
+        <div className="flex shrink-0 items-center gap-4 lg:w-[340px]">
           <div className="relative grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-night shadow-root">
             <Database className="h-7 w-7 text-accent" strokeWidth={2.2} aria-hidden="true" />
             <span

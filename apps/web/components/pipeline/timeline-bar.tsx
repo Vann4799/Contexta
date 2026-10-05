@@ -29,7 +29,7 @@ export function TimelineBar({ events, ingestedChunks, pendingCount, range, onRan
   });
 
   return (
-    <section className="surface flex flex-col gap-4 px-5 py-3.5 md:flex-row md:items-center md:gap-8">
+    <section className="surface flex flex-col gap-4 px-5 py-3.5 lg:flex-row lg:items-center lg:gap-8">
       <div className="relative shrink-0">
         <button
           aria-expanded={open}
@@ -80,7 +80,8 @@ export function TimelineBar({ events, ingestedChunks, pendingCount, range, onRan
               return (
                 <span
                   className={cn(
-                    "nums relative z-10 bg-paper-card px-1.5 font-mono text-[12.5px]",
+                    "nums relative z-10 bg-paper-card px-1 font-mono text-[11px] sm:px-1.5 sm:text-[12.5px]",
+                    index % 2 === 1 ? "hidden sm:inline" : "",
                     near ? "font-semibold text-ink" : "text-ink-muted"
                   )}
                   key={`${tick}-${index}`}

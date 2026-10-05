@@ -24,6 +24,7 @@ export type PipelineMetric = { label: string; value: string; unit: string };
 
 export type PipelineRoot = {
   name: string;
+  engine: string;
   collection: string;
   primary: string;
   clusters: string;
@@ -172,6 +173,7 @@ export function buildPipelineSnapshot(
     ],
     root: {
       name: "Contexta Workspace",
+      engine: "Qdrant",
       collection: "contexta_chunks",
       primary: plural(totalChunks, "chunk"),
       clusters: `${clusters.length} active`,

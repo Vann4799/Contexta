@@ -99,7 +99,7 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
       <div className="absolute left-5 top-5 z-20 flex items-center gap-1 rounded-card border border-paper-line bg-paper-card p-1 shadow-node lg:left-12 lg:top-11">
         <span className="flex items-center gap-2 px-2.5 text-[13px] text-ink-muted">
           <Waypoints className="h-4 w-4 text-ink" aria-hidden="true" />
-          Live Synapse Graph
+          <span className="hidden sm:inline">Live Synapse Graph</span>
         </span>
         <span className="mx-1 h-5 w-px bg-paper-line" />
         <ToolButton label="Zoom out" onClick={() => setZoom((z) => Math.max(0.7, +(z - 0.1).toFixed(2)))}>
@@ -121,7 +121,7 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
       <div className="overflow-x-auto">
         <div
           ref={stageRef}
-          className="relative mx-auto origin-top-left px-5 pb-12 pt-24 transition-transform duration-300 lg:min-w-[1180px] lg:px-14 lg:pb-12 lg:pt-[76px]"
+          className="relative mx-auto origin-top-left px-5 pb-12 pt-24 transition-transform duration-300 lg:min-w-[1180px] lg:px-14 lg:pb-12 lg:pt-[112px]"
           style={{ transform: `scale(${zoom})`, transformOrigin: "top center" }}
           onTransitionEnd={measure}
         >
@@ -230,10 +230,11 @@ function RootCard({ root }: { root: PipelineRoot }) {
           <span className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-accent" aria-hidden="true" />
           Knowledge Root
         </span>
-        <span className="rounded bg-night-raised px-1.5 py-0.5 font-mono text-[10px] text-white/70">{root.collection}</span>
+        <span className="rounded bg-night-raised px-1.5 py-0.5 font-mono text-[10px] text-white/70">{root.engine}</span>
       </div>
       <div className="mt-5 text-[14px] font-semibold">{root.name}</div>
       <div className="nums mt-0.5 font-mono text-[13px] text-white/90">{root.primary}</div>
+      <div className="mt-0.5 truncate font-mono text-[11px] text-white/55">{root.collection}</div>
       <div className="my-4 h-px bg-night-line" />
       <dl className="grid grid-cols-2 gap-2">
         <div>
