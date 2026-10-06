@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import math
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal, Protocol, TypedDict
 
@@ -13,6 +15,9 @@ except ModuleNotFoundError:
 
 
 DocumentStatus = Literal["processing", "ready", "failed"]
+
+CHUNKER_VERSION = "window-v2"
+_TOKENS_PER_CHAR = 4
 
 
 class ProcessingDocument(TypedDict, total=False):
@@ -41,6 +46,10 @@ class ProcessingChunk(TypedDict):
     chunk_index: int
     text: str
     page_number: int | None
+    section_path: str | None
+    is_table: bool
+    char_count: int
+    token_count: int
     qdrant_point_id: str
 
 
@@ -73,7 +82,12 @@ class DocumentRepository(Protocol):
     def claim_next_processing_document(self) -> ProcessingDocument | None:
         ...
 
-    def mark_ready(self, document: ProcessingDocument) -> None:
+    def mark_ready(
+        self,
+        document: ProcessingDocument,
+        chunk_count: int = 0,
+        index_metadata: dict[str, object] | None = None,
+    ) -> None:
         ...
 
     def mark_failed(self, document: ProcessingDocument, error_message: str) -> None:
@@ -96,9 +110,16 @@ class InMemoryDocumentRepository:
                 return document
         return None
 
-    def mark_ready(self, document: ProcessingDocument, chunk_count: int = 0) -> None:
+    def mark_ready(
+        self,
+        document: ProcessingDocument,
+        chunk_count: int = 0,
+        index_metadata: dict[str, object] | None = None,
+    ) -> None:
         document["status"] = "ready"
         document["chunk_count"] = chunk_count
+        if index_metadata:
+            document.update(index_metadata)  # type: ignore[typeddict-item]
 
     def mark_failed(self, document: ProcessingDocument, error_message: str) -> None:
         document["status"] = "failed"
@@ -150,6 +171,7 @@ class WorkerProcessor:
         max_chunk_words: int = 500,
         overlap_words: int = 100,
         min_chunk_words: int = 40,
+        index_metadata: dict[str, object] | None = None,
     ) -> None:
         self.repository = repository
         self.storage = storage or MissingDocumentStorage()
@@ -159,6 +181,7 @@ class WorkerProcessor:
         self.max_chunk_words = max_chunk_words
         self.overlap_words = overlap_words
         self.min_chunk_words = min_chunk_words
+        self.index_metadata = {"chunker_version": CHUNKER_VERSION, **(index_metadata or {})}
 
     def process_once(self) -> bool:
         document = self.repository.claim_next_processing_document()
@@ -198,7 +221,14 @@ class WorkerProcessor:
             chunks_with_points.append({**chunk, "qdrant_point_id": point_id})
 
         self.repository.replace_chunks(document, chunks_with_points)
-        self.repository.mark_ready(document, len(chunks_with_points))
+        self.repository.mark_ready(
+            document,
+            len(chunks_with_points),
+            {
+                "indexed_at": datetime.now(timezone.utc).isoformat(),
+                **self.index_metadata,
+            },
+        )
 
     def _build_chunks(
         self, document: ProcessingDocument, extracted_document: ExtractedDocument
@@ -217,6 +247,10 @@ class WorkerProcessor:
                 "chunk_index": page_chunk["chunk_index"],
                 "text": page_chunk["text"],
                 "page_number": page_chunk["page_number"],
+                "section_path": page_chunk["section_path"],
+                "is_table": page_chunk["is_table"],
+                "char_count": len(page_chunk["text"]),
+                "token_count": math.ceil(len(page_chunk["text"]) / _TOKENS_PER_CHAR),
                 "qdrant_point_id": "",
             }
             for page_chunk in page_chunks

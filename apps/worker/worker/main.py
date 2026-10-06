@@ -70,6 +70,14 @@ def create_processor() -> WorkerProcessor:
         max_chunk_words=max_chunk_words,
         overlap_words=chunk_overlap_words,
         min_chunk_words=min_chunk_words,
+        index_metadata={
+            "embedding_model": (
+                "deterministic-hash"
+                if embedding_provider in {"deterministic", "hash"}
+                else embedding_model_name
+            ),
+            "embedding_dimensions": embedding_dimensions,
+        },
     )
 
 

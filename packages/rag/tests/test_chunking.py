@@ -141,3 +141,50 @@ def test_wide_table_breaks_only_between_rows():
         lines = [line for line in chunk["text"].splitlines() if line.strip()]
         assert all(line.count("|") == 3 for line in lines)
     assert _covered(chunks) == set(range(len(pages[0]["text"].split())))
+
+
+def test_chunks_carry_the_heading_trail_they_start_under():
+    pages = [
+        {
+            "page_number": 40,
+            "text": (
+                "## BAB IV HASIL DAN PEMBAHASAN\n"
+                "### 4.2 Metode Pengujian\n"
+                + _words(30, prefix="metode")
+                + "\n### 4.3 Hasil\n"
+                + _words(30, prefix="hasil")
+            ),
+        }
+    ]
+
+    chunks = chunk_pages(pages, max_words=45, overlap_words=5, min_words=5)
+
+    assert [chunk["section_path"] for chunk in chunks] == [
+        "BAB IV HASIL DAN PEMBAHASAN",
+        "BAB IV HASIL DAN PEMBAHASAN > 4.3 Hasil",
+    ]
+    assert "##" not in "".join(chunk["text"] for chunk in chunks)
+
+
+def test_is_table_marks_only_chunks_that_span_a_table_row():
+    pages = [
+        {
+            "page_number": 9,
+            "text": (
+                _words(20, prefix="prose")
+                + "\n| nama | nilai |\n| a | 1 |"
+                + "\n"
+                + _words(20, prefix="tail")
+            ),
+        }
+    ]
+
+    chunks = chunk_pages(pages, max_words=15, overlap_words=0, min_words=3)
+
+    assert any(chunk["is_table"] for chunk in chunks)
+    assert any(not chunk["is_table"] for chunk in chunks)
+    for chunk in chunks:
+        has_row = any(
+            line.strip().startswith("|") for line in chunk["text"].splitlines()
+        )
+        assert chunk["is_table"] == has_row

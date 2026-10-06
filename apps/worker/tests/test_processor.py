@@ -70,6 +70,7 @@ def test_process_once_marks_processing_document_ready() -> None:
         max_chunk_words=4,
         overlap_words=0,
         min_chunk_words=0,
+        index_metadata={"embedding_model": "fake-model", "embedding_dimensions": 2},
     )
 
     processed = processor.process_once()
@@ -84,6 +85,10 @@ def test_process_once_marks_processing_document_ready() -> None:
             "chunk_index": 0,
             "text": "one two three four",
             "page_number": 1,
+            "section_path": None,
+            "is_table": False,
+            "char_count": 18,
+            "token_count": 5,
             "qdrant_point_id": "point-0",
         },
         {
@@ -92,9 +97,16 @@ def test_process_once_marks_processing_document_ready() -> None:
             "chunk_index": 1,
             "text": "five six seven eight",
             "page_number": 2,
+            "section_path": None,
+            "is_table": False,
+            "char_count": 20,
+            "token_count": 5,
             "qdrant_point_id": "point-1",
         },
     ]
+    assert repository.documents[0]["chunker_version"] == "window-v2"
+    assert repository.documents[0]["embedding_model"] == "fake-model"
+    assert repository.documents[0]["embedding_dimensions"] == 2
     assert [chunk["text"] for chunk in vector_store.upserted] == [
         "one two three four",
         "five six seven eight",

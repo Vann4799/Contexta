@@ -24,6 +24,8 @@ class PageChunk(TypedDict):
     chunk_index: int
     text: str
     page_number: int
+    section_path: str | None
+    is_table: bool
     start_word: int
     end_word: int
 
@@ -93,6 +95,8 @@ def chunk_pages(
             "chunk_index": index,
             "text": document.render(start, end),
             "page_number": document.page_at(start),
+            "section_path": document.section_at(start),
+            "is_table": document.covers_table(start, end),
             "start_word": start,
             "end_word": end,
         }
@@ -113,6 +117,8 @@ class _Document:
         self.line_of_word: list[int] = []
         self.line_bounds: list[tuple[int, int]] = []
         self.line_is_table: list[bool] = []
+        self.line_section: list[str | None] = []
+        headings: dict[int, str] = {}
 
         for page in pages:
             page_number = page["page_number"]
@@ -120,9 +126,24 @@ class _Document:
                 words = line.split()
                 if not words:
                     continue
+
+                heading = _heading(words)
+                if heading:
+                    level, title = heading
+                    words = words[1:]
+                    headings = {
+                        saved_level: saved_title
+                        for saved_level, saved_title in headings.items()
+                        if saved_level < level
+                    }
+                    headings[level] = title
+
                 line_id = len(self.line_bounds)
                 self.line_bounds.append((len(self.words), len(self.words) + len(words)))
                 self.line_is_table.append(words[0].startswith("|"))
+                self.line_section.append(
+                    " > ".join(headings[level] for level in sorted(headings)) or None
+                )
                 self.words.extend(words)
                 self.pages.extend([page_number] * len(words))
                 self.line_of_word.extend([line_id] * len(words))
@@ -136,6 +157,14 @@ class _Document:
 
     def page_at(self, word_index: int) -> int:
         return self.pages[word_index]
+
+    def section_at(self, word_index: int) -> str | None:
+        return self.line_section[self.line_of_word[word_index]]
+
+    def covers_table(self, start: int, end: int) -> bool:
+        first_line = self.line_of_word[start]
+        last_line = self.line_of_word[end - 1]
+        return any(self.line_is_table[first_line : last_line + 1])
 
     def render(self, start: int, end: int) -> str:
         parts: list[str] = []
@@ -273,3 +302,14 @@ class _Document:
             for bound in (self.line_bounds[line_id][1] for line_id in range(len(self.line_bounds)))
             if start < bound < end
         }
+
+
+def _heading(words: list[str]) -> tuple[int, str] | None:
+    marker = words[0]
+    level = len(marker)
+    if not marker.startswith("#") or level > 6 or marker != "#" * level:
+        return None
+    title = " ".join(words[1:]).strip()
+    if not title:
+        return None
+    return level, title

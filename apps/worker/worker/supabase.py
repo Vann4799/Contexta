@@ -88,13 +88,19 @@ class SupabaseDocumentRepository:
         )
         insert_response.raise_for_status()
 
-    def mark_ready(self, document: ProcessingDocument, chunk_count: int = 0) -> None:
+    def mark_ready(
+        self,
+        document: ProcessingDocument,
+        chunk_count: int = 0,
+        index_metadata: dict[str, object] | None = None,
+    ) -> None:
         self._update_document(
             document,
             {
                 "status": "ready",
                 "chunk_count": chunk_count,
                 "error_message": None,
+                **(index_metadata or {}),
             },
         )
 
