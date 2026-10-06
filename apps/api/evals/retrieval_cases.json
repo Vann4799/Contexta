@@ -1,6 +1,7 @@
 {
-  "version": 1,
+  "version": 2,
   "user_id": "09f59060-e9a9-47d1-8b45-ba1d253d0957",
+  "note": "Gold chunk indices re-derived 2026-10-07 against the window-v2 reindex (thesis 127 -> 46 chunks, MiniLM embeddings, collection contexta_chunks_v2). v1 labels pointed at the old per-page chunking and are invalid after reindex.",
   "documents": {
     "laporan-ta": "e5c9610c-2229-4502-a7d0-778e43499e16",
     "contexta-qa": "3afbdf71-7767-4529-8113-faf3e9cebd14"
@@ -9,122 +10,122 @@
     {
       "id": "flutter-vendor",
       "question": "Framework Flutter dikembangkan oleh perusahaan apa?",
-      "gold": [{ "document": "laporan-ta", "chunks": [20] }],
-      "note": "2.2.5 Framework Flutter"
+      "gold": [{ "document": "laporan-ta", "chunks": [9] }],
+      "note": "2.2.5 Framework Flutter: 'dikembangkan oleh Google'"
     },
     {
       "id": "uml-definition",
       "question": "Apa itu UML menurut landasan teori dokumen ini?",
-      "gold": [{ "document": "laporan-ta", "chunks": [23] }],
-      "note": "2.2.9 UML"
+      "gold": [{ "document": "laporan-ta", "chunks": [10, 11] }],
+      "note": "2.2.9 UML, split across the chunk boundary"
     },
     {
       "id": "usecase-purpose",
       "question": "Untuk apa use case diagram digunakan?",
-      "gold": [{ "document": "laporan-ta", "chunks": [24] }],
-      "note": "2.2.9 use case diagram"
+      "gold": [{ "document": "laporan-ta", "chunks": [11] }],
+      "note": "2.2.9 'Use case diagram digunakan untuk menggambarkan hubungan antara aktor'"
     },
     {
       "id": "submission-table",
       "question": "Tabel apa yang mencatat data pengumpulan tugas siswa?",
-      "gold": [{ "document": "laporan-ta", "chunks": [45] }],
-      "note": "bab IV penyimpanan file"
+      "gold": [{ "document": "laporan-ta", "chunks": [20] }],
+      "note": "Sequence diagram siswa mengumpulkan tugas: 'mencatat data pengumpulan pada tabel Submission'"
     },
     {
       "id": "forum-purpose",
       "question": "Apa fungsi halaman forum diskusi?",
-      "gold": [{ "document": "laporan-ta", "chunks": [59] }],
-      "note": "4.x halaman forum diskusi"
+      "gold": [{ "document": "laporan-ta", "chunks": [24, 33] }],
+      "note": "Wireframe '6. Halaman Forum Diskusi' and its implementation section"
     },
     {
       "id": "saran-pengembangan",
       "question": "Apa saran penulis untuk pengembangan sistem selanjutnya?",
-      "gold": [{ "document": "laporan-ta", "chunks": [124] }],
-      "note": "6.2 Saran"
+      "gold": [{ "document": "laporan-ta", "chunks": [44] }],
+      "note": "6.2 Saran: penelitian selanjutnya, learning analytics"
     },
     {
       "id": "simpulan-bab",
       "question": "Apa simpulan hasil penelitian ini?",
-      "gold": [{ "document": "laporan-ta", "chunks": [123] }],
-      "note": "6.1 Simpulan"
+      "gold": [{ "document": "laporan-ta", "chunks": [43, 44] }],
+      "note": "BAB VI PENUTUP begins at the end of 43"
     },
     {
       "id": "prior-study-motivation",
       "question": "Penelitian terdahulu apa yang menilai keterlibatan siswa di e-learning dari sisi psikologi pendidikan?",
-      "gold": [{ "document": "laporan-ta", "chunks": [16, 17] }],
-      "note": "tabel penelitian terdahulu"
+      "gold": [{ "document": "laporan-ta", "chunks": [6, 7] }],
+      "note": "Tabel 2.1 kajian + 'dari perspektif psikologi pendidikan'"
     },
     {
       "id": "informasi-sistem-peran",
       "question": "Apa peran sistem informasi dalam pengelolaan data?",
-      "gold": [{ "document": "laporan-ta", "chunks": [19] }],
-      "note": "2.2 sistem informasi"
+      "gold": [{ "document": "laporan-ta", "chunks": [8, 9] }],
+      "note": "2.2.3 sistem informasi, 'sistem informasi memiliki peran penting'"
     },
     {
       "id": "gambar-545",
       "question": "Gambar 5.45 menunjukkan apa?",
-      "gold": [{ "document": "laporan-ta", "chunks": [9] }],
-      "note": "daftar gambar"
+      "gold": [{ "document": "laporan-ta", "chunks": [3, 38] }],
+      "note": "Daftar gambar entry and the figure itself (Halaman Login Mobile)"
     },
     {
       "id": "data-collection-method",
       "question": "Bagaimana cara penulis mengumpulkan data penelitian?",
-      "gold": [{ "document": "laporan-ta", "chunks": [30] }],
-      "note": "3.2 pengumpulan data: observasi dan wawancara daring"
+      "gold": [{ "document": "laporan-ta", "chunks": [13, 14] }],
+      "note": "3.1.2 Prosedur pengumpulan data"
     },
     {
       "id": "research-stages",
       "question": "Apa saja tahapan penelitian yang dilakukan?",
-      "gold": [{ "document": "laporan-ta", "chunks": [35] }],
-      "note": "3.3 tahapan penelitian"
+      "gold": [{ "document": "laporan-ta", "chunks": [15, 16] }],
+      "note": "3.3 Tahapan penelitian: identifikasi kebutuhan ... evaluasi"
     },
     {
       "id": "student-rank-feature",
       "question": "Fitur apa yang membuat siswa bisa melihat posisinya di kelas?",
-      "gold": [{ "document": "laporan-ta", "chunks": [39] }],
-      "note": "fitur peringkat/leaderboard"
+      "gold": [{ "document": "laporan-ta", "chunks": [13, 24] }],
+      "note": "Leaderboard as visualisation of student rank"
     },
     {
       "id": "gamification-elements",
       "question": "Elemen gamifikasi apa yang disebut mampu meningkatkan motivasi intrinsik siswa?",
-      "gold": [{ "document": "laporan-ta", "chunks": [16] }],
-      "note": "point, tantangan, sistem penghargaan"
+      "gold": [{ "document": "laporan-ta", "chunks": [7] }],
+      "note": "point, tantangan, sistem penghargaan -> motivasi intrinsik"
     },
     {
       "id": "testing-purpose",
       "question": "Untuk apa pengujian aplikasi dilakukan?",
-      "gold": [{ "document": "laporan-ta", "chunks": [118] }],
-      "note": "5.2 Hasil"
+      "gold": [{ "document": "laporan-ta", "chunks": [41] }],
+      "note": "5.2 Black Box Testing description"
     },
     {
       "id": "background-problem",
       "question": "Masalah apa yang melatarbelakangi penelitian ini di SMK?",
-      "gold": [{ "document": "laporan-ta", "chunks": [11] }],
-      "note": "1.1 Latar belakang"
+      "gold": [{ "document": "laporan-ta", "chunks": [4, 5] }],
+      "note": "1.1 Latar belakang -> 1.2 Rumusan Masalah"
     },
     {
       "id": "abstract-indonesian",
       "question": "Ringkas tujuan dan hasil utama penelitian dalam bahasa Indonesia.",
-      "gold": [{ "document": "laporan-ta", "chunks": [2] }],
+      "gold": [{ "document": "laporan-ta", "chunks": [0] }],
       "note": "ABSTRAK"
     },
     {
       "id": "abstract-english",
       "question": "What does the English abstract say about the development method?",
-      "gold": [{ "document": "laporan-ta", "chunks": [3] }],
-      "note": "ABSTRACT, cross-lingual case"
+      "gold": [{ "document": "laporan-ta", "chunks": [0] }],
+      "note": "ABSTRACT ('The development method used was the prototype model') sits in the same chunk as ABSTRAK under window-v2"
     },
     {
       "id": "bibliography-author",
       "question": "Siapa saja penulis studi tentang pengaruh gamifikasi terhadap hasil belajar informatika?",
-      "gold": [{ "document": "laporan-ta", "chunks": [125] }],
-      "note": "DAFTAR PUSTAKA"
+      "gold": [{ "document": "laporan-ta", "chunks": [44, 45] }],
+      "note": "DAFTAR PUSTAKA starts at the tail of 44"
     },
     {
       "id": "what-is-contexta",
       "question": "Apa itu Contexta dan bagaimana dokumen diindeks?",
       "gold": [{ "document": "contexta-qa", "chunks": [0] }],
-      "note": "cross-document discrimination against the 127-chunk thesis"
+      "note": "cross-document discrimination; QA doc reindexes to a single chunk"
     }
   ]
 }
