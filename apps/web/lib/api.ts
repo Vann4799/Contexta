@@ -95,6 +95,8 @@ export function apiBaseUrl() {
 
 const DEFAULT_REQUEST_TIMEOUT_MS = 15000;
 const CHAT_ANSWER_TIMEOUT_MS = 120000;
+/** Multipart uploads wait on the user's uplink: 50 MB at a slow connection is minutes, not seconds. */
+const FILE_TRANSFER_TIMEOUT_MS = 300000;
 
 function apiBaseUrls() {
   const primaryUrl = apiBaseUrl().replace(/\/$/, "");
@@ -279,7 +281,7 @@ export async function uploadDocument(accessToken: string, file: File) {
       Authorization: `Bearer ${accessToken}`
     },
     body: formData
-  });
+  }, FILE_TRANSFER_TIMEOUT_MS);
 
   if (!response.ok) {
     throw new Error(await getErrorMessage(response, "Unable to upload document."));
@@ -298,7 +300,7 @@ export async function convertPdfToMarkdown(accessToken: string, file: File) {
       Authorization: `Bearer ${accessToken}`
     },
     body: formData
-  }, CHAT_ANSWER_TIMEOUT_MS);
+  }, FILE_TRANSFER_TIMEOUT_MS);
 
   if (!response.ok) {
     throw new Error(await getErrorMessage(response, "Unable to convert PDF to Markdown."));
