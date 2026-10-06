@@ -1,3 +1,4 @@
+import logging
 import re
 from collections import Counter
 from typing import Annotated
@@ -34,6 +35,7 @@ from app.documents.vector_cleanup import (
 
 
 router = APIRouter(prefix="/documents", tags=["documents"])
+logger = logging.getLogger(__name__)
 MAX_UPLOAD_BYTES = 50 * 1024 * 1024
 ALLOWED_UPLOAD_TYPES = {
     "application/pdf": "pdf",
@@ -353,10 +355,30 @@ async def delete_document(
 
     try:
         vector_cleanup.delete_document_vectors(current_user.id, document_id)
+    except Exception as exc:
+        logger.exception("could not drop vectors for document %s", document_id)
+        raise HTTPException(
+            status_code=502,
+            detail="Unable to remove the indexed chunks for this document.",
+        ) from exc
+
+    try:
         await storage.delete_document(document.storage_path)
+    except Exception as exc:
+        logger.exception("could not delete stored file for document %s", document_id)
+        raise HTTPException(
+            status_code=502,
+            detail="Unable to remove the stored file for this document.",
+        ) from exc
+
+    try:
         repository.delete_document(current_user.id, document_id)
     except Exception as exc:
-        raise HTTPException(status_code=502, detail="Unable to delete document.") from exc
+        logger.exception("could not delete document row %s", document_id)
+        raise HTTPException(
+            status_code=502,
+            detail="Unable to delete this document.",
+        ) from exc
 
 
 @router.post("/{document_id}/retry", response_model=DocumentResponse)
@@ -377,9 +399,18 @@ def retry_document_processing(
 
     try:
         vector_cleanup.delete_document_vectors(current_user.id, document_id)
+    except Exception as exc:
+        logger.exception("could not drop vectors before retrying document %s", document_id)
+        raise HTTPException(
+            status_code=502,
+            detail="Unable to clear the previous indexing attempt for this document.",
+        ) from exc
+
+    try:
         retried_document = repository.retry_failed_document(current_user.id, document_id)
     except Exception as exc:
-        raise HTTPException(status_code=502, detail="Unable to retry document.") from exc
+        logger.exception("could not queue document %s for retry", document_id)
+        raise HTTPException(status_code=502, detail="Unable to retry this document.") from exc
 
     if not retried_document:
         raise HTTPException(status_code=404, detail="document not found")

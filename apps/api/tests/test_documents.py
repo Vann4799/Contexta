@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from app.documents import routes as document_routes
 from app.chat.llm import DeepSeekAnswerGenerator
-from app.documents.models import DocumentCreate
+from app.documents.models import DocumentCreate, DocumentResponse
 from app.documents.repository import InMemoryDocumentRepository
 from app.main import app
 from app.documents.routes import (
@@ -496,6 +496,85 @@ def test_delete_document_returns_404_for_other_user_document() -> None:
     assert repository.get_document(USER_ID, created.id) is not None
 
 
+class FailingVectorCleanup:
+    def delete_document_vectors(self, user_id: str, document_id: str) -> None:
+        raise RuntimeError("qdrant unreachable")
+
+
+class FailingStorage:
+    def __init__(self) -> None:
+        self.objects: dict[str, bytes] = {}
+
+    async def upload_document(
+        self,
+        storage_path: str,
+        content: bytes,
+        content_type: str,
+    ) -> None:
+        self.objects[storage_path] = content
+
+    async def delete_document(self, storage_path: str) -> None:
+        raise RuntimeError("storage down")
+
+
+def seed_document(repository: InMemoryDocumentRepository) -> DocumentResponse:
+    return repository.create_document(
+        USER_ID,
+        DocumentCreate(
+            filename="probe-latency.pdf",
+            file_type="pdf",
+            file_size=900,
+            storage_path=f"{USER_ID}/{DOCUMENT_ID}/probe-latency.pdf",
+        ),
+    )
+
+
+def test_delete_document_names_the_chunk_step_when_vector_cleanup_fails() -> None:
+    repository = InMemoryDocumentRepository()
+    storage = InMemoryDocumentStorage()
+    app.dependency_overrides[get_document_repository] = lambda: repository
+    app.dependency_overrides[get_document_storage] = lambda: storage
+    app.dependency_overrides[get_document_vector_cleanup] = lambda: FailingVectorCleanup()
+    created = seed_document(repository)
+    storage.objects[created.storage_path] = b"%PDF"
+
+    response = client.delete(f"/documents/{created.id}", headers=auth_headers())
+
+    assert response.status_code == 502
+    assert "indexed chunks" in response.json()["detail"]
+    assert repository.get_document(USER_ID, created.id) is not None
+    assert created.storage_path in storage.objects
+
+
+def test_delete_document_names_the_file_step_when_storage_delete_fails() -> None:
+    repository = InMemoryDocumentRepository()
+    storage = FailingStorage()
+    app.dependency_overrides[get_document_repository] = lambda: repository
+    app.dependency_overrides[get_document_storage] = lambda: storage
+    app.dependency_overrides[get_document_vector_cleanup] = lambda: NoopDocumentVectorCleanup()
+    created = seed_document(repository)
+
+    response = client.delete(f"/documents/{created.id}", headers=auth_headers())
+
+    assert response.status_code == 502
+    assert "stored file" in response.json()["detail"]
+    assert repository.get_document(USER_ID, created.id) is not None
+
+
+def test_delete_document_succeeds_without_vectors_or_stored_file() -> None:
+    repository = InMemoryDocumentRepository()
+    storage = InMemoryDocumentStorage()
+    app.dependency_overrides[get_document_repository] = lambda: repository
+    app.dependency_overrides[get_document_storage] = lambda: storage
+    app.dependency_overrides[get_document_vector_cleanup] = lambda: NoopDocumentVectorCleanup()
+    created = seed_document(repository)
+
+    response = client.delete(f"/documents/{created.id}", headers=auth_headers())
+
+    assert response.status_code == 204
+    assert repository.get_document(USER_ID, created.id) is None
+
+
 def test_retry_failed_document_resets_processing_state() -> None:
     repository = InMemoryDocumentRepository()
     app.dependency_overrides[get_document_repository] = lambda: repository
@@ -581,3 +660,39 @@ async def test_supabase_storage_url_encodes_path_segments(
     assert "policy #1.pdf" not in captured["url"]
     assert "%23" in captured["url"]
     assert "policy%20%231.pdf" in captured["url"]
+
+
+@pytest.mark.asyncio
+async def test_supabase_storage_delete_tolerates_missing_object(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class FakeResponse:
+        status_code = 404
+
+        def raise_for_status(self) -> None:
+            raise RuntimeError("object not found")
+
+    class FakeAsyncClient:
+        async def __aenter__(self) -> "FakeAsyncClient":
+            return self
+
+        async def __aexit__(self, *args: object) -> None:
+            return None
+
+        async def delete(
+            self,
+            url: str,
+            json: dict[str, list[str]],
+            headers: dict[str, str],
+        ) -> FakeResponse:
+            return FakeResponse()
+
+    monkeypatch.setattr("app.documents.storage.httpx.AsyncClient", FakeAsyncClient)
+
+    storage = SupabaseDocumentStorage(
+        "https://example.supabase.co",
+        "service-role-key",
+        "documents",
+    )
+
+    await storage.delete_document(f"{USER_ID}/{DOCUMENT_ID}/probe-latency.pdf")
