@@ -330,6 +330,8 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
               <p className="mt-3 text-[13px] text-ink-muted">No text has been extracted yet.</p>
             )}
           </article>
+
+          <DocumentChunksTable documentId={document.id} getAccessToken={getAccessToken} />
         </div>
 
         <aside className="flex min-w-0 flex-col gap-3">
@@ -371,8 +373,6 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
         </aside>
       </section>
       ) : null}
-
-      {document.status === "ready" ? <DocumentChunksTable documentId={document.id} getAccessToken={getAccessToken} /> : null}
     </div>
   );
 }
