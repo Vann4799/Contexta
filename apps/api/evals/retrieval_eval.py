@@ -22,7 +22,11 @@ import httpx
 
 API_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(API_ROOT))
-sys.path.append(str(API_ROOT.parents[1] / "packages" / "rag"))
+for _parent in API_ROOT.parents:
+    _rag_package = _parent / "packages" / "rag"
+    if _rag_package.is_dir():
+        sys.path.append(str(_rag_package))
+        break
 
 from app.chat.retrieval import QdrantRetriever  # noqa: E402
 from app.core.config import Settings, get_settings  # noqa: E402

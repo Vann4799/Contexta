@@ -1,0 +1,779 @@
+{
+  "generated_at": "2026-10-06T15:47:52+00:00",
+  "embedding_provider": "deterministic",
+  "embedding_model": "BAAI/bge-m3",
+  "collection": "contexta_chunks",
+  "top_k": 5,
+  "cases_file": "/tmp/ev1/evals/retrieval_cases.json",
+  "metrics": {
+    "cases": 20,
+    "hit@1": 0.3,
+    "hit@3": 0.4,
+    "hit@5": 0.45,
+    "doc_hit@5": 0.95,
+    "mrr@5": 0.3542,
+    "mean_junk_in_top5": 0.15
+  },
+  "per_case": {
+    "flutter-vendor": {
+      "hit_at": {
+        "hit@1": true,
+        "hit@3": true,
+        "hit@5": true
+      },
+      "doc_hit@5": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "junk_in_top5": 0,
+      "returned": [
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 20,
+          "score": 0.1772
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 19,
+          "score": 0.1701
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 31,
+          "score": 0.152
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 21,
+          "score": 0.1502
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 39,
+          "score": 0.1372
+        }
+      ]
+    },
+    "uml-definition": {
+      "hit_at": {
+        "hit@1": false,
+        "hit@3": false,
+        "hit@5": false
+      },
+      "doc_hit@5": true,
+      "reciprocal_rank": 0.0,
+      "first_hit_rank": null,
+      "junk_in_top5": 0,
+      "returned": [
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 96,
+          "score": 0.1464
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 89,
+          "score": 0.1384
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 90,
+          "score": 0.1319
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 84,
+          "score": 0.1075
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 17,
+          "score": 0.1017
+        }
+      ]
+    },
+    "usecase-purpose": {
+      "hit_at": {
+        "hit@1": true,
+        "hit@3": true,
+        "hit@5": true
+      },
+      "doc_hit@5": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "junk_in_top5": 1,
+      "returned": [
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 24,
+          "score": 0.4121
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 25,
+          "score": 0.275
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 23,
+          "score": 0.2292
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 43,
+          "score": 0.1678
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 26,
+          "score": 0.1667
+        }
+      ]
+    },
+    "submission-table": {
+      "hit_at": {
+        "hit@1": false,
+        "hit@3": false,
+        "hit@5": false
+      },
+      "doc_hit@5": true,
+      "reciprocal_rank": 0.0,
+      "first_hit_rank": null,
+      "junk_in_top5": 0,
+      "returned": [
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 30,
+          "score": 0.4134
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 29,
+          "score": 0.3895
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 27,
+          "score": 0.3872
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 52,
+          "score": 0.3644
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 93,
+          "score": 0.3482
+        }
+      ]
+    },
+    "forum-purpose": {
+      "hit_at": {
+        "hit@1": true,
+        "hit@3": true,
+        "hit@5": true
+      },
+      "doc_hit@5": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "junk_in_top5": 0,
+      "returned": [
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 59,
+          "score": 0.3503
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 91,
+          "score": 0.3262
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 8,
+          "score": 0.3235
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 57,
+          "score": 0.2958
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 56,
+          "score": 0.2764
+        }
+      ]
+    },
+    "saran-pengembangan": {
+      "hit_at": {
+        "hit@1": false,
+        "hit@3": false,
+        "hit@5": false
+      },
+      "doc_hit@5": true,
+      "reciprocal_rank": 0.0,
+      "first_hit_rank": null,
+      "junk_in_top5": 0,
+      "returned": [
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 39,
+          "score": 0.2795
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 40,
+          "score": 0.2273
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 38,
+          "score": 0.2257
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 13,
+          "score": 0.219
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 22,
+          "score": 0.2069
+        }
+      ]
+    },
+    "simpulan-bab": {
+      "hit_at": {
+        "hit@1": false,
+        "hit@3": false,
+        "hit@5": false
+      },
+      "doc_hit@5": true,
+      "reciprocal_rank": 0.0,
+      "first_hit_rank": null,
+      "junk_in_top5": 0,
+      "returned": [
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 96,
+          "score": 0.216
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 5,
+          "score": 0.1754
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 13,
+          "score": 0.1666
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 15,
+          "score": 0.1543
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 6,
+          "score": 0.1491
+        }
+      ]
+    },
+    "prior-study-motivation": {
+      "hit_at": {
+        "hit@1": false,
+        "hit@3": false,
+        "hit@5": true
+      },
+      "doc_hit@5": true,
+      "reciprocal_rank": 0.25,
+      "first_hit_rank": 4,
+      "junk_in_top5": 0,
+      "returned": [
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 12,
+          "score": 0.3267
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 15,
+          "score": 0.2871
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 28,
+          "score": 0.2818
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 16,
+          "score": 0.2652
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 27,
+          "score": 0.2187
+        }
+      ]
+    },
+    "informasi-sistem-peran": {
+      "hit_at": {
+        "hit@1": true,
+        "hit@3": true,
+        "hit@5": true
+      },
+      "doc_hit@5": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "junk_in_top5": 0,
+      "returned": [
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 19,
+          "score": 0.4295
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 18,
+          "score": 0.3012
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 126,
+          "score": 0.2636
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 39,
+          "score": 0.2541
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 42,
+          "score": 0.2437
+        }
+      ]
+    },
+    "gambar-545": {
+      "hit_at": {
+        "hit@1": false,
+        "hit@3": false,
+        "hit@5": false
+      },
+      "doc_hit@5": true,
+      "reciprocal_rank": 0.0,
+      "first_hit_rank": null,
+      "junk_in_top5": 2,
+      "returned": [
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 7,
+          "score": 0.3596
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 75,
+          "score": 0.2425
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 26,
+          "score": 0.2041
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 33,
+          "score": 0.2041
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 74,
+          "score": 0.2
+        }
+      ]
+    },
+    "data-collection-method": {
+      "hit_at": {
+        "hit@1": false,
+        "hit@3": false,
+        "hit@5": false
+      },
+      "doc_hit@5": true,
+      "reciprocal_rank": 0.0,
+      "first_hit_rank": null,
+      "junk_in_top5": 0,
+      "returned": [
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 98,
+          "score": 0.2838
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 27,
+          "score": 0.2146
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 60,
+          "score": 0.1879
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 70,
+          "score": 0.1811
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 44,
+          "score": 0.1804
+        }
+      ]
+    },
+    "research-stages": {
+      "hit_at": {
+        "hit@1": true,
+        "hit@3": true,
+        "hit@5": true
+      },
+      "doc_hit@5": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "junk_in_top5": 0,
+      "returned": [
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 35,
+          "score": 0.3154
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 12,
+          "score": 0.3006
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 15,
+          "score": 0.2818
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 13,
+          "score": 0.2703
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 27,
+          "score": 0.2504
+        }
+      ]
+    },
+    "student-rank-feature": {
+      "hit_at": {
+        "hit@1": false,
+        "hit@3": false,
+        "hit@5": false
+      },
+      "doc_hit@5": true,
+      "reciprocal_rank": 0.0,
+      "first_hit_rank": null,
+      "junk_in_top5": 0,
+      "returned": [
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 67,
+          "score": 0.3136
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 58,
+          "score": 0.3108
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 34,
+          "score": 0.2762
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 37,
+          "score": 0.2389
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 28,
+          "score": 0.2356
+        }
+      ]
+    },
+    "gamification-elements": {
+      "hit_at": {
+        "hit@1": false,
+        "hit@3": true,
+        "hit@5": true
+      },
+      "doc_hit@5": true,
+      "reciprocal_rank": 0.5,
+      "first_hit_rank": 2,
+      "junk_in_top5": 0,
+      "returned": [
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 15,
+          "score": 0.3985
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 16,
+          "score": 0.391
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 18,
+          "score": 0.3642
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 12,
+          "score": 0.3188
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 11,
+          "score": 0.2922
+        }
+      ]
+    },
+    "testing-purpose": {
+      "hit_at": {
+        "hit@1": false,
+        "hit@3": true,
+        "hit@5": true
+      },
+      "doc_hit@5": true,
+      "reciprocal_rank": 0.3333333333333333,
+      "first_hit_rank": 3,
+      "junk_in_top5": 0,
+      "returned": [
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 105,
+          "score": 0.2727
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 20,
+          "score": 0.2265
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 118,
+          "score": 0.207
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 81,
+          "score": 0.1721
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 2,
+          "score": 0.1698
+        }
+      ]
+    },
+    "background-problem": {
+      "hit_at": {
+        "hit@1": false,
+        "hit@3": false,
+        "hit@5": false
+      },
+      "doc_hit@5": true,
+      "reciprocal_rank": 0.0,
+      "first_hit_rank": null,
+      "junk_in_top5": 0,
+      "returned": [
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 12,
+          "score": 0.4165
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 14,
+          "score": 0.3278
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 13,
+          "score": 0.3219
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 35,
+          "score": 0.2913
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 30,
+          "score": 0.2894
+        }
+      ]
+    },
+    "abstract-indonesian": {
+      "hit_at": {
+        "hit@1": false,
+        "hit@3": false,
+        "hit@5": false
+      },
+      "doc_hit@5": true,
+      "reciprocal_rank": 0.0,
+      "first_hit_rank": null,
+      "junk_in_top5": 0,
+      "returned": [
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 15,
+          "score": 0.4392
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 16,
+          "score": 0.4383
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 13,
+          "score": 0.3172
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 123,
+          "score": 0.3079
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 41,
+          "score": 0.3046
+        }
+      ]
+    },
+    "abstract-english": {
+      "hit_at": {
+        "hit@1": true,
+        "hit@3": true,
+        "hit@5": true
+      },
+      "doc_hit@5": true,
+      "reciprocal_rank": 1.0,
+      "first_hit_rank": 1,
+      "junk_in_top5": 0,
+      "returned": [
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 3,
+          "score": 0.3722
+        },
+        {
+          "document": "3afbdf71-7767-4529-8113-faf3e9cebd14",
+          "chunk": 0,
+          "score": 0.1942
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 29,
+          "score": 0.1136
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 94,
+          "score": 0.0956
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 120,
+          "score": 0.0866
+        }
+      ]
+    },
+    "bibliography-author": {
+      "hit_at": {
+        "hit@1": false,
+        "hit@3": false,
+        "hit@5": false
+      },
+      "doc_hit@5": true,
+      "reciprocal_rank": 0.0,
+      "first_hit_rank": null,
+      "junk_in_top5": 0,
+      "returned": [
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 15,
+          "score": 0.2554
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 124,
+          "score": 0.2226
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 16,
+          "score": 0.2042
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 35,
+          "score": 0.2019
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 12,
+          "score": 0.1998
+        }
+      ]
+    },
+    "what-is-contexta": {
+      "hit_at": {
+        "hit@1": false,
+        "hit@3": false,
+        "hit@5": false
+      },
+      "doc_hit@5": false,
+      "reciprocal_rank": 0.0,
+      "first_hit_rank": null,
+      "junk_in_top5": 0,
+      "returned": [
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 12,
+          "score": 0.3757
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 121,
+          "score": 0.3401
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 16,
+          "score": 0.3313
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 15,
+          "score": 0.3202
+        },
+        {
+          "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+          "chunk": 18,
+          "score": 0.3012
+        }
+      ]
+    }
+  }
+}
