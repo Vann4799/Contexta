@@ -10,10 +10,12 @@ from app.chat.models import RetrievedContext
 
 try:
     from contexta_rag.embeddings import DeterministicEmbeddingProvider
+    from contexta_rag.vector_space import assert_vector_space_matches
 except ModuleNotFoundError:
     rag_package_path = Path(__file__).resolve().parents[4] / "packages" / "rag"
     sys.path.append(str(rag_package_path))
     from contexta_rag.embeddings import DeterministicEmbeddingProvider
+    from contexta_rag.vector_space import assert_vector_space_matches
 
 
 class EmbeddingProvider(Protocol):
@@ -27,14 +29,32 @@ class QdrantRetriever:
         qdrant_url: str,
         collection_name: str,
         embedding_provider: EmbeddingProvider,
+        expected_dimensions: int,
+        expected_model_label: str,
         api_key: str = "",
         client: httpx.Client | None = None,
     ) -> None:
         self._qdrant_url = qdrant_url.rstrip("/")
         self._collection_name = collection_name
         self._embedding_provider = embedding_provider
+        self._expected_dimensions = expected_dimensions
+        self._expected_model_label = expected_model_label
         self._headers = {"api-key": api_key} if api_key else None
         self._client = client or httpx.Client(timeout=30)
+        self._vector_space_checked = False
+
+    def _ensure_vector_space(self) -> None:
+        if self._vector_space_checked:
+            return
+        assert_vector_space_matches(
+            client=self._client,
+            qdrant_url=self._qdrant_url,
+            collection_name=self._collection_name,
+            dimensions=self._expected_dimensions,
+            model_label=self._expected_model_label,
+            headers=self._headers,
+        )
+        self._vector_space_checked = True
 
     def retrieve(
         self,
@@ -44,6 +64,7 @@ class QdrantRetriever:
         top_k: int = 5,
         doc_types: list[str] | None = None,
     ) -> list[RetrievedContext]:
+        self._ensure_vector_space()
         query_vector = self._embedding_provider.embed_texts([question])[0]
         must_filters: list[dict[str, object]] = [
             {"key": "user_id", "match": {"value": user_id}}

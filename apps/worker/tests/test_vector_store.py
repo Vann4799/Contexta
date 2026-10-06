@@ -4,8 +4,15 @@ import json
 from uuid import UUID
 
 import httpx
+import pytest
 
+from contexta_rag.vector_space import reset_vector_space_cache
 from worker.vector_store import DeterministicEmbeddingProvider, QdrantVectorStore
+
+
+@pytest.fixture(autouse=True)
+def clear_vector_space_cache() -> None:
+    reset_vector_space_cache()
 
 
 def test_deterministic_embedding_provider_returns_stable_vectors() -> None:
@@ -134,3 +141,112 @@ def test_qdrant_vector_store_indexes_payload_on_an_existing_collection() -> None
     assert json.loads(requests[-1].content)["points"][0]["payload"]["doc_type"] == (
         "unclassified"
     )
+
+
+def build_store(
+    handler,
+    requests: list[httpx.Request],
+    **kwargs: object,
+) -> QdrantVectorStore:
+    def record(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return handler(request)
+
+    return QdrantVectorStore(
+        qdrant_url="http://qdrant.local",
+        collection_name="contexta_chunks_v2",
+        dimensions=2,
+        client=httpx.Client(transport=httpx.MockTransport(record)),
+        **kwargs,  # type: ignore[arg-type]
+    )
+
+
+def upsert_one(store: QdrantVectorStore) -> None:
+    store.upsert_chunks(
+        document={"id": "doc-1", "user_id": "user-1", "filename": "file.pdf"},
+        chunks=[
+            {
+                "document_id": "doc-1",
+                "user_id": "user-1",
+                "chunk_index": 0,
+                "text": "hello",
+                "page_number": 1,
+                "section_path": None,
+                "is_table": False,
+                "qdrant_point_id": "",
+            }
+        ],
+        embeddings=[[0.1, 0.2]],
+    )
+
+
+def test_upsert_records_the_index_metadata_in_every_payload() -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/points/scroll"):
+            return httpx.Response(200, json={"result": {"points": []}})
+        return httpx.Response(
+            200,
+            json={"result": {"config": {"params": {"vectors": {"size": 2}}}}},
+        )
+
+    store = build_store(
+        handler,
+        requests,
+        index_metadata={
+            "chunker_version": "window-v2",
+            "embedding_model": "paraphrase-multilingual-MiniLM-L12-v2",
+            "embedding_dimensions": 2,
+        },
+    )
+
+    upsert_one(store)
+
+    payload = json.loads(requests[-1].content)["points"][0]["payload"]
+    assert payload["chunker_version"] == "window-v2"
+    assert payload["embedding_model"] == "paraphrase-multilingual-MiniLM-L12-v2"
+    assert payload["embedding_dimensions"] == 2
+
+
+def test_upsert_refuses_a_collection_indexed_by_another_model() -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/points/scroll"):
+            return httpx.Response(
+                200,
+                json={"result": {"points": [{"payload": {"embedding_model": "bge-m3"}}]}},
+            )
+        return httpx.Response(
+            200,
+            json={"result": {"config": {"params": {"vectors": {"size": 2}}}}},
+        )
+
+    store = build_store(
+        handler,
+        requests,
+        index_metadata={"embedding_model": "paraphrase-multilingual-MiniLM-L12-v2"},
+    )
+
+    with pytest.raises(RuntimeError, match="indexed with 'bge-m3'"):
+        upsert_one(store)
+
+    assert [request.method for request in requests] == ["GET", "POST"]
+
+
+def test_upsert_refuses_a_collection_of_another_dimensionality() -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={"result": {"config": {"params": {"vectors": {"size": 1024}}}}},
+        )
+
+    store = build_store(handler, requests, index_metadata={"embedding_model": "miniLM"})
+
+    with pytest.raises(RuntimeError, match="stores 1024-dimension vectors"):
+        upsert_one(store)
+
+    assert [request.method for request in requests] == ["GET"]

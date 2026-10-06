@@ -6,16 +6,16 @@ import time
 from pathlib import Path
 
 try:
-    from contexta_rag.embeddings import create_embedding_provider
+    from contexta_rag.embeddings import create_embedding_provider, embedding_model_label
 except ModuleNotFoundError:
     rag_package_path = Path(__file__).resolve().parents[3] / "packages" / "rag"
     import sys
 
     sys.path.append(str(rag_package_path))
-    from contexta_rag.embeddings import create_embedding_provider
+    from contexta_rag.embeddings import create_embedding_provider, embedding_model_label
 
 from worker.extraction import DocumentTextExtractor
-from worker.processor import WorkerProcessor
+from worker.processor import CHUNKER_VERSION, WorkerProcessor
 from worker.supabase import SupabaseDocumentRepository, SupabaseDocumentStorage
 from worker.vector_store import QdrantVectorStore
 
@@ -50,6 +50,12 @@ def create_processor() -> WorkerProcessor:
     chunk_overlap_words = int(os.environ.get("CHUNK_OVERLAP_WORDS", "100"))
     min_chunk_words = int(os.environ.get("MIN_CHUNK_WORDS", "40"))
 
+    index_metadata = {
+        "chunker_version": CHUNKER_VERSION,
+        "embedding_model": embedding_model_label(embedding_provider, embedding_model_name),
+        "embedding_dimensions": embedding_dimensions,
+    }
+
     return WorkerProcessor(
         repository=SupabaseDocumentRepository(supabase_url, service_role_key),
         storage=SupabaseDocumentStorage(supabase_url, service_role_key, bucket),
@@ -66,18 +72,12 @@ def create_processor() -> WorkerProcessor:
             collection_name=collection_name,
             dimensions=embedding_dimensions,
             api_key=qdrant_api_key,
+            index_metadata=index_metadata,
         ),
         max_chunk_words=max_chunk_words,
         overlap_words=chunk_overlap_words,
         min_chunk_words=min_chunk_words,
-        index_metadata={
-            "embedding_model": (
-                "deterministic-hash"
-                if embedding_provider in {"deterministic", "hash"}
-                else embedding_model_name
-            ),
-            "embedding_dimensions": embedding_dimensions,
-        },
+        index_metadata=index_metadata,
     )
 
 

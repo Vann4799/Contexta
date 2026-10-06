@@ -143,6 +143,14 @@ class SentenceTransformerEmbeddingProvider:
         return sentence_transformer(model_name, **kwargs)
 
 
+def embedding_model_label(provider_name: str, model_name: str) -> str:
+    """Return the label stored in Qdrant payloads to identify a vector space."""
+    normalized_name = provider_name.strip().lower()
+    if normalized_name in {"deterministic", "hash"}:
+        return "deterministic-hash"
+    return model_name.strip() or "embedding-service"
+
+
 def create_embedding_provider(
     provider_name: str = "deterministic",
     dimensions: int = 384,

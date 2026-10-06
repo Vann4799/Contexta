@@ -30,7 +30,7 @@ for _parent in API_ROOT.parents:
 
 from app.chat.retrieval import QdrantRetriever  # noqa: E402
 from app.core.config import Settings, get_settings  # noqa: E402
-from contexta_rag.embeddings import create_embedding_provider  # noqa: E402
+from contexta_rag.embeddings import create_embedding_provider, embedding_model_label  # noqa: E402
 
 DEFAULT_CASES = API_ROOT / "evals" / "retrieval_cases.json"
 JUNK_TEXT_CHARS = 40
@@ -49,6 +49,11 @@ def build_retriever(settings: Settings) -> QdrantRetriever:
             remote_url=settings.embedding_remote_url,
         ),
         api_key=settings.qdrant_api_key,
+        expected_dimensions=settings.embedding_dimensions,
+        expected_model_label=embedding_model_label(
+            settings.embedding_provider,
+            settings.embedding_model_name,
+        ),
     )
 
 

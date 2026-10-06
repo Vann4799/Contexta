@@ -10,10 +10,12 @@ from worker.processor import ProcessingChunk, ProcessingDocument
 
 try:
     from contexta_rag.embeddings import DeterministicEmbeddingProvider
+    from contexta_rag.vector_space import assert_vector_space_matches
 except ModuleNotFoundError:
     rag_package_path = Path(__file__).resolve().parents[3] / "packages" / "rag"
     sys.path.append(str(rag_package_path))
     from contexta_rag.embeddings import DeterministicEmbeddingProvider
+    from contexta_rag.vector_space import assert_vector_space_matches
 
 _PAYLOAD_INDEXES = (
     ("user_id", "keyword"),
@@ -31,12 +33,14 @@ class QdrantVectorStore:
         dimensions: int,
         api_key: str = "",
         client: httpx.Client | None = None,
+        index_metadata: dict[str, object] | None = None,
     ) -> None:
         self._qdrant_url = qdrant_url.rstrip("/")
         self._collection_name = collection_name
         self._dimensions = dimensions
         self._headers = {"api-key": api_key} if api_key else None
         self._client = client or httpx.Client(timeout=30)
+        self._index_metadata = dict(index_metadata or {})
         self._collection_checked = False
 
     def upsert_chunks(
@@ -54,6 +58,7 @@ class QdrantVectorStore:
                 "id": point_id,
                 "vector": embedding,
                 "payload": {
+                    **self._index_metadata,
                     "document_id": chunk["document_id"],
                     "user_id": chunk["user_id"],
                     "filename": document.get("filename", ""),
@@ -89,11 +94,14 @@ class QdrantVectorStore:
         if self._collection_checked:
             return
 
-        response = self._client.get(
-            f"{self._qdrant_url}/collections/{self._collection_name}",
+        if not assert_vector_space_matches(
+            client=self._client,
+            qdrant_url=self._qdrant_url,
+            collection_name=self._collection_name,
+            dimensions=self._dimensions,
+            model_label=str(self._index_metadata.get("embedding_model") or ""),
             headers=self._headers,
-        )
-        if response.status_code == 404:
+        ):
             create_response = self._client.put(
                 f"{self._qdrant_url}/collections/{self._collection_name}",
                 headers=self._headers,
@@ -105,8 +113,6 @@ class QdrantVectorStore:
                 },
             )
             create_response.raise_for_status()
-        else:
-            response.raise_for_status()
 
         self._ensure_payload_indexes()
         self._collection_checked = True
