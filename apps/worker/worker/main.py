@@ -116,21 +116,28 @@ def create_processor() -> WorkerProcessor:
         if arm
     ]
     arms = build_arms(arm_settings)
-    primary = arm_settings[0]
+    spaces = [
+        VectorSpace(
+            name=arm.name,
+            dimensions=settings.dimensions,
+            model_label=embedding_model_label(settings.provider, settings.model_name),
+        )
+        for arm, settings in zip(arms, arm_settings)
+    ]
+    primary = spaces[0]
 
     index_metadata = {
         "chunker_version": CHUNKER_VERSION,
-        "embedding_model": embedding_model_label(primary.provider, primary.model_name),
+        "embedding_model": primary.model_label,
         "embedding_dimensions": primary.dimensions,
     }
     # Qdrant may hold several vector spaces in one point, so the payload records
     # a per-slot label map that the vector-space guard can read back. Postgres
     # has no such column, so the map stays out of index_metadata.
     payload_metadata = dict(index_metadata)
-    if len(arms) > 1:
+    if len(spaces) > 1:
         payload_metadata["embedding_models"] = {
-            arm.name: embedding_model_label(arm.provider, arm.model_name)
-            for arm, settings in zip(arms, arm_settings)
+            space.name: space.model_label for space in spaces
         }
 
     return WorkerProcessor(
@@ -141,14 +148,7 @@ def create_processor() -> WorkerProcessor:
         vector_store=QdrantVectorStore(
             qdrant_url=qdrant_url,
             collection_name=collection_name,
-            vectors=[
-                VectorSpace(
-                    name=arm.name,
-                    dimensions=settings.dimensions,
-                    model_label=embedding_model_label(settings.provider, settings.model_name),
-                )
-                for arm, settings in zip(arms, arm_settings)
-            ],
+            vectors=spaces,
             api_key=qdrant_api_key,
             index_metadata=payload_metadata,
         ),

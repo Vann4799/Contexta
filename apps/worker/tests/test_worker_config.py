@@ -2,7 +2,13 @@ from __future__ import annotations
 
 import pytest
 
-from worker.main import ArmSettings, build_arms, read_arm_settings
+from worker.main import (
+    ArmSettings,
+    build_arms,
+    create_processor,
+    read_arm_settings,
+)
+from worker.processor import CHUNKER_VERSION
 
 
 def settings(name: str = "", provider: str = "deterministic") -> ArmSettings:
@@ -63,3 +69,55 @@ def test_two_arms_must_name_their_vector_slots() -> None:
 def test_two_arms_need_distinct_vector_slots() -> None:
     with pytest.raises(ValueError, match="must be distinct"):
         build_arms([settings(name="shared"), settings(name="shared")])
+
+
+def configure_worker_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SUPABASE_URL", "http://supabase.local")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "service-role")
+    monkeypatch.setenv("EMBEDDING_PROVIDER", "remote")
+    monkeypatch.setenv("EMBEDDING_MODEL_NAME", "miniLM-l12")
+    monkeypatch.setenv("EMBEDDING_REMOTE_URL", "http://embeddings:8070")
+    monkeypatch.setenv("EMBEDDING_DIMENSIONS", "384")
+    monkeypatch.setenv("EMBEDDING_VECTOR_NAME", "minilm")
+    monkeypatch.setenv("SECONDARY_EMBEDDING_PROVIDER", "openrouter")
+    monkeypatch.setenv("SECONDARY_EMBEDDING_MODEL_NAME", "text-embedding-3-small")
+    monkeypatch.setenv("SECONDARY_EMBEDDING_DIMENSIONS", "1536")
+    monkeypatch.setenv("SECONDARY_EMBEDDING_VECTOR_NAME", "openai")
+    monkeypatch.setenv("SECONDARY_EMBEDDING_BASE_URL", "https://openrouter.ai/api/v1")
+    monkeypatch.setenv("SECONDARY_EMBEDDING_API_KEY", "key-for-tests-only")
+
+
+def test_two_arm_processor_splits_metadata_between_postgres_and_qdrant(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    configure_worker_env(monkeypatch)
+
+    processor = create_processor()
+
+    assert [arm.name for arm in processor.embedding_arms] == ["minilm", "openai"]
+    assert processor.index_metadata == {
+        "chunker_version": CHUNKER_VERSION,
+        "embedding_model": "miniLM-l12",
+        "embedding_dimensions": 384,
+    }
+
+    payload = processor.vector_store._index_metadata
+    assert payload["embedding_models"] == {
+        "minilm": "miniLM-l12",
+        "openai": "text-embedding-3-small",
+    }
+    assert [space.name for space in processor.vector_store._vectors] == [
+        "minilm",
+        "openai",
+    ]
+
+
+def test_a_single_arm_payload_keeps_the_one_label_field(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    configure_worker_env(monkeypatch)
+    monkeypatch.delenv("SECONDARY_EMBEDDING_PROVIDER")
+
+    processor = create_processor()
+
+    assert "embedding_models" not in processor.vector_store._index_metadata
