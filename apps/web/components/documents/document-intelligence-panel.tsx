@@ -13,6 +13,7 @@ import {
 import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { StatusPill } from "@/components/ui/status-pill";
 import { Button } from "@/components/ui/button";
+import { DocumentChunksTable } from "@/components/documents/document-chunks-table";
 
 type DocumentIntelligencePanelProps = {
   documentId: string;
@@ -370,6 +371,8 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
         </aside>
       </section>
       ) : null}
+
+      {document.status === "ready" ? <DocumentChunksTable documentId={document.id} getAccessToken={getAccessToken} /> : null}
     </div>
   );
 }

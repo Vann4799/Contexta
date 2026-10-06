@@ -3,15 +3,20 @@ from collections import Counter
 from typing import Annotated
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 
 from app.auth.dependencies import get_current_user
 from app.auth.supabase_jwt import CurrentUser
 from app.chat.llm import AnswerGenerator, DeepSeekAnswerGenerator
 from app.core.config import Settings, get_settings
 from app.documents.models import (
+    DEFAULT_CHUNK_PAGE_SIZE,
+    MAX_CHUNK_PAGE_SIZE,
+    CHUNK_PREVIEW_MAX_CHARS,
     DocumentAIBriefResponse,
     DocumentChunkResponse,
+    DocumentChunksPage,
+    DocumentChunkRow,
     DocumentCreate,
     DocumentIntelligenceResponse,
     DocumentResponse,
@@ -244,6 +249,16 @@ async def read_upload_content(file: UploadFile) -> bytes:
     return bytes(content)
 
 
+def chunk_row(chunk: DocumentChunkResponse) -> DocumentChunkRow:
+    collapsed = " ".join(chunk.text.split())
+    return DocumentChunkRow(
+        chunk_index=chunk.chunk_index,
+        page_number=chunk.page_number,
+        char_count=len(chunk.text),
+        preview=collapsed[:CHUNK_PREVIEW_MAX_CHARS],
+    )
+
+
 @router.get("", response_model=list[DocumentResponse])
 def list_documents(
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
@@ -276,6 +291,29 @@ def get_document_intelligence(
 
     chunks = repository.list_document_chunks(current_user.id, document_id)
     return build_document_intelligence(document, chunks)
+
+
+@router.get("/{document_id}/chunks", response_model=DocumentChunksPage)
+def get_document_chunks(
+    document_id: str,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    repository: Annotated[DocumentRepository, Depends(get_document_repository)],
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(ge=1, le=MAX_CHUNK_PAGE_SIZE)] = DEFAULT_CHUNK_PAGE_SIZE,
+) -> DocumentChunksPage:
+    document = repository.get_document(current_user.id, document_id)
+    if not document:
+        raise HTTPException(status_code=404, detail="document not found")
+
+    chunks = repository.list_document_chunks(current_user.id, document_id)
+    start = (page - 1) * page_size
+    return DocumentChunksPage(
+        document_id=document.id,
+        total=len(chunks),
+        page=page,
+        page_size=page_size,
+        items=[chunk_row(chunk) for chunk in chunks[start : start + page_size]],
+    )
 
 
 @router.post("/{document_id}/brief", response_model=DocumentAIBriefResponse)

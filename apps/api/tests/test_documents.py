@@ -195,6 +195,60 @@ def test_get_document_intelligence_returns_summary_and_detected_fields() -> None
     assert body["suggested_questions"]
 
 
+def test_get_document_chunks_pages_numbered_rows() -> None:
+    repository = InMemoryDocumentRepository()
+    app.dependency_overrides[get_document_repository] = lambda: repository
+    created = repository.create_document(
+        USER_ID,
+        DocumentCreate(
+            filename="laporan.pdf",
+            file_type="pdf",
+            file_size=8200,
+            storage_path=f"{USER_ID}/{DOCUMENT_ID}/laporan.pdf",
+        ),
+    )
+    repository.add_chunks(
+        [
+            {
+                "document_id": created.id,
+                "user_id": USER_ID,
+                "chunk_index": index,
+                "text": f"  chunk   {index} body text   with whitespace  ",
+                "page_number": index + 1,
+                "qdrant_point_id": f"point-{index}",
+            }
+            for index in range(25)
+        ]
+    )
+
+    first = client.get(f"/documents/{created.id}/chunks", headers=auth_headers())
+    assert first.status_code == 200
+    first_body = first.json()
+    assert first_body["total"] == 25
+    assert first_body["page"] == 1
+    assert first_body["page_size"] == 20
+    assert [item["chunk_index"] for item in first_body["items"][:3]] == [0, 1, 2]
+    assert first_body["items"][0]["preview"] == "chunk 0 body text with whitespace"
+    assert first_body["items"][0]["page_number"] == 1
+
+    second = client.get(
+        f"/documents/{created.id}/chunks?page=2&page_size=20", headers=auth_headers()
+    )
+    second_body = second.json()
+    assert len(second_body["items"]) == 5
+    assert second_body["items"][0]["chunk_index"] == 20
+
+    oversized = client.get(
+        f"/documents/{created.id}/chunks?page_size=500", headers=auth_headers()
+    )
+    assert oversized.status_code == 422
+
+    other_user = client.get(
+        f"/documents/{created.id}/chunks", headers=auth_headers("other-user")
+    )
+    assert other_user.status_code == 404
+
+
 def test_generate_document_ai_brief_uses_document_chunks() -> None:
     repository = InMemoryDocumentRepository()
     answer_generator = FakeAnswerGenerator()

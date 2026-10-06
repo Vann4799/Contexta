@@ -75,6 +75,26 @@ class DocumentChunkResponse(BaseModel):
     qdrant_point_id: str
 
 
+CHUNK_PREVIEW_MAX_CHARS = 240
+DEFAULT_CHUNK_PAGE_SIZE = 20
+MAX_CHUNK_PAGE_SIZE = 50
+
+
+class DocumentChunkRow(BaseModel):
+    chunk_index: int
+    page_number: int | None
+    char_count: int
+    preview: str
+
+
+class DocumentChunksPage(BaseModel):
+    document_id: str
+    total: int
+    page: int
+    page_size: int
+    items: list[DocumentChunkRow]
+
+
 class DocumentIntelligenceResponse(BaseModel):
     document_id: str
     filename: str

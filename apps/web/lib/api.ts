@@ -33,6 +33,21 @@ export type DocumentAIBrief = {
   brief: string;
 };
 
+export type DocumentChunkRow = {
+  chunk_index: number;
+  page_number: number | null;
+  char_count: number;
+  preview: string;
+};
+
+export type DocumentChunksPage = {
+  document_id: string;
+  total: number;
+  page: number;
+  page_size: number;
+  items: DocumentChunkRow[];
+};
+
 export type MarkdownConversion = {
   filename: string;
   markdown: string;
@@ -88,6 +103,9 @@ export type ChatMessage = {
 export type ChatSessionMessageResponse = ChatQueryResponse & {
   session_id: string;
 };
+
+/** Rows per page in the chunk table; matches the API default. */
+export const CHUNK_PAGE_SIZE = 20;
 
 export function apiBaseUrl() {
   return process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8001";
@@ -254,6 +272,27 @@ export async function getDocumentIntelligence(accessToken: string, documentId: s
   }
 
   return (await response.json()) as DocumentIntelligence;
+}
+
+export async function listDocumentChunks(
+  accessToken: string,
+  documentId: string,
+  page: number,
+  pageSize: number = CHUNK_PAGE_SIZE
+) {
+  const query = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
+  const response = await fetchApi(`/documents/${documentId}/chunks?${query.toString()}`, {
+    cache: "no-store",
+    headers: {
+      Authorization: `Bearer ${accessToken}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to load document chunks."));
+  }
+
+  return (await response.json()) as DocumentChunksPage;
 }
 
 export async function generateDocumentAIBrief(accessToken: string, documentId: string) {
