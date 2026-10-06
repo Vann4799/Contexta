@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   Menu,
   MessageSquare,
+  Settings,
   User,
   Waypoints,
   type LucideIcon
@@ -103,7 +104,17 @@ export function TopNav({ email }: { email: string }) {
                 )}
               >
                 <User className="h-4 w-4 text-ink-muted" aria-hidden="true" />
-                Profile &amp; Settings
+                Profile
+              </Link>
+              <Link
+                href="/settings"
+                className={cn(
+                  "flex items-center gap-2 rounded-control px-2.5 py-2 text-[13.5px] font-medium text-ink hover:bg-paper-soft",
+                  isActiveRoute(pathname, "/settings") && "bg-paper-chip"
+                )}
+              >
+                <Settings className="h-4 w-4 text-ink-muted" aria-hidden="true" />
+                Settings
               </Link>
               <Link
                 href="/help"
