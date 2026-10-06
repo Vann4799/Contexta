@@ -91,6 +91,63 @@ def test_replace_chunks_deletes_existing_chunks_and_inserts_new_rows() -> None:
     assert json.loads(requests[1].content)[0]["text"] == "hello"
 
 
+def test_get_document_reads_one_row_by_id() -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(
+            200,
+            json=[{"id": "doc-1", "user_id": "user-1", "status": "ready"}],
+        )
+
+    repository = SupabaseDocumentRepository(
+        supabase_url="https://example.supabase.co",
+        service_role_key="service-key",
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+
+    document = repository.get_document("doc-1")
+
+    assert document is not None
+    assert document["id"] == "doc-1"
+    assert requests[0].url.params["id"] == "eq.doc-1"
+
+
+def test_get_document_returns_none_when_the_id_is_unknown() -> None:
+    repository = SupabaseDocumentRepository(
+        supabase_url="https://example.supabase.co",
+        service_role_key="service-key",
+        client=httpx.Client(
+            transport=httpx.MockTransport(lambda _request: httpx.Response(200, json=[]))
+        ),
+    )
+
+    assert repository.get_document("doc-9") is None
+
+
+def test_list_documents_orders_by_creation() -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(
+            200,
+            json=[{"id": "doc-1", "status": "ready"}, {"id": "doc-2", "status": "failed"}],
+        )
+
+    repository = SupabaseDocumentRepository(
+        supabase_url="https://example.supabase.co",
+        service_role_key="service-key",
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+
+    documents = repository.list_documents()
+
+    assert [document["id"] for document in documents] == ["doc-1", "doc-2"]
+    assert requests[0].url.params["order"] == "created_at.asc"
+
+
 def test_storage_downloads_encoded_object_path() -> None:
     seen_url = ""
 

@@ -90,6 +90,26 @@ class QdrantVectorStore:
             )
         )
 
+    def prune_stale_chunks(self, document_id: str, chunk_count: int) -> None:
+        """Drop points left over from a longer chunking of the same document."""
+        if chunk_count <= 0:
+            return
+
+        response = self._client.post(
+            f"{self._qdrant_url}/collections/{self._collection_name}/points/delete",
+            headers=self._headers,
+            params={"wait": "true"},
+            json={
+                "filter": {
+                    "must": [
+                        {"key": "document_id", "match": {"value": document_id}},
+                        {"key": "chunk_index", "range": {"gte": chunk_count}},
+                    ]
+                }
+            },
+        )
+        response.raise_for_status()
+
     def _ensure_collection(self) -> None:
         if self._collection_checked:
             return

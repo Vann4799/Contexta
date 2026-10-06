@@ -80,9 +80,18 @@ class VectorStore(Protocol):
     ) -> list[str]:
         ...
 
+    def prune_stale_chunks(self, document_id: str, chunk_count: int) -> None:
+        ...
+
 
 class DocumentRepository(Protocol):
     def claim_next_processing_document(self) -> ProcessingDocument | None:
+        ...
+
+    def get_document(self, document_id: str) -> ProcessingDocument | None:
+        ...
+
+    def list_documents(self) -> list[ProcessingDocument]:
         ...
 
     def mark_ready(
@@ -112,6 +121,15 @@ class InMemoryDocumentRepository:
             if document.get("status") == "processing":
                 return document
         return None
+
+    def get_document(self, document_id: str) -> ProcessingDocument | None:
+        for document in self.documents:
+            if document.get("id") == document_id:
+                return document
+        return None
+
+    def list_documents(self) -> list[ProcessingDocument]:
+        return list(self.documents)
 
     def mark_ready(
         self,
@@ -162,6 +180,9 @@ class MissingVectorStore:
     ) -> list[str]:
         raise RuntimeError("Vector store is not configured")
 
+    def prune_stale_chunks(self, document_id: str, chunk_count: int) -> None:
+        raise RuntimeError("Vector store is not configured")
+
 
 class WorkerProcessor:
     def __init__(
@@ -192,13 +213,13 @@ class WorkerProcessor:
             return False
 
         try:
-            self._process_document(document)
+            self.process_document(document)
         except Exception as exc:
             self.repository.mark_failed(document, str(exc))
 
         return True
 
-    def _process_document(self, document: ProcessingDocument) -> None:
+    def process_document(self, document: ProcessingDocument) -> int:
         filename = document.get("filename", "")
         if not filename.endswith((".pdf", ".docx")):
             raise ValueError("Unsupported document type")
@@ -219,6 +240,8 @@ class WorkerProcessor:
         if len(point_ids) != len(chunks):
             raise ValueError("Vector point count did not match chunk count")
 
+        self.vector_store.prune_stale_chunks(document["id"], len(chunks))
+
         chunks_with_points: list[ProcessingChunk] = []
         for chunk, point_id in zip(chunks, point_ids):
             chunks_with_points.append({**chunk, "qdrant_point_id": point_id})
@@ -232,6 +255,7 @@ class WorkerProcessor:
                 **self.index_metadata,
             },
         )
+        return len(chunks_with_points)
 
     def _build_chunks(
         self, document: ProcessingDocument, extracted_document: ExtractedDocument

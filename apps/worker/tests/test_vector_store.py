@@ -250,3 +250,28 @@ def test_upsert_refuses_a_collection_of_another_dimensionality() -> None:
         upsert_one(store)
 
     assert [request.method for request in requests] == ["GET"]
+
+
+def test_prune_stale_chunks_deletes_only_the_leftover_chunk_indices() -> None:
+    requests: list[httpx.Request] = []
+    store = build_store(lambda _request: httpx.Response(200, json={"result": "ok"}), requests)
+
+    store.prune_stale_chunks("doc-1", 75)
+
+    delete_request = requests[0]
+    assert delete_request.method == "POST"
+    assert delete_request.url.path == "/collections/contexta_chunks_v2/points/delete"
+    assert delete_request.url.params["wait"] == "true"
+    assert json.loads(delete_request.content)["filter"]["must"] == [
+        {"key": "document_id", "match": {"value": "doc-1"}},
+        {"key": "chunk_index", "range": {"gte": 75}},
+    ]
+
+
+def test_prune_stale_chunks_skips_qdrant_without_a_known_chunk_count() -> None:
+    requests: list[httpx.Request] = []
+    store = build_store(lambda _request: httpx.Response(200, json={"result": "ok"}), requests)
+
+    store.prune_stale_chunks("doc-1", 0)
+
+    assert requests == []

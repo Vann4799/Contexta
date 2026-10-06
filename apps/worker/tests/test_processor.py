@@ -35,6 +35,7 @@ class FakeEmbeddingProvider:
 class FakeVectorStore:
     def __init__(self) -> None:
         self.upserted: list[ProcessingChunk] = []
+        self.pruned: list[tuple[str, int]] = []
 
     def upsert_chunks(
         self,
@@ -45,6 +46,9 @@ class FakeVectorStore:
         assert len(chunks) == len(embeddings)
         self.upserted = chunks
         return [f"point-{chunk['chunk_index']}" for chunk in chunks]
+
+    def prune_stale_chunks(self, document_id: str, chunk_count: int) -> None:
+        self.pruned.append((document_id, chunk_count))
 
 
 def test_process_once_marks_processing_document_ready() -> None:
@@ -111,6 +115,7 @@ def test_process_once_marks_processing_document_ready() -> None:
         "one two three four",
         "five six seven eight",
     ]
+    assert vector_store.pruned == [("doc-1", 2)]
 
 
 def test_short_pages_are_merged_into_one_document_window() -> None:

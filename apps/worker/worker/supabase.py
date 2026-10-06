@@ -65,6 +65,25 @@ class SupabaseDocumentRepository:
             return None
         return claimed_documents[0]
 
+    def get_document(self, document_id: str) -> ProcessingDocument | None:
+        response = self._client.get(
+            f"{self._supabase_url}/rest/v1/documents",
+            headers=self._headers,
+            params={"id": f"eq.{document_id}", "limit": "1"},
+        )
+        response.raise_for_status()
+        documents = response.json()
+        return documents[0] if documents else None
+
+    def list_documents(self) -> list[ProcessingDocument]:
+        response = self._client.get(
+            f"{self._supabase_url}/rest/v1/documents",
+            headers=self._headers,
+            params={"order": "created_at.asc"},
+        )
+        response.raise_for_status()
+        return response.json()
+
     def replace_chunks(
         self, document: ProcessingDocument, chunks: list[ProcessingChunk]
     ) -> None:
