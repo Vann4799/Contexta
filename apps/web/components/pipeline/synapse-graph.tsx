@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import Link from "next/link";
 import { AlertTriangle, FileInput, Layers, Minus, Plus, RotateCcw, Waypoints, type LucideIcon } from "lucide-react";
 import type { PipelineCluster, PipelineClusterId, PipelineRoot } from "@/lib/pipeline";
+import { OVERFLOW_LEAF_ID } from "@/lib/pipeline";
 import { cn } from "@/lib/utils";
 
 const CLUSTER_ICONS: Record<PipelineClusterId, LucideIcon> = {
@@ -12,12 +13,24 @@ const CLUSTER_ICONS: Record<PipelineClusterId, LucideIcon> = {
   failed: AlertTriangle
 };
 
-type Edge = { id: string; d: string; kind: "trunk" | "branch"; cluster: string };
+const MIN_ZOOM = 0.7;
+const MAX_ZOOM = 1.3;
+
+type Point = { x: number; y: number };
+type Edge = { id: string; d: string; kind: "trunk" | "branch"; cluster: string; end: Point };
 
 /** Smooth horizontal S-curve between two points. */
 function curve(x1: number, y1: number, x2: number, y2: number) {
   const dx = Math.max(24, (x2 - x1) * 0.55);
   return `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+}
+
+function leftAnchor(rect: DOMRect, box: DOMRect, k: number) {
+  return { x: (rect.left - box.left) / k, y: (rect.top + rect.height / 2 - box.top) / k };
+}
+
+function rightAnchor(rect: DOMRect, box: DOMRect, k: number) {
+  return { x: (rect.right - box.left) / k, y: (rect.top + rect.height / 2 - box.top) / k };
 }
 
 type SynapseGraphProps = {
@@ -29,13 +42,22 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
   const stageRef = useRef<HTMLDivElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const clusterRefs = useRef(new Map<string, HTMLElement>());
+  const dragRef = useRef<{ pointerId: number; startX: number; startY: number; originX: number; originY: number } | null>(null);
 
   const [edges, setEdges] = useState<Edge[]>([]);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [hover, setHover] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
 
-  const nodeCount = 1 + clusters.length + clusters.reduce((count, cluster) => count + cluster.items.length, 0);
+  const nodeCount =
+    1 +
+    clusters.length +
+    clusters.reduce(
+      (count, cluster) => count + cluster.items.filter((item) => item.id !== OVERFLOW_LEAF_ID).length,
+      0
+    );
 
   const measure = useCallback(() => {
     const stage = stageRef.current;
@@ -50,24 +72,48 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
     }
     const box = stage.getBoundingClientRect();
     const k = zoom || 1;
-    const rel = (rect: DOMRect) => ({
-      l: (rect.left - box.left) / k,
-      r: (rect.right - box.left) / k,
-      cy: (rect.top + rect.height / 2 - box.top) / k
-    });
-
-    const rr = rel(rootNode.getBoundingClientRect());
+    const rr = rootNode.getBoundingClientRect();
+    const rootOut = rightAnchor(rr, box, k);
     const next: Edge[] = [];
+
     for (const cluster of clusters) {
       const cell = clusterRefs.current.get(cluster.id);
       if (!cell) {
         continue;
       }
-      const cr = rel(cell.getBoundingClientRect());
-      next.push({ id: `root-${cluster.id}`, d: curve(rr.r, rr.cy, cr.l, cr.cy), kind: "trunk", cluster: cluster.id });
+      const clusterRect = cell.getBoundingClientRect();
+      const clusterIn = leftAnchor(clusterRect, box, k);
+      const clusterOut = rightAnchor(clusterRect, box, k);
+      next.push({
+        id: `root-${cluster.id}`,
+        d: curve(rootOut.x, rootOut.y, clusterIn.x, clusterIn.y),
+        kind: "trunk",
+        cluster: cluster.id,
+        end: clusterIn
+      });
+
+      // One branch per document leaf hanging off the cluster card.
+      const leaves = stage.querySelectorAll<HTMLElement>(`[data-cluster="${cluster.id}"] [data-leaf]`);
+      leaves.forEach((leaf) => {
+        const leafIn = leftAnchor(leaf.getBoundingClientRect(), box, k);
+        next.push({
+          id: `${cluster.id}-${leaf.dataset.leaf}`,
+          d: curve(clusterOut.x, clusterOut.y, leafIn.x, leafIn.y),
+          kind: "branch",
+          cluster: cluster.id,
+          end: leafIn
+        });
+      });
     }
+
     setSize({ w: box.width / k, h: box.height / k });
-    setEdges(next);
+    setEdges((current) => {
+      const signature = next.map((edge) => `${edge.id}:${edge.d}`).join("|");
+      if (current.length === next.length && current.map((edge) => `${edge.id}:${edge.d}`).join("|") === signature) {
+        return current;
+      }
+      return next;
+    });
   }, [clusters, zoom]);
 
   useLayoutEffect(() => {
@@ -85,7 +131,48 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
 
   useEffect(() => {
     setZoom(1);
+    setPan({ x: 0, y: 0 });
   }, [clusters.length]);
+
+  function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
+    if (event.pointerType === "touch") {
+      return;
+    }
+    if ((event.target as HTMLElement).closest("a,button")) {
+      return;
+    }
+    dragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: pan.x,
+      originY: pan.y
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setIsPanning(true);
+  }
+
+  function handlePointerMove(event: React.PointerEvent<HTMLDivElement>) {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+    setPan({
+      x: drag.originX + (event.clientX - drag.startX),
+      y: drag.originY + (event.clientY - drag.startY)
+    });
+  }
+
+  function handlePointerUp(event: React.PointerEvent<HTMLDivElement>) {
+    if (dragRef.current?.pointerId !== event.pointerId) {
+      return;
+    }
+    dragRef.current = null;
+    setIsPanning(false);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  }
 
   return (
     <section
@@ -102,27 +189,43 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
           <span className="hidden sm:inline">Live Synapse Graph</span>
         </span>
         <span className="mx-1 h-5 w-px bg-paper-line" />
-        <ToolButton label="Zoom out" onClick={() => setZoom((z) => Math.max(0.7, +(z - 0.1).toFixed(2)))}>
+        <ToolButton label="Zoom out" onClick={() => setZoom((z) => Math.max(MIN_ZOOM, +(z - 0.1).toFixed(2)))}>
           <Minus className="h-3.5 w-3.5" aria-hidden="true" />
         </ToolButton>
-        <ToolButton label="Zoom in" onClick={() => setZoom((z) => Math.min(1.3, +(z + 0.1).toFixed(2)))}>
+        <ToolButton label="Zoom in" onClick={() => setZoom((z) => Math.min(MAX_ZOOM, +(z + 0.1).toFixed(2)))}>
           <Plus className="h-3.5 w-3.5" aria-hidden="true" />
         </ToolButton>
         <button
           className="focus-ring ml-1 inline-flex h-7 items-center gap-1 rounded-control bg-paper-chip px-2 text-[12px] font-medium text-ink-muted transition-colors hover:text-ink"
           type="button"
-          onClick={() => setZoom(1)}
+          onClick={() => {
+            setZoom(1);
+            setPan({ x: 0, y: 0 });
+          }}
         >
           <RotateCcw className="h-3 w-3" aria-hidden="true" /> Reset
         </button>
         <span className="nums px-2.5 font-mono text-[12.5px] font-medium text-ink">Nodes: {nodeCount}</span>
       </div>
 
-      <div className="overflow-x-auto">
+      <div
+        className={cn(
+          "relative lg:max-h-[540px] lg:select-none lg:overflow-hidden",
+          isPanning ? "cursor-grabbing" : "lg:cursor-grab"
+        )}
+        onPointerCancel={handlePointerUp}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+      >
         <div
           ref={stageRef}
-          className="relative mx-auto origin-top-left px-5 pb-12 pt-24 transition-transform duration-300 lg:min-w-[1180px] lg:px-14 lg:pb-12 lg:pt-[112px]"
-          style={{ transform: `scale(${zoom})`, transformOrigin: "top center" }}
+          className="relative px-5 pb-12 pt-24 lg:min-w-[1180px] lg:px-14 lg:pb-12 lg:pt-[112px]"
+          style={{
+            transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${zoom})`,
+            transformOrigin: "top center",
+            transition: isPanning ? "none" : "transform 300ms ease"
+          }}
           onTransitionEnd={measure}
         >
           {size.w > 0 ? (
@@ -152,14 +255,26 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
                   );
                 }
                 return (
-                  <path
-                    className={cn("transition-[stroke,opacity] duration-200", hover === edge.cluster ? "stroke-ink" : "stroke-paper-edge")}
-                    d={edge.d}
-                    fill="none"
+                  <g
+                    className={cn("transition-opacity duration-200", dim && "opacity-35")}
                     key={edge.id}
-                    opacity={dim ? 0.35 : 1}
-                    strokeWidth={1.25}
-                  />
+                  >
+                    <path
+                      className={cn(
+                        "transition-[stroke] duration-200",
+                        hover === edge.cluster ? "stroke-ink" : "stroke-paper-edge"
+                      )}
+                      d={edge.d}
+                      fill="none"
+                      strokeWidth={1.25}
+                    />
+                    <circle
+                      className={cn(hover === edge.cluster ? "fill-ink" : "fill-paper-edge")}
+                      cx={edge.end.x}
+                      cy={edge.end.y}
+                      r={2.5}
+                    />
+                  </g>
                 );
               })}
             </svg>
@@ -177,6 +292,7 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
               {clusters.map((cluster) => (
                 <div
                   className="relative flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-[52px]"
+                  data-cluster={cluster.id}
                   key={cluster.id}
                   onMouseEnter={() => setHover(cluster.id)}
                   onMouseLeave={() => setHover(null)}
@@ -194,7 +310,7 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
                   />
                   <ul className="flex min-w-0 flex-col gap-2.5 pl-4 lg:pl-0">
                     {cluster.items.map((item) => (
-                      <li key={item.id}>
+                      <li data-leaf={item.id} key={item.id}>
                         <LeafRow item={item} />
                       </li>
                     ))}
@@ -205,6 +321,10 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
           </div>
         </div>
       </div>
+
+      <p className="pointer-events-none absolute bottom-3 right-4 z-20 hidden font-mono text-[10.5px] uppercase tracking-[0.14em] text-ink-faint lg:block">
+        drag to pan - click a node to open
+      </p>
     </section>
   );
 }
@@ -291,13 +411,19 @@ function ClusterCard({ cluster, active, ref }: ClusterCardProps) {
 }
 
 function LeafRow({ item }: { item: PipelineCluster["items"][number] }) {
+  const isOverflow = item.id === OVERFLOW_LEAF_ID;
   return (
     <Link
-      className="focus-ring group inline-flex max-w-full items-center gap-2.5 rounded-control border border-paper-line bg-paper-card py-1 pl-3 pr-1 text-left shadow-node transition hover:border-ink/30"
+      className={cn(
+        "focus-ring group inline-flex max-w-full items-center gap-2.5 rounded-control border py-1 pl-3 pr-1 text-left shadow-node transition hover:border-ink/30",
+        isOverflow
+          ? "border-dashed border-paper-edge bg-paper-soft text-ink-muted"
+          : "border-paper-line bg-paper-card"
+      )}
       href={item.href}
     >
       {item.dot ? <span className="h-2 w-2 shrink-0 rounded-full bg-accent ring-1 ring-ink/70" aria-hidden="true" /> : null}
-      <span className="truncate font-mono text-[12px] font-medium text-ink">{item.name}</span>
+      <span className={cn("truncate font-mono text-[12px] font-medium", isOverflow ? "text-ink-muted" : "text-ink")}>{item.name}</span>
       {item.meta ? <span className="shrink-0 font-mono text-[11.5px] text-ink-muted">{item.meta}</span> : null}
       {item.tag ? (
         <span className="shrink-0 rounded-control bg-paper-chip px-1.5 py-0.5 font-mono text-[10.5px] font-medium text-ink">{item.tag}</span>

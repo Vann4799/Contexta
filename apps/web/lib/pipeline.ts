@@ -62,7 +62,18 @@ export const SAMPLE_METRICS: PipelineMetric[] = [
   { label: "Cache Ratio", value: "68.4", unit: "%" }
 ];
 
-const LEAF_LIMIT = 3;
+const LEAF_LIMIT = 4;
+
+/** Synthetic branch that stands in for documents a cluster did not draw. Not a real node. */
+export const OVERFLOW_LEAF_ID = "overflow";
+
+/** Keeps a cluster honest: when the card counts more documents than it draws, the remainder gets its own branch. */
+function withOverflow(items: PipelineLeaf[], total: number): PipelineLeaf[] {
+  if (total <= items.length) {
+    return items;
+  }
+  return [...items, { id: OVERFLOW_LEAF_ID, name: `+${total - items.length} more in this cluster`, href: "/documents" }];
+}
 
 function countFormat(value: number) {
   return new Intl.NumberFormat("en-US").format(value);
@@ -114,13 +125,16 @@ export function buildPipelineSnapshot(
       title: "Indexed Chunks",
       subtitle: `${plural(totalChunks, "chunk")} in Qdrant`,
       badge: { label: "Ready", tone: "lime" },
-      items: [...readyDocuments].sort(byRecent).slice(0, LEAF_LIMIT).map((document) => ({
-        id: document.id,
-        name: truncate(document.filename, 34),
-        meta: `[${countFormat(document.chunk_count)} tok]`,
-        tag: document.file_type.toUpperCase(),
-        href: `/documents/${document.id}`
-      }))
+      items: withOverflow(
+        [...readyDocuments].sort(byRecent).slice(0, LEAF_LIMIT).map((document) => ({
+          id: document.id,
+          name: truncate(document.filename, 34),
+          meta: `[${countFormat(document.chunk_count)} tok]`,
+          tag: document.file_type.toUpperCase(),
+          href: `/documents/${document.id}`
+        })),
+        readyDocuments.length
+      )
     });
   }
 
@@ -130,14 +144,17 @@ export function buildPipelineSnapshot(
       title: "Ingestion Queue",
       subtitle: `${queueDepth} queued - ${processingDocuments.length} processing`,
       badge: { label: "Live", tone: "dark" },
-      items: [...queuedDocuments, ...processingDocuments].sort(byRecent).slice(0, LEAF_LIMIT).map((document) => ({
-        id: document.id,
-        name: truncate(document.filename, 34),
-        meta: relativeTime(document.updated_at, now),
-        tag: document.status === "uploaded" ? "QUEUED" : "WORKING",
-        dot: document.status === "processing",
-        href: `/documents/${document.id}`
-      }))
+      items: withOverflow(
+        [...queuedDocuments, ...processingDocuments].sort(byRecent).slice(0, LEAF_LIMIT).map((document) => ({
+          id: document.id,
+          name: truncate(document.filename, 34),
+          meta: relativeTime(document.updated_at, now),
+          tag: document.status === "uploaded" ? "QUEUED" : "WORKING",
+          dot: document.status === "processing",
+          href: `/documents/${document.id}`
+        })),
+        queuedDocuments.length + processingDocuments.length
+      )
     });
   }
 
@@ -146,13 +163,16 @@ export function buildPipelineSnapshot(
       id: "failed",
       title: "Failed Jobs",
       subtitle: `${failedDocuments.length} document${failedDocuments.length === 1 ? "" : "s"} need a retry`,
-      items: failedDocuments.sort(byRecent).slice(0, LEAF_LIMIT).map((document) => ({
-        id: document.id,
-        name: truncate(document.filename, 34),
-        meta: truncate(document.error_message ?? "Worker error", 28),
-        tag: "RETRY",
-        href: `/documents/${document.id}`
-      }))
+      items: withOverflow(
+        failedDocuments.sort(byRecent).slice(0, LEAF_LIMIT).map((document) => ({
+          id: document.id,
+          name: truncate(document.filename, 34),
+          meta: truncate(document.error_message ?? "Worker error", 28),
+          tag: "RETRY",
+          href: `/documents/${document.id}`
+        })),
+        failedDocuments.length
+      )
     });
   }
 
