@@ -10,7 +10,6 @@ import {
   LayoutDashboard,
   Menu,
   MessageSquare,
-  Settings,
   User,
   Waypoints,
   type LucideIcon
@@ -25,8 +24,7 @@ const NAV_ICONS: Record<NavIcon, LucideIcon> = {
   pipeline: Waypoints,
   documents: FileText,
   chat: MessageSquare,
-  convert: FileCode,
-  settings: Settings
+  convert: FileCode
 };
 
 function isActiveRoute(pathname: string, href: string) {
@@ -99,10 +97,13 @@ export function TopNav({ email }: { email: string }) {
               <p className="truncate px-2 py-1.5 text-[12.5px] text-ink-muted">{email || "Signed in"}</p>
               <Link
                 href="/profile"
-                className="flex items-center gap-2 rounded-control px-2.5 py-2 text-[13.5px] font-medium text-ink hover:bg-paper-soft"
+                className={cn(
+                  "flex items-center gap-2 rounded-control px-2.5 py-2 text-[13.5px] font-medium text-ink hover:bg-paper-soft",
+                  isActiveRoute(pathname, "/profile") && "bg-paper-chip"
+                )}
               >
                 <User className="h-4 w-4 text-ink-muted" aria-hidden="true" />
-                Profile
+                Profile &amp; Settings
               </Link>
               <Link
                 href="/help"

@@ -209,7 +209,7 @@ export function ProfilePanel() {
   return (
     <div className="space-y-3">
       <section className="grid gap-3 lg:grid-cols-12">
-        <article className="rounded-card border border-paper-line bg-paper-card p-6 lg:col-span-8">
+        <article className="rounded-card border border-paper-line bg-paper-card p-6 lg:col-span-8 lg:self-start">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex min-w-0 items-center gap-3">
               <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-card bg-night text-[17px] font-semibold text-white">

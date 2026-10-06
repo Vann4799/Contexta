@@ -371,7 +371,7 @@ export function DashboardInsights() {
               {[
                 { href: "/documents", label: "Upload or manage documents", icon: Upload },
                 { href: "/chat", label: "Ask questions with citations", icon: MessageSquare },
-                { href: "/settings", label: "Review retrieval settings", icon: SlidersHorizontal }
+                { href: "/profile", label: "Review retrieval settings", icon: SlidersHorizontal }
               ].map((action) => (
                 <Link
                   key={action.href}
