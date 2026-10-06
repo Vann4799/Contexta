@@ -46,12 +46,14 @@ class QdrantRetriever:
         arms: list[RetrievalArm],
         api_key: str = "",
         client: httpx.Client | None = None,
+        arm_window: int = 10,
     ) -> None:
         if not arms:
             raise ValueError("at least one retrieval arm is required")
         self._qdrant_url = qdrant_url.rstrip("/")
         self._collection_name = collection_name
         self._arms = arms
+        self._arm_window = arm_window
         self._headers = {"api-key": api_key} if api_key else None
         self._client = client or httpx.Client(timeout=30)
         self._vector_space_checked = False
@@ -94,8 +96,13 @@ class QdrantRetriever:
         if doc_types:
             must_filters.append({"key": "doc_type", "match": {"any": doc_types}})
 
+        # RRF only trusts rank positions, so a deeper per-arm pool can reorder the
+        # final top_k without any extra embedding cost; one query vector per arm
+        # is reused no matter how many candidates Qdrant returns.
+        limit = max(top_k, self._arm_window)
+
         if len(self._arms) == 1:
-            ranked_points = [self._search(self._arms[0], question, must_filters, top_k)]
+            ranked_points = [self._search(self._arms[0], question, must_filters, limit)]
         else:
             # Two arms are one local model call plus one remote one; running them
             # concurrently keeps query latency at the slower arm instead of the sum.
@@ -105,7 +112,7 @@ class QdrantRetriever:
             with ThreadPoolExecutor(max_workers=len(self._arms)) as pool:
                 ranked_points = list(
                     pool.map(
-                        lambda arm: self._search(arm, question, must_filters, top_k),
+                        lambda arm: self._search(arm, question, must_filters, limit),
                         self._arms,
                     )
                 )
@@ -227,6 +234,7 @@ def retriever_from_settings(settings: Settings) -> QdrantRetriever:
         collection_name=settings.qdrant_collection,
         arms=arms,
         api_key=settings.qdrant_api_key,
+        arm_window=settings.retrieval_arm_window,
     )
 
 

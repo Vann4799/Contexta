@@ -73,6 +73,7 @@ def build_retriever(
     requests: list[httpx.Request],
     arms: list[RetrievalArm] | None = None,
     response_handler=handler,
+    arm_window: int = 10,
 ) -> QdrantRetriever:
     def record(request: httpx.Request) -> httpx.Response:
         requests.append(request)
@@ -83,6 +84,7 @@ def build_retriever(
         collection_name=COLLECTION,
         arms=arms if arms is not None else [arm()],
         client=httpx.Client(transport=httpx.MockTransport(record)),
+        arm_window=arm_window,
     )
 
 
@@ -251,18 +253,117 @@ def test_two_arms_merge_by_rank_not_by_raw_score() -> None:
     assert contexts[0]["score"] == 0.90
 
 
-def test_two_arms_ask_each_slot_for_the_full_window() -> None:
+def test_each_arm_is_asked_for_the_window_instead_of_top_k() -> None:
     requests: list[httpx.Request] = []
     retriever = build_retriever(
         requests,
         arms=[arm(name="minilm"), arm(name="openai", tag=0.9)],
         response_handler=two_arm_handler,
+        arm_window=10,
     )
 
     contexts = retriever.retrieve("user-1", "how do I restart", top_k=1)
 
-    assert [body["limit"] for body in search_bodies(requests)] == [1, 1]
-    assert [context["document_id"] for context in contexts] == ["doc-2"]
+    assert [body["limit"] for body in search_bodies(requests)] == [10, 10]
+    assert len(contexts) == 1
+
+
+def test_asking_for_more_results_than_the_window_widens_the_search() -> None:
+    requests: list[httpx.Request] = []
+    retriever = build_retriever(
+        requests,
+        arms=[arm(name="minilm"), arm(name="openai", tag=0.9)],
+        response_handler=two_arm_handler,
+        arm_window=4,
+    )
+
+    retriever.retrieve("user-1", "how do I restart", top_k=12)
+
+    assert [body["limit"] for body in search_bodies(requests)] == [12, 12]
+
+
+WINDOW_RANKINGS: dict[str, list[tuple[str, str, float]]] = {
+    "minilm": [
+        ("m1", "doc-both-rank-1", 0.80),
+        ("m2", "doc-m2", 0.75),
+        ("m3", "doc-m3", 0.70),
+        ("shared", "doc-agreed-on", 0.60),
+    ],
+    "openai": [
+        ("o1", "doc-o1", 0.85),
+        ("o2", "doc-o2", 0.78),
+        ("o3", "doc-o3", 0.66),
+        ("shared", "doc-agreed-on", 0.61),
+    ],
+}
+
+
+def window_handler(request: httpx.Request) -> httpx.Response:
+    if request.url.path.endswith("/points/search"):
+        body = json.loads(request.content)
+        ranking = WINDOW_RANKINGS[body["vector"]["name"]]
+        return httpx.Response(
+            200,
+            json={
+                "result": [
+                    point(point_id, document_id, index, score)
+                    for index, (point_id, document_id, score) in enumerate(
+                        ranking[: body["limit"]]
+                    )
+                ]
+            },
+        )
+    if request.url.path.endswith("/points/scroll"):
+        return httpx.Response(200, json={"result": {"points": []}})
+    return httpx.Response(
+        200,
+        json={
+            "result": {
+                "config": {
+                    "params": {
+                        "vectors": {"minilm": {"size": 2}, "openai": {"size": 2}}
+                    }
+                }
+            }
+        },
+    )
+
+
+def two_window_arms() -> list[RetrievalArm]:
+    return [arm(name="minilm"), arm(name="openai", tag=0.9)]
+
+
+def test_a_shallow_window_hides_a_chunk_both_arms_agree_on() -> None:
+    retriever = build_retriever(
+        [],
+        arms=two_window_arms(),
+        response_handler=window_handler,
+        arm_window=3,
+    )
+
+    contexts = retriever.retrieve("user-1", "how do I restart", top_k=3)
+
+    # Each arm stops before the shared chunk, so the top 3 is decided by the
+    # leaders of each arm alone.
+    assert [context["document_id"] for context in contexts] == [
+        "doc-both-rank-1",
+        "doc-o1",
+        "doc-m2",
+    ]
+
+
+def test_a_deeper_window_lets_agreement_outrank_a_single_arm_leader() -> None:
+    retriever = build_retriever(
+        [],
+        arms=two_window_arms(),
+        response_handler=window_handler,
+        arm_window=4,
+    )
+
+    contexts = retriever.retrieve("user-1", "how do I restart", top_k=3)
+
+    # Fourth for each arm is still second-best overall once both arms list it.
+    assert contexts[0]["document_id"] == "doc-agreed-on"
 
 
 def test_a_failing_arm_fails_the_query_rather_than_retrieving_one_way() -> None:
@@ -396,3 +497,12 @@ def test_a_second_arm_needs_a_named_vector_slot() -> None:
 
     with pytest.raises(ValueError, match="EMBEDDING_VECTOR_NAME"):
         retriever_from_settings(settings)
+
+
+def test_the_configured_window_reaches_the_retriever() -> None:
+    settings = Settings(
+        embedding_provider="deterministic",
+        retrieval_arm_window=20,
+    )
+
+    assert retriever_from_settings(settings)._arm_window == 20

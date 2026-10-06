@@ -58,7 +58,9 @@ def arm_descriptions(settings: Settings) -> list[dict[str, object]]:
     return arms
 
 
-def build_retriever(settings: Settings) -> QdrantRetriever:
+def build_retriever(settings: Settings, arm_window: int | None = None) -> QdrantRetriever:
+    if arm_window is not None:
+        settings = settings.model_copy(update={"retrieval_arm_window": arm_window})
     return retriever_from_settings(settings)
 
 
@@ -164,6 +166,12 @@ def main() -> int:
     parser.add_argument("--cases", type=Path, default=DEFAULT_CASES)
     parser.add_argument("--user-id", default=None)
     parser.add_argument("--top-k", type=int, default=5)
+    parser.add_argument(
+        "--arm-window",
+        type=int,
+        default=None,
+        help="Candidates each arm asks Qdrant for before fusion (default: RETRIEVAL_ARM_WINDOW)",
+    )
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--out", type=Path, default=None)
     parser.add_argument("--compare", type=Path, default=None)
@@ -175,12 +183,18 @@ def main() -> int:
     if args.limit:
         cases = cases[: args.limit]
 
-    retriever = build_retriever(settings)
+    arm_window = (
+        args.arm_window
+        if args.arm_window is not None
+        else settings.retrieval_arm_window
+    )
+    retriever = build_retriever(settings, arm_window)
     arms = arm_descriptions(settings)
     print(
         "arms="
         + " + ".join(f"{arm['slot']}:{arm['model']}" for arm in arms)
-        + f" collection={settings.qdrant_collection} top_k={args.top_k}"
+        + f" collection={settings.qdrant_collection}"
+        + f" top_k={args.top_k} arm_window={arm_window}"
     )
 
     for case in cases:
@@ -205,6 +219,7 @@ def main() -> int:
         "embedding_arms": arms,
         "collection": settings.qdrant_collection,
         "top_k": args.top_k,
+        "arm_window": arm_window,
         "cases_file": str(args.cases),
         "metrics": summarise(cases),
         "per_case": {case["id"]: case["grades"] for case in cases},

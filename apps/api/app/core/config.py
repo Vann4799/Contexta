@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     secondary_embedding_base_url: str = ""
     secondary_embedding_api_key: str = ""
     secondary_embedding_vector_name: str = "openai"
+    retrieval_arm_window: int = 10
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
