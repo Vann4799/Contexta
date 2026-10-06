@@ -8,6 +8,7 @@ import {
   getIndexingHealth,
   retryDocument,
   uploadDocument,
+  updateDocumentMetadata,
   DOCUMENT_TYPE_LABELS,
   listDocuments,
   type DocumentItem,
@@ -198,6 +199,32 @@ export function DocumentUploadPanel() {
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
+    }
+  };
+
+  const handleDocTypeChange = async (document: DocumentItem, nextDocType: DocumentType) => {
+    setError(null);
+    setSuccess(null);
+    setMutatingDocumentId(document.id);
+
+    try {
+      const accessToken = await getAccessToken();
+      if (!accessToken) {
+        setError("Sign in to view and upload documents.");
+        return;
+      }
+
+      const updatedDocument = await updateDocumentMetadata(accessToken, document.id, {
+        doc_type: nextDocType
+      });
+      setDocuments((currentDocuments) =>
+        currentDocuments.map((item) => (item.id === updatedDocument.id ? updatedDocument : item))
+      );
+      setSuccess(`${updatedDocument.filename} classified as ${DOCUMENT_TYPE_LABELS[updatedDocument.doc_type]}.`);
+    } catch (updateError) {
+      setError(uploadErrorMessage(updateError, "Unable to update document type."));
+    } finally {
+      setMutatingDocumentId(null);
     }
   };
 
@@ -424,9 +451,10 @@ export function DocumentUploadPanel() {
         <div className="mt-4 overflow-x-auto">
           <div className="min-w-[720px]">
             <div className="grid grid-cols-12 gap-3 border-b border-paper-line pb-2">
-              <div className="eyebrow col-span-6">File name</div>
-              <div className="eyebrow col-span-2">Size</div>
-              <div className="eyebrow col-span-3">Status</div>
+              <div className="eyebrow col-span-5">File name</div>
+              <div className="eyebrow col-span-1">Size</div>
+              <div className="eyebrow col-span-3">Type</div>
+              <div className="eyebrow col-span-2">Status</div>
               <div className="eyebrow col-span-1 text-right">Actions</div>
             </div>
             <div>
@@ -436,7 +464,7 @@ export function DocumentUploadPanel() {
                     key={document.id}
                     className="grid grid-cols-12 items-center gap-3 border-b border-paper-line/60 py-3 last:border-0"
                   >
-                    <div className="col-span-6 flex min-w-0 items-center gap-3">
+                    <div className="col-span-5 flex min-w-0 items-center gap-3">
                       <div className="grid h-9 w-9 shrink-0 place-items-center rounded-control bg-night">
                         <span className="font-mono text-[9.5px] font-bold tracking-[0.06em] text-accent">
                           {document.file_type.toUpperCase()}
@@ -456,8 +484,29 @@ export function DocumentUploadPanel() {
                         ) : null}
                       </div>
                     </div>
-                    <div className="nums col-span-2 text-[12.5px] text-ink-muted">{formatBytes(document.file_size)}</div>
+                    <div className="nums col-span-1 text-[12.5px] text-ink-muted">{formatBytes(document.file_size)}</div>
                     <div className="col-span-3">
+                      <select
+                        aria-label={`Document type for ${document.filename}`}
+                        className="focus-ring h-8 w-full max-w-[190px] rounded-control border border-paper-line bg-paper-soft px-2 text-[12.5px] outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                        disabled={
+                          mutatingDocumentId === document.id ||
+                          document.status === "uploaded" ||
+                          document.status === "processing"
+                        }
+                        onChange={(event) =>
+                          void handleDocTypeChange(document, event.target.value as DocumentType)
+                        }
+                        value={document.doc_type}
+                      >
+                        {Object.entries(DOCUMENT_TYPE_LABELS).map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="col-span-2">
                       <StatusPill status={statusForPill(document.status)} />
                     </div>
                     <div className="col-span-1 flex justify-end gap-1">

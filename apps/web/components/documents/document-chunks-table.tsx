@@ -130,8 +130,25 @@ export function DocumentChunksTable({ documentId, getAccessToken }: DocumentChun
                 <tr key={chunk.chunk_index} className="border-b border-paper-line/60 align-top last:border-0">
                   <td className="nums px-3 py-2.5 font-mono text-[11.5px] text-ink-faint">{firstRow + index + 1}</td>
                   <td className="nums px-3 py-2.5 text-ink-muted">{chunk.page_number ?? "\u2014"}</td>
-                  <td className="nums px-3 py-2.5 text-ink-muted">{chunk.char_count}</td>
+                  <td className="nums px-3 py-2.5 text-ink-muted">
+                    {chunk.char_count}
+                    {chunk.token_count ? (
+                      <span className="block font-mono text-[11px] text-ink-faint">
+                        ~{chunk.token_count} tok
+                      </span>
+                    ) : null}
+                  </td>
                   <td className="px-3 py-2.5">
+                    {chunk.section_path || chunk.is_table ? (
+                      <p className="mb-1 flex flex-wrap items-center gap-1.5 text-[11px] text-ink-faint">
+                        {chunk.section_path ? (
+                          <span className="font-mono">{chunk.section_path}</span>
+                        ) : null}
+                        {chunk.is_table ? (
+                          <span className="rounded-chip bg-paper-chip px-1.5 py-0.5">table</span>
+                        ) : null}
+                      </p>
+                    ) : null}
                     <p className="line-clamp-2 leading-5 text-ink">{chunk.preview}</p>
                   </td>
                 </tr>

@@ -511,7 +511,8 @@ export function ChatWorkspace() {
                       </span>
                     </div>
                     <p className="nums mt-1 font-mono text-[11.5px] text-ink-muted">
-                      {citation.page_number ? `Page ${citation.page_number}` : "Page unknown"} · Score {citation.score.toFixed(2)}
+                      {citation.page_number ? `Page ${citation.page_number}` : "Page unknown"}
+                      {citation.section_path ? ` · ${citation.section_path}` : ""} · Score {citation.score.toFixed(2)}
                     </p>
                     <p className="mt-2 line-clamp-6 text-[13px] leading-5 text-ink-muted">{citation.text}</p>
                   </article>

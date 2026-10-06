@@ -60,7 +60,10 @@ export type DocumentAIBrief = {
 export type DocumentChunkRow = {
   chunk_index: number;
   page_number: number | null;
+  section_path?: string | null;
+  is_table?: boolean;
   char_count: number;
+  token_count?: number | null;
   preview: string;
 };
 
@@ -101,6 +104,8 @@ export type ChatCitation = {
   document_name: string;
   chunk_index: number;
   page_number: number | null;
+  doc_type?: DocumentType;
+  section_path?: string | null;
   text: string;
   score: number;
 };
@@ -379,6 +384,27 @@ export async function uploadDocument(
 
   if (!response.ok) {
     throw new Error(await getErrorMessage(response, "Unable to upload document."));
+  }
+
+  return (await response.json()) as DocumentItem;
+}
+
+export async function updateDocumentMetadata(
+  accessToken: string,
+  documentId: string,
+  changes: Partial<Pick<DocumentItem, "doc_type" | "source_url" | "doc_version">>
+) {
+  const response = await fetchApi(`/documents/${documentId}/metadata`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(changes)
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to update document metadata."));
   }
 
   return (await response.json()) as DocumentItem;
