@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Database } from "lucide-react";
 import { TopNav } from "@/components/top-nav";
-import { createSupabaseBrowserClient } from "@/lib/supabase";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -15,7 +15,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let isMounted = true;
-    const supabase = createSupabaseBrowserClient();
+    const supabase = getSupabaseBrowserClient();
 
     async function verifySession() {
       const { data } = await supabase.auth.getSession();

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AuthCard } from "@/components/auth/auth-card";
-import { createSupabaseBrowserClient } from "@/lib/supabase";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
 
 type CallbackState =
   | { status: "loading"; message: string }
@@ -41,7 +41,7 @@ export default function AuthCallbackPage() {
           throw new Error(authParams.errorDescription ?? authParams.error);
         }
 
-        const supabase = createSupabaseBrowserClient();
+        const supabase = getSupabaseBrowserClient();
 
         if (authParams.code) {
           const { data, error } = await supabase.auth.exchangeCodeForSession(authParams.code);

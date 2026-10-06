@@ -17,7 +17,7 @@ import {
   type LucideIcon
 } from "lucide-react";
 import { getIndexingHealth, listDocuments, type DocumentItem, type DocumentStatus, type IndexingHealth } from "@/lib/api";
-import { createSupabaseBrowserClient } from "@/lib/supabase";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/status-pill";
 import { cn } from "@/lib/utils";
@@ -68,7 +68,7 @@ export function DashboardInsights() {
   const [libraryFilter, setLibraryFilter] = useState("");
 
   const getAccessToken = useCallback(async () => {
-    const supabase = createSupabaseBrowserClient();
+    const supabase = getSupabaseBrowserClient();
     const { data } = await supabase.auth.getSession();
     return data.session?.access_token ?? null;
   }, []);

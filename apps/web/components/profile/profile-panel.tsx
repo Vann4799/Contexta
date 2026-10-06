@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarDays, Database, FileText, KeyRound, Mail, MessageSquare, Save, ShieldCheck, UserRound } from "lucide-react";
 import { listChatSessions, listDocuments, type ChatSession, type DocumentItem } from "@/lib/api";
-import { createSupabaseBrowserClient } from "@/lib/supabase";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 
 type ProfileRow = {
@@ -81,7 +81,7 @@ export function ProfilePanel() {
     setMessage(null);
 
     try {
-      const supabase = createSupabaseBrowserClient();
+      const supabase = getSupabaseBrowserClient();
       const { data: sessionData } = await supabase.auth.getSession();
       const session = sessionData.session;
 
@@ -151,7 +151,7 @@ export function ProfilePanel() {
     setMessage(null);
 
     try {
-      const supabase = createSupabaseBrowserClient();
+      const supabase = getSupabaseBrowserClient();
       const trimmedDisplayName = displayName.trim();
       const { error } = await supabase.from("profiles").upsert({
         id: profile.id,
@@ -183,7 +183,7 @@ export function ProfilePanel() {
     setMessage(null);
 
     try {
-      const supabase = createSupabaseBrowserClient();
+      const supabase = getSupabaseBrowserClient();
       const { error } = await supabase.auth.signOut();
 
       if (error) {

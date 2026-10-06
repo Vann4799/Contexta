@@ -5,7 +5,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AuthCard } from "@/components/auth/auth-card";
 import { Button } from "@/components/ui/button";
-import { createSupabaseBrowserClient } from "@/lib/supabase";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
 
 export default function UpdatePasswordPage() {
   const router = useRouter();
@@ -18,7 +18,7 @@ export default function UpdatePasswordPage() {
 
   useEffect(() => {
     let isMounted = true;
-    const supabase = createSupabaseBrowserClient();
+    const supabase = getSupabaseBrowserClient();
 
     async function checkSession() {
       const { data } = await supabase.auth.getSession();
@@ -57,7 +57,7 @@ export default function UpdatePasswordPage() {
     setIsSubmitting(true);
 
     try {
-      const supabase = createSupabaseBrowserClient();
+      const supabase = getSupabaseBrowserClient();
       const { error } = await supabase.auth.updateUser({ password });
       if (error) {
         throw error;

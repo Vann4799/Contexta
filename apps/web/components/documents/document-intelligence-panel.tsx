@@ -10,7 +10,7 @@ import {
   type DocumentIntelligence,
   type DocumentItem
 } from "@/lib/api";
-import { createSupabaseBrowserClient } from "@/lib/supabase";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { StatusPill } from "@/components/ui/status-pill";
 import { Button } from "@/components/ui/button";
 import { DocumentChunksTable } from "@/components/documents/document-chunks-table";
@@ -112,7 +112,7 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
   const [copyMessage, setCopyMessage] = useState<string | null>(null);
 
   const getAccessToken = useCallback(async () => {
-    const supabase = createSupabaseBrowserClient();
+    const supabase = getSupabaseBrowserClient();
     const { data } = await supabase.auth.getSession();
     return data.session?.access_token ?? null;
   }, []);

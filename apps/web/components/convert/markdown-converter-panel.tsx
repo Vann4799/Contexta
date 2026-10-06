@@ -3,7 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import { Check, Clipboard, CloudUpload, Download, FileCode, FileText, Loader2, X } from "lucide-react";
 import { convertPdfToMarkdown, type MarkdownConversion } from "@/lib/api";
-import { createSupabaseBrowserClient } from "@/lib/supabase";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 
 const maxUploadBytes = 50 * 1024 * 1024;
@@ -67,7 +67,7 @@ export function MarkdownConverterPanel() {
   const [notice, setNotice] = useState<string | null>(null);
 
   const getAccessToken = useCallback(async () => {
-    const supabase = createSupabaseBrowserClient();
+    const supabase = getSupabaseBrowserClient();
     const { data } = await supabase.auth.getSession();
     return data.session?.access_token ?? null;
   }, []);

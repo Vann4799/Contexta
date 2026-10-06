@@ -14,7 +14,7 @@ import {
   type ChatMessage,
   type ChatSession
 } from "@/lib/api";
-import { createSupabaseBrowserClient } from "@/lib/supabase";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { AIInputWithLoading } from "@/components/ui/ai-input-with-loading";
 import { ShiningText } from "@/components/ui/shining-text";
@@ -48,7 +48,7 @@ export function ChatWorkspace() {
   const latestMessageRef = useRef<HTMLDivElement | null>(null);
 
   const getAccessToken = useCallback(async () => {
-    const supabase = createSupabaseBrowserClient();
+    const supabase = getSupabaseBrowserClient();
     const { data } = await supabase.auth.getSession();
     if (data.session?.user) {
       setUserInitials(initialsFromUser(data.session.user.email, data.session.user.user_metadata?.full_name));

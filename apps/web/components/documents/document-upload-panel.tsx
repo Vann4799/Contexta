@@ -13,7 +13,7 @@ import {
   type DocumentStatus,
   type IndexingHealth
 } from "@/lib/api";
-import { createSupabaseBrowserClient } from "@/lib/supabase";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/status-pill";
 import { cn } from "@/lib/utils";
@@ -104,7 +104,7 @@ export function DocumentUploadPanel() {
   const [showAllDocuments, setShowAllDocuments] = useState(false);
 
   const getAccessToken = useCallback(async () => {
-    const supabase = createSupabaseBrowserClient();
+    const supabase = getSupabaseBrowserClient();
     const { data } = await supabase.auth.getSession();
     return data.session?.access_token ?? null;
   }, []);

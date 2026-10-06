@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getIndexingHealth, listDocuments, type DocumentItem, type IndexingHealth } from "@/lib/api";
-import { createSupabaseBrowserClient } from "@/lib/supabase";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { buildPipelineSnapshot, SAMPLE_METRICS, TIMELINE_RANGES, type TimelineRange } from "@/lib/pipeline";
 import { IndexHeader } from "@/components/pipeline/index-header";
 import { SynapseGraph } from "@/components/pipeline/synapse-graph";
@@ -17,7 +17,7 @@ export function PipelineWorkspace() {
   const [range, setRange] = useState<TimelineRange>(TIMELINE_RANGES[0]);
 
   const getAccessToken = useCallback(async () => {
-    const supabase = createSupabaseBrowserClient();
+    const supabase = getSupabaseBrowserClient();
     const { data } = await supabase.auth.getSession();
     return data.session?.access_token ?? null;
   }, []);

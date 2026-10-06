@@ -3,7 +3,7 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getRequiredPublicEnv } from "@/lib/env";
-import { createSupabaseBrowserClient } from "@/lib/supabase";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 
 type AuthMode = "login" | "register" | "reset";
@@ -67,7 +67,7 @@ export function AuthForm({ mode }: AuthFormProps) {
     setIsSubmitting(true);
 
     try {
-      const supabase = createSupabaseBrowserClient();
+      const supabase = getSupabaseBrowserClient();
 
       if (mode === "login") {
         const { error } = await supabase.auth.signInWithPassword({
