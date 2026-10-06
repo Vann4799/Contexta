@@ -10,7 +10,35 @@ export type PipelineLeaf = {
   tag?: string;
   dot?: boolean;
   href: string;
+  /** Real chunk count from the API - drives how deep this node can fan out. */
+  chunkCount?: number;
 };
+
+/** Chunk positions drawn under one document; the rest collapse into a `+N` node. */
+const CHUNK_FAN_LIMIT = 3;
+
+export type ChunkNode = { key: string; label: string; collapsed: boolean };
+
+/**
+ * Chunks are addressed by index server-side, so the drawn positions are real
+ * addresses - not text previews.
+ */
+export function chunkFan(documentId: string, chunkCount: number): ChunkNode[] {
+  const drawn = Math.min(chunkCount, CHUNK_FAN_LIMIT);
+  const nodes: ChunkNode[] = Array.from({ length: drawn }, (_, index) => ({
+    key: `${documentId}-chunk-${index}`,
+    label: `#${index}`,
+    collapsed: false
+  }));
+  const rest = chunkCount - drawn;
+  if (rest > 0) {
+    nodes.push({ key: `${documentId}-chunk-rest`, label: `+${countFormat(rest)}`, collapsed: true });
+  }
+  return nodes;
+}
+
+/** Every chunk becomes exactly one point in the collection. */
+export const VECTOR_SHAPE = "384d";
 
 export type PipelineCluster = {
   id: PipelineClusterId;
@@ -131,6 +159,7 @@ export function buildPipelineSnapshot(
           name: truncate(document.filename, 34),
           meta: `[${countFormat(document.chunk_count)} tok]`,
           tag: document.file_type.toUpperCase(),
+          chunkCount: document.chunk_count,
           href: `/documents/${document.id}`
         })),
         readyDocuments.length
@@ -151,6 +180,7 @@ export function buildPipelineSnapshot(
           meta: relativeTime(document.updated_at, now),
           tag: document.status === "uploaded" ? "QUEUED" : "WORKING",
           dot: document.status === "processing",
+          chunkCount: document.chunk_count,
           href: `/documents/${document.id}`
         })),
         queuedDocuments.length + processingDocuments.length
@@ -169,6 +199,7 @@ export function buildPipelineSnapshot(
           name: truncate(document.filename, 34),
           meta: truncate(document.error_message ?? "Worker error", 28),
           tag: "RETRY",
+          chunkCount: document.chunk_count,
           href: `/documents/${document.id}`
         })),
         failedDocuments.length

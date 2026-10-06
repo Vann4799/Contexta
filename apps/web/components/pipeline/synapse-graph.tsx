@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, FileInput, Layers, Minus, Plus, RotateCcw, Waypoints, type LucideIcon } from "lucide-react";
+import { AlertTriangle, ChevronRight, FileInput, Layers, Minus, Plus, RotateCcw, Waypoints, type LucideIcon } from "lucide-react";
 import type { PipelineCluster, PipelineClusterId, PipelineRoot } from "@/lib/pipeline";
-import { OVERFLOW_LEAF_ID } from "@/lib/pipeline";
+import { chunkFan, OVERFLOW_LEAF_ID, VECTOR_SHAPE } from "@/lib/pipeline";
 import { cn } from "@/lib/utils";
 
 const CLUSTER_ICONS: Record<PipelineClusterId, LucideIcon> = {
@@ -17,7 +17,8 @@ const MIN_ZOOM = 0.7;
 const MAX_ZOOM = 1.3;
 
 type Point = { x: number; y: number };
-type Edge = { id: string; d: string; kind: "trunk" | "branch"; cluster: string; end: Point };
+type EdgeKind = "trunk" | "branch" | "chunk" | "vector";
+type Edge = { id: string; d: string; kind: EdgeKind; cluster: string; end: Point };
 
 /** Smooth horizontal S-curve between two points. */
 function curve(x1: number, y1: number, x2: number, y2: number) {
@@ -25,12 +26,11 @@ function curve(x1: number, y1: number, x2: number, y2: number) {
   return `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
 }
 
-function leftAnchor(rect: DOMRect, box: DOMRect, k: number) {
-  return { x: (rect.left - box.left) / k, y: (rect.top + rect.height / 2 - box.top) / k };
-}
-
-function rightAnchor(rect: DOMRect, box: DOMRect, k: number) {
-  return { x: (rect.right - box.left) / k, y: (rect.top + rect.height / 2 - box.top) / k };
+function anchor(rect: DOMRect, box: DOMRect, k: number, side: "left" | "right"): Point {
+  return {
+    x: ((side === "left" ? rect.left : rect.right) - box.left) / k,
+    y: (rect.top + rect.height / 2 - box.top) / k
+  };
 }
 
 type SynapseGraphProps = {
@@ -50,14 +50,16 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
+  const [openDocs, setOpenDocs] = useState<Set<string>>(new Set());
 
-  const nodeCount =
-    1 +
-    clusters.length +
-    clusters.reduce(
-      (count, cluster) => count + cluster.items.filter((item) => item.id !== OVERFLOW_LEAF_ID).length,
-      0
-    );
+  const realLeaves = clusters.flatMap((cluster) => cluster.items.filter((item) => item.id !== OVERFLOW_LEAF_ID));
+  const openChunkCount = realLeaves
+    .filter((leaf) => (leaf.chunkCount ?? 0) > 0 && openDocs.has(leaf.id))
+    .reduce((sum, leaf) => {
+      const fan = chunkFan(leaf.id, leaf.chunkCount ?? 0);
+      return sum + fan.length + fan.filter((node) => !node.collapsed).length;
+    }, 0);
+  const nodeCount = 1 + clusters.length + realLeaves.length + openChunkCount;
 
   const measure = useCallback(() => {
     const stage = stageRef.current;
@@ -72,8 +74,7 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
     }
     const box = stage.getBoundingClientRect();
     const k = zoom || 1;
-    const rr = rootNode.getBoundingClientRect();
-    const rootOut = rightAnchor(rr, box, k);
+    const rootOut = anchor(rootNode.getBoundingClientRect(), box, k, "right");
     const next: Edge[] = [];
 
     for (const cluster of clusters) {
@@ -82,8 +83,8 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
         continue;
       }
       const clusterRect = cell.getBoundingClientRect();
-      const clusterIn = leftAnchor(clusterRect, box, k);
-      const clusterOut = rightAnchor(clusterRect, box, k);
+      const clusterIn = anchor(clusterRect, box, k, "left");
+      const clusterOut = anchor(clusterRect, box, k, "right");
       next.push({
         id: `root-${cluster.id}`,
         d: curve(rootOut.x, rootOut.y, clusterIn.x, clusterIn.y),
@@ -92,10 +93,9 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
         end: clusterIn
       });
 
-      // One branch per document leaf hanging off the cluster card.
-      const leaves = stage.querySelectorAll<HTMLElement>(`[data-cluster="${cluster.id}"] [data-leaf]`);
-      leaves.forEach((leaf) => {
-        const leafIn = leftAnchor(leaf.getBoundingClientRect(), box, k);
+      for (const leaf of stage.querySelectorAll<HTMLElement>(`[data-cluster="${cluster.id}"] [data-leaf]`)) {
+        const leafRect = leaf.getBoundingClientRect();
+        const leafIn = anchor(leafRect, box, k, "left");
         next.push({
           id: `${cluster.id}-${leaf.dataset.leaf}`,
           d: curve(clusterOut.x, clusterOut.y, leafIn.x, leafIn.y),
@@ -103,16 +103,42 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
           cluster: cluster.id,
           end: leafIn
         });
-      });
+
+        // One document fans out into the chunk positions it actually holds.
+        for (const chip of leaf.closest("li")?.querySelectorAll<HTMLElement>("[data-chunk]") ?? []) {
+          const chipIn = anchor(chip.getBoundingClientRect(), box, k, "left");
+          next.push({
+            id: `chunk-${chip.dataset.chunk}`,
+            d: curve(leafIn.x, leafIn.y, chipIn.x, chipIn.y),
+            kind: "chunk",
+            cluster: cluster.id,
+            end: chipIn
+          });
+        }
+        for (const stub of leaf.closest("li")?.querySelectorAll<HTMLElement>("[data-vector]") ?? []) {
+          const chip = stub.closest("[data-chunk-row]")?.querySelector<HTMLElement>("[data-chunk]");
+          if (!chip) {
+            continue;
+          }
+          const chipOut = anchor(chip.getBoundingClientRect(), box, k, "right");
+          const stubIn = anchor(stub.getBoundingClientRect(), box, k, "left");
+          next.push({
+            id: `vector-${stub.dataset.vector}`,
+            d: curve(chipOut.x, chipOut.y, stubIn.x, stubIn.y),
+            kind: "vector",
+            cluster: cluster.id,
+            end: stubIn
+          });
+        }
+      }
     }
 
     setSize({ w: box.width / k, h: box.height / k });
     setEdges((current) => {
       const signature = next.map((edge) => `${edge.id}:${edge.d}`).join("|");
-      if (current.length === next.length && current.map((edge) => `${edge.id}:${edge.d}`).join("|") === signature) {
-        return current;
-      }
-      return next;
+      return current.length === next.length && current.map((edge) => `${edge.id}:${edge.d}`).join("|") === signature
+        ? current
+        : next;
     });
   }, [clusters, zoom]);
 
@@ -132,7 +158,21 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
   useEffect(() => {
     setZoom(1);
     setPan({ x: 0, y: 0 });
+    setOpenDocs(new Set());
   }, [clusters.length]);
+
+  function toggleDocument(leafId: string) {
+    setOpenDocs((current) => {
+      const next = new Set(current);
+      if (next.has(leafId)) {
+        next.delete(leafId);
+      } else {
+        next.add(leafId);
+      }
+      return next;
+    });
+    requestAnimationFrame(measure);
+  }
 
   function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
     if (event.pointerType === "touch") {
@@ -201,6 +241,7 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
           onClick={() => {
             setZoom(1);
             setPan({ x: 0, y: 0 });
+            setOpenDocs(new Set());
           }}
         >
           <RotateCcw className="h-3 w-3" aria-hidden="true" /> Reset
@@ -254,25 +295,24 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
                     </g>
                   );
                 }
+                const isVector = edge.kind === "vector";
                 return (
-                  <g
-                    className={cn("transition-opacity duration-200", dim && "opacity-35")}
-                    key={edge.id}
-                  >
+                  <g className={cn("transition-opacity duration-200", dim && "opacity-35")} key={edge.id}>
                     <path
                       className={cn(
                         "transition-[stroke] duration-200",
-                        hover === edge.cluster ? "stroke-ink" : "stroke-paper-edge"
+                        isVector ? "stroke-accent-deep" : hover === edge.cluster ? "stroke-ink" : "stroke-paper-edge"
                       )}
                       d={edge.d}
                       fill="none"
-                      strokeWidth={1.25}
+                      strokeDasharray={isVector ? "1 4" : undefined}
+                      strokeWidth={isVector ? 1.5 : 1.25}
                     />
                     <circle
-                      className={cn(hover === edge.cluster ? "fill-ink" : "fill-paper-edge")}
+                      className={cn(isVector ? "fill-accent" : hover === edge.cluster ? "fill-ink" : "fill-paper-edge")}
                       cx={edge.end.x}
                       cy={edge.end.y}
-                      r={2.5}
+                      r={isVector ? 2 : 2.5}
                     />
                   </g>
                 );
@@ -310,8 +350,12 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
                   />
                   <ul className="flex min-w-0 flex-col gap-2.5 pl-4 lg:pl-0">
                     {cluster.items.map((item) => (
-                      <li data-leaf={item.id} key={item.id}>
-                        <LeafRow item={item} />
+                      <li key={item.id}>
+                        <LeafNode
+                          item={item}
+                          open={openDocs.has(item.id)}
+                          onToggle={() => toggleDocument(item.id)}
+                        />
                       </li>
                     ))}
                   </ul>
@@ -323,7 +367,7 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
       </div>
 
       <p className="pointer-events-none absolute bottom-3 right-4 z-20 hidden font-mono text-[10.5px] uppercase tracking-[0.14em] text-ink-faint lg:block">
-        drag to pan - click a node to open
+        drag to pan - expand a file to fan its chunks
       </p>
     </section>
   );
@@ -410,26 +454,94 @@ function ClusterCard({ cluster, active, ref }: ClusterCardProps) {
   );
 }
 
-function LeafRow({ item }: { item: PipelineCluster["items"][number] }) {
+type LeafNodeProps = {
+  item: PipelineCluster["items"][number];
+  open: boolean;
+  onToggle: () => void;
+};
+
+function LeafNode({ item, open, onToggle }: LeafNodeProps) {
   const isOverflow = item.id === OVERFLOW_LEAF_ID;
+  const chunkCount = item.chunkCount ?? 0;
+  const fan = open && chunkCount > 0 ? chunkFan(item.id, chunkCount) : [];
+
   return (
-    <Link
-      className={cn(
-        "focus-ring group inline-flex max-w-full items-center gap-2.5 rounded-control border py-1 pl-3 pr-1 text-left shadow-node transition hover:border-ink/30",
-        isOverflow
-          ? "border-dashed border-paper-edge bg-paper-soft text-ink-muted"
-          : "border-paper-line bg-paper-card"
-      )}
-      href={item.href}
-    >
-      {item.dot ? <span className="h-2 w-2 shrink-0 rounded-full bg-accent ring-1 ring-ink/70" aria-hidden="true" /> : null}
-      <span className={cn("truncate font-mono text-[12px] font-medium", isOverflow ? "text-ink-muted" : "text-ink")}>{item.name}</span>
-      {item.meta ? <span className="shrink-0 font-mono text-[11.5px] text-ink-muted">{item.meta}</span> : null}
-      {item.tag ? (
-        <span className="shrink-0 rounded-control bg-paper-chip px-1.5 py-0.5 font-mono text-[10.5px] font-medium text-ink">{item.tag}</span>
-      ) : (
-        <span className="w-1" />
-      )}
-    </Link>
+    <div>
+      <div className="flex items-center gap-1.5" data-leaf={item.id}>
+        <Link
+          className={cn(
+            "focus-ring group inline-flex min-w-0 max-w-full flex-1 items-center gap-2.5 rounded-control border py-1 pl-3 pr-1 text-left shadow-node transition hover:border-ink/30",
+            isOverflow
+              ? "border-dashed border-paper-edge bg-paper-soft text-ink-muted"
+              : "border-paper-line bg-paper-card"
+          )}
+          href={item.href}
+        >
+          {item.dot ? <span className="h-2 w-2 shrink-0 rounded-full bg-accent ring-1 ring-ink/70" aria-hidden="true" /> : null}
+          <span className={cn("truncate font-mono text-[12px] font-medium", isOverflow ? "text-ink-muted" : "text-ink")}>
+            {item.name}
+          </span>
+          {item.meta ? <span className="shrink-0 font-mono text-[11.5px] text-ink-muted">{item.meta}</span> : null}
+          {item.tag ? (
+            <span className="shrink-0 rounded-control bg-paper-chip px-1.5 py-0.5 font-mono text-[10.5px] font-medium text-ink">{item.tag}</span>
+          ) : (
+            <span className="w-1" />
+          )}
+        </Link>
+
+        {chunkCount > 0 ? (
+          <button
+            aria-expanded={open}
+            className={cn(
+              "focus-ring inline-flex h-6 shrink-0 items-center gap-1 rounded-control border px-1.5 font-mono text-[10.5px] font-medium transition",
+              open
+                ? "border-accent bg-accent text-ink"
+                : "border-paper-line bg-paper-soft text-ink-muted hover:border-ink/30 hover:text-ink"
+            )}
+            onClick={onToggle}
+            title={open ? "Collapse chunk positions" : `Fan out ${chunkCount} chunk positions`}
+            type="button"
+          >
+            <ChevronRight className={cn("h-3 w-3 transition-transform", open && "rotate-90")} aria-hidden="true" />
+            <span className="nums">{chunkCount} {chunkCount === 1 ? "chunk" : "chunks"}</span>
+          </button>
+        ) : null}
+      </div>
+
+      {fan.length > 0 ? (
+        <div className="mt-1.5 flex flex-col gap-1.5 pl-[76px]">
+          {fan.map((node) => (
+            <div className="flex items-center gap-[30px]" data-chunk-row key={node.key}>
+              {node.collapsed ? (
+                <Link
+                  className="focus-ring inline-flex h-6 shrink-0 items-center rounded-control border border-dashed border-paper-edge bg-paper-soft px-2 font-mono text-[11px] text-ink-muted transition hover:border-ink/30 hover:text-ink"
+                  data-chunk={node.key}
+                  href={item.href}
+                  title="Open the document to read every chunk"
+                >
+                  <span className="nums">{node.label}</span>
+                  <span className="ml-1 text-[10px] uppercase tracking-[0.1em]">more</span>
+                </Link>
+              ) : (
+                <span
+                  className="inline-flex h-6 shrink-0 items-center rounded-control border border-paper-line bg-paper-card px-2 font-mono text-[11px] text-ink shadow-node"
+                  data-chunk={node.key}
+                  title={`Chunk position ${node.label.slice(1)} of ${chunkCount} - the text itself lives in the document`}
+                >
+                  <span className="nums">{node.label}</span>
+                  <span className="ml-1 text-[10px] uppercase tracking-[0.1em] text-ink-faint">chunk</span>
+                </span>
+              )}
+              {node.collapsed ? null : (
+                <span className="inline-flex h-5 shrink-0 items-center rounded-control bg-night-raised px-1.5 font-mono text-[10px] text-white/75" data-vector={node.key}>
+                  <span className="mr-1 h-1 w-1 rounded-full bg-accent" aria-hidden="true" />
+                  {VECTOR_SHAPE} point
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }
