@@ -110,6 +110,42 @@ git pull
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
+## Retrieval upgrade (Wave 2)
+
+Order matters: `0002_document_metadata.sql` must exist before the new api and
+worker run, because they read and write the `doc_type`, `section_path` and
+`token_count` columns that PostgREST rejects otherwise.
+
+These steps need the Wave 2 commits pushed to GitHub first.
+
+```bash
+cd Contexta
+git pull
+
+# 1. Apply the metadata migration (Supabase dashboard: SQL editor, or `supabase db push`)
+#    infra/supabase/migrations/0002_document_metadata.sql
+
+# 2. Point the corpus at a NEW collection instead of reusing contexta_chunks,
+#    then rebuild. The embeddings container is what holds the model.
+sed -i 's/^QDRANT_COLLECTION=.*/QDRANT_COLLECTION=contexta_chunks_v2/' .env.production
+docker compose -f docker-compose.prod.yml up -d --build
+
+# 3. Re-index every document with the new chunker and model
+docker compose -f docker-compose.prod.yml exec worker python -m worker.reindex --all
+
+# 4. Confirm retrieval actually improved before letting users back in
+docker compose -f docker-compose.prod.yml exec api python evals/retrieval_eval.py --compare evals/results/baseline.json
+```
+
+Step 3 writes into `contexta_chunks_v2`; the old `contexta_chunks` keeps
+serving until `QDRANT_COLLECTION` is switched, so rollback is the previous
+collection plus the previous `chunker_version`. Delete the old collection only
+after the eval numbers hold for a few days.
+
+A reindex that fails on one document leaves that document readable from its
+previous index; the command prints the failure and exits non-zero, so re-run
+it with `--document-id` after fixing the cause.
+
 ## Logs
 
 ```bash
