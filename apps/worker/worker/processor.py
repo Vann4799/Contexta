@@ -4,7 +4,7 @@ import math
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Literal, Protocol, TypedDict
+from typing import Literal, NamedTuple, Protocol, TypedDict
 
 try:
     from contexta_rag.chunking import chunk_pages
@@ -71,12 +71,19 @@ class EmbeddingProvider(Protocol):
         ...
 
 
+class EmbeddingArm(NamedTuple):
+    """One embedder and the Qdrant vector slot its output belongs in ("" = default)."""
+
+    name: str
+    provider: EmbeddingProvider
+
+
 class VectorStore(Protocol):
     def upsert_chunks(
         self,
         document: ProcessingDocument,
         chunks: list[ProcessingChunk],
-        embeddings: list[list[float]],
+        embeddings: dict[str, list[list[float]]],
     ) -> list[str]:
         ...
 
@@ -176,7 +183,7 @@ class MissingVectorStore:
         self,
         document: ProcessingDocument,
         chunks: list[ProcessingChunk],
-        embeddings: list[list[float]],
+        embeddings: dict[str, list[list[float]]],
     ) -> list[str]:
         raise RuntimeError("Vector store is not configured")
 
@@ -190,7 +197,7 @@ class WorkerProcessor:
         repository: DocumentRepository,
         storage: DocumentStorage | None = None,
         extractor: DocumentExtractor | None = None,
-        embedding_provider: EmbeddingProvider | None = None,
+        embedding_arms: list[EmbeddingArm] | None = None,
         vector_store: VectorStore | None = None,
         max_chunk_words: int = 500,
         overlap_words: int = 100,
@@ -200,7 +207,9 @@ class WorkerProcessor:
         self.repository = repository
         self.storage = storage or MissingDocumentStorage()
         self.extractor = extractor or MissingDocumentExtractor()
-        self.embedding_provider = embedding_provider or MissingEmbeddingProvider()
+        self.embedding_arms = embedding_arms or [
+            EmbeddingArm(name="", provider=MissingEmbeddingProvider())
+        ]
         self.vector_store = vector_store or MissingVectorStore()
         self.max_chunk_words = max_chunk_words
         self.overlap_words = overlap_words
@@ -230,11 +239,7 @@ class WorkerProcessor:
         if not chunks:
             raise ValueError("No extractable text found")
 
-        embeddings = self.embedding_provider.embed_texts(
-            [chunk["text"] for chunk in chunks]
-        )
-        if len(embeddings) != len(chunks):
-            raise ValueError("Embedding count did not match chunk count")
+        embeddings = self._embed_arms(chunks)
 
         point_ids = self.vector_store.upsert_chunks(document, chunks, embeddings)
         if len(point_ids) != len(chunks):
@@ -256,6 +261,27 @@ class WorkerProcessor:
             },
         )
         return len(chunks_with_points)
+
+    def _embed_arms(
+        self, chunks: list[ProcessingChunk]
+    ) -> dict[str, list[list[float]]]:
+        """Embed the same chunk texts once per arm, keyed by Qdrant vector slot.
+
+        An arm returning the wrong count would misalign vectors with chunks
+        inside the point payload, so it fails the document instead of indexing
+        a half-shifted collection.
+        """
+        texts = [chunk["text"] for chunk in chunks]
+        embeddings: dict[str, list[list[float]]] = {}
+        for arm in self.embedding_arms:
+            vectors = arm.provider.embed_texts(texts)
+            if len(vectors) != len(chunks):
+                raise ValueError(
+                    f"embedding arm '{arm.name or 'default'}' returned "
+                    f"{len(vectors)} vectors for {len(chunks)} chunks"
+                )
+            embeddings[arm.name] = vectors
+        return embeddings
 
     def _build_chunks(
         self, document: ProcessingDocument, extracted_document: ExtractedDocument

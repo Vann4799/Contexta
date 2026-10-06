@@ -6,8 +6,12 @@ from uuid import UUID
 import httpx
 import pytest
 
-from contexta_rag.vector_space import reset_vector_space_cache
+from contexta_rag.vector_space import VectorSpace, reset_vector_space_cache
 from worker.vector_store import DeterministicEmbeddingProvider, QdrantVectorStore
+
+
+def space(name: str = "", dimensions: int = 2, model_label: str = "miniLM") -> VectorSpace:
+    return VectorSpace(name=name, dimensions=dimensions, model_label=model_label)
 
 
 @pytest.fixture(autouse=True)
@@ -40,7 +44,7 @@ def test_qdrant_vector_store_creates_collection_and_upserts_chunks() -> None:
     store = QdrantVectorStore(
         qdrant_url="http://qdrant.local",
         collection_name="contexta_chunks",
-        dimensions=2,
+        vectors=[space()],
         api_key="qdrant-key",
         client=httpx.Client(transport=httpx.MockTransport(handler)),
     )
@@ -65,7 +69,7 @@ def test_qdrant_vector_store_creates_collection_and_upserts_chunks() -> None:
                 "qdrant_point_id": "",
             }
         ],
-        embeddings=[[0.1, 0.2]],
+        embeddings={"": [[0.1, 0.2]]},
     )
 
     UUID(point_ids[0])
@@ -78,6 +82,9 @@ def test_qdrant_vector_store_creates_collection_and_upserts_chunks() -> None:
         "PUT",
         "PUT",
     ]
+    assert json.loads(requests[1].content) == {
+        "vectors": {"size": 2, "distance": "Cosine"}
+    }
     assert all(request.headers["api-key"] == "qdrant-key" for request in requests)
     assert [
         json.loads(request.content)["field_name"] for request in requests[2:6]
@@ -85,6 +92,7 @@ def test_qdrant_vector_store_creates_collection_and_upserts_chunks() -> None:
 
     upsert_payload = json.loads(requests[6].content)
     assert upsert_payload["points"][0]["id"] == point_ids[0]
+    assert upsert_payload["points"][0]["vector"] == [0.1, 0.2]
     assert upsert_payload["points"][0]["payload"] == {
         "document_id": "doc-1",
         "user_id": "user-1",
@@ -109,7 +117,7 @@ def test_qdrant_vector_store_indexes_payload_on_an_existing_collection() -> None
     store = QdrantVectorStore(
         qdrant_url="http://qdrant.local",
         collection_name="contexta_chunks",
-        dimensions=2,
+        vectors=[space()],
         client=httpx.Client(transport=httpx.MockTransport(handler)),
     )
 
@@ -127,7 +135,7 @@ def test_qdrant_vector_store_indexes_payload_on_an_existing_collection() -> None
                 "qdrant_point_id": "",
             }
         ],
-        embeddings=[[0.1, 0.2]],
+        embeddings={"": [[0.1, 0.2]]},
     )
 
     collection_exists = requests[0]
@@ -152,16 +160,19 @@ def build_store(
         requests.append(request)
         return handler(request)
 
+    kwargs.setdefault("vectors", [space()])
     return QdrantVectorStore(
         qdrant_url="http://qdrant.local",
         collection_name="contexta_chunks_v2",
-        dimensions=2,
         client=httpx.Client(transport=httpx.MockTransport(record)),
         **kwargs,  # type: ignore[arg-type]
     )
 
 
-def upsert_one(store: QdrantVectorStore) -> None:
+def upsert_one(
+    store: QdrantVectorStore,
+    embeddings: dict[str, list[list[float]]] | None = None,
+) -> None:
     store.upsert_chunks(
         document={"id": "doc-1", "user_id": "user-1", "filename": "file.pdf"},
         chunks=[
@@ -176,7 +187,7 @@ def upsert_one(store: QdrantVectorStore) -> None:
                 "qdrant_point_id": "",
             }
         ],
-        embeddings=[[0.1, 0.2]],
+        embeddings=embeddings if embeddings is not None else {"": [[0.1, 0.2]]},
     )
 
 
@@ -250,6 +261,65 @@ def test_upsert_refuses_a_collection_of_another_dimensionality() -> None:
         upsert_one(store)
 
     assert [request.method for request in requests] == ["GET"]
+
+
+def test_two_vector_slots_create_a_named_collection_and_one_shared_point() -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.method == "GET":
+            return httpx.Response(404)
+        return httpx.Response(200, json={"result": "ok"})
+
+    store = build_store(
+        handler,
+        requests,
+        vectors=[space("minilm"), space("openai", dimensions=4)],
+        index_metadata={
+            "embedding_model": "miniLM",
+            "embedding_models": {"minilm": "miniLM", "openai": "3-small"},
+        },
+    )
+
+    upsert_one(store, {"minilm": [[0.1, 0.2]], "openai": [[0.3, 0.4, 0.5, 0.6]]})
+
+    create_request = requests[1]
+    assert create_request.url.path == "/collections/contexta_chunks_v2"
+    assert json.loads(create_request.content) == {
+        "vectors": {
+            "minilm": {"size": 2, "distance": "Cosine"},
+            "openai": {"size": 4, "distance": "Cosine"},
+        }
+    }
+
+    point = json.loads(requests[-1].content)["points"][0]
+    assert point["vector"] == {"minilm": [0.1, 0.2], "openai": [0.3, 0.4, 0.5, 0.6]}
+    assert point["payload"]["embedding_models"] == {
+        "minilm": "miniLM",
+        "openai": "3-small",
+    }
+
+
+def test_upsert_refuses_when_an_arm_supplied_no_embeddings() -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.method == "GET":
+            return httpx.Response(404)
+        return httpx.Response(200, json={"result": "ok"})
+
+    store = build_store(
+        handler,
+        requests,
+        vectors=[space("minilm"), space("openai", dimensions=4)],
+    )
+
+    with pytest.raises(
+        ValueError, match="no embeddings supplied for vector slot\\(s\\): openai"
+    ):
+        upsert_one(store, {"minilm": [[0.1, 0.2]]})
+
+    assert requests == []
 
 
 def test_prune_stale_chunks_deletes_only_the_leftover_chunk_indices() -> None:

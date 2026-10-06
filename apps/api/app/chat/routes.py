@@ -8,12 +8,10 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 
 try:
-    from contexta_rag.embeddings import create_embedding_provider, embedding_model_label
     from contexta_rag.prompts import build_rag_prompt
 except ModuleNotFoundError:
     rag_package_path = Path(__file__).resolve().parents[4] / "packages" / "rag"
     sys.path.append(str(rag_package_path))
-    from contexta_rag.embeddings import create_embedding_provider, embedding_model_label
     from contexta_rag.prompts import build_rag_prompt
 
 from app.auth.dependencies import get_current_user
@@ -34,7 +32,7 @@ from app.chat.repository import (
     SupabaseChatRepository,
     chat_repository,
 )
-from app.chat.retrieval import QdrantRetriever
+from app.chat.retrieval import QdrantRetriever, retriever_from_settings
 from app.documents.repository import (
     DocumentRepository,
     SupabaseDocumentRepository,
@@ -108,25 +106,7 @@ def get_document_repository(
 def get_retriever(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> QdrantRetriever:
-    return QdrantRetriever(
-        qdrant_url=settings.qdrant_url,
-        collection_name=settings.qdrant_collection,
-        embedding_provider=create_embedding_provider(
-            provider_name=settings.embedding_provider,
-            dimensions=settings.embedding_dimensions,
-            model_name=settings.embedding_model_name,
-            device=settings.embedding_device or None,
-            remote_url=settings.embedding_remote_url,
-            base_url=settings.embedding_base_url,
-            api_key=settings.embedding_api_key,
-        ),
-        api_key=settings.qdrant_api_key,
-        expected_dimensions=settings.embedding_dimensions,
-        expected_model_label=embedding_model_label(
-            settings.embedding_provider,
-            settings.embedding_model_name,
-        ),
-    )
+    return retriever_from_settings(settings)
 
 
 def get_answer_generator(

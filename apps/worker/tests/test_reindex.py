@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from worker.processor import InMemoryDocumentRepository, WorkerProcessor
+from worker.processor import EmbeddingArm, InMemoryDocumentRepository, WorkerProcessor
 from worker.reindex import collect_documents, run_reindex
 
 
@@ -33,7 +33,7 @@ class FakeVectorStore:
         self,
         document: dict,
         chunks: list[dict],
-        embeddings: list[list[float]],
+        embeddings: dict[str, list[list[float]]],
     ) -> list[str]:
         self.upserted_chunks += len(chunks)
         return [f"point-{chunk['chunk_index']}" for chunk in chunks]
@@ -63,7 +63,7 @@ def build_processor(documents: list[dict]) -> WorkerProcessor:
             {f"user-1/{document['id']}.pdf": b"document bytes" for document in documents}
         ),
         extractor=FakeExtractor(),
-        embedding_provider=FakeEmbeddingProvider(),
+        embedding_arms=[EmbeddingArm(name="", provider=FakeEmbeddingProvider())],
         vector_store=vector_store,
         index_metadata={"embedding_model": "miniLM", "embedding_dimensions": 2},
     )

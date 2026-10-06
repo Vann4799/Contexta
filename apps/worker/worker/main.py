@@ -4,18 +4,21 @@ import argparse
 import os
 import time
 from pathlib import Path
+from typing import NamedTuple
 
 try:
     from contexta_rag.embeddings import create_embedding_provider, embedding_model_label
+    from contexta_rag.vector_space import VectorSpace
 except ModuleNotFoundError:
     rag_package_path = Path(__file__).resolve().parents[3] / "packages" / "rag"
     import sys
 
     sys.path.append(str(rag_package_path))
     from contexta_rag.embeddings import create_embedding_provider, embedding_model_label
+    from contexta_rag.vector_space import VectorSpace
 
 from worker.extraction import DocumentTextExtractor
-from worker.processor import CHUNKER_VERSION, WorkerProcessor
+from worker.processor import CHUNKER_VERSION, EmbeddingArm, WorkerProcessor
 from worker.supabase import SupabaseDocumentRepository, SupabaseDocumentStorage
 from worker.vector_store import QdrantVectorStore
 
@@ -34,6 +37,65 @@ def load_env_files() -> None:
             os.environ.setdefault(key.strip().lstrip("\ufeff"), value)
 
 
+class ArmSettings(NamedTuple):
+    name: str
+    provider: str
+    model_name: str
+    dimensions: int
+    device: str | None
+    remote_url: str
+    base_url: str
+    api_key: str
+
+
+def read_arm_settings(prefix: str, default_provider: str) -> ArmSettings | None:
+    """Read one `<PREFIX>EMBEDDING_*` group; None when the group is not configured."""
+    provider = os.environ.get(f"{prefix}EMBEDDING_PROVIDER", "") or default_provider
+    if not provider:
+        return None
+    return ArmSettings(
+        name=os.environ.get(f"{prefix}EMBEDDING_VECTOR_NAME", "").strip(),
+        provider=provider,
+        model_name=os.environ.get(f"{prefix}EMBEDDING_MODEL_NAME", "BAAI/bge-m3"),
+        dimensions=int(os.environ.get(f"{prefix}EMBEDDING_DIMENSIONS", "384")),
+        device=os.environ.get(f"{prefix}EMBEDDING_DEVICE") or None,
+        remote_url=os.environ.get(f"{prefix}EMBEDDING_REMOTE_URL", ""),
+        base_url=os.environ.get(f"{prefix}EMBEDDING_BASE_URL", ""),
+        api_key=os.environ.get(f"{prefix}EMBEDDING_API_KEY", ""),
+    )
+
+
+def build_arms(settings: list[ArmSettings]) -> list[EmbeddingArm]:
+    if len(settings) > 1:
+        unnamed = [arm.provider for arm in settings if not arm.name]
+        if unnamed:
+            raise ValueError(
+                "every embedding arm needs a distinct EMBEDDING_VECTOR_NAME once a "
+                f"second arm is configured; missing for: {', '.join(unnamed)}"
+            )
+        if len({arm.name for arm in settings}) != len(settings):
+            raise ValueError(
+                "EMBEDDING_VECTOR_NAME values must be distinct, "
+                f"got {[arm.name for arm in settings]}"
+            )
+
+    return [
+        EmbeddingArm(
+            name=arm.name,
+            provider=create_embedding_provider(
+                provider_name=arm.provider,
+                dimensions=arm.dimensions,
+                model_name=arm.model_name,
+                device=arm.device,
+                remote_url=arm.remote_url,
+                base_url=arm.base_url,
+                api_key=arm.api_key,
+            ),
+        )
+        for arm in settings
+    ]
+
+
 def create_processor() -> WorkerProcessor:
     supabase_url = os.environ["SUPABASE_URL"]
     service_role_key = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
@@ -41,42 +103,54 @@ def create_processor() -> WorkerProcessor:
     qdrant_url = os.environ.get("QDRANT_URL", "http://localhost:6333")
     qdrant_api_key = os.environ.get("QDRANT_API_KEY", "")
     collection_name = os.environ.get("QDRANT_COLLECTION", "contexta_chunks")
-    embedding_provider = os.environ.get("EMBEDDING_PROVIDER", "deterministic")
-    embedding_model_name = os.environ.get("EMBEDDING_MODEL_NAME", "BAAI/bge-m3")
-    embedding_device = os.environ.get("EMBEDDING_DEVICE") or None
-    embedding_dimensions = int(os.environ.get("EMBEDDING_DIMENSIONS", "384"))
-    embedding_remote_url = os.environ.get("EMBEDDING_REMOTE_URL", "")
-    embedding_base_url = os.environ.get("EMBEDDING_BASE_URL", "")
-    embedding_api_key = os.environ.get("EMBEDDING_API_KEY", "")
     max_chunk_words = int(os.environ.get("MAX_CHUNK_WORDS", "500"))
     chunk_overlap_words = int(os.environ.get("CHUNK_OVERLAP_WORDS", "100"))
     min_chunk_words = int(os.environ.get("MIN_CHUNK_WORDS", "40"))
 
+    arm_settings = [
+        arm
+        for arm in [
+            read_arm_settings("", "deterministic"),
+            read_arm_settings("SECONDARY_", ""),
+        ]
+        if arm
+    ]
+    arms = build_arms(arm_settings)
+    primary = arm_settings[0]
+
     index_metadata = {
         "chunker_version": CHUNKER_VERSION,
-        "embedding_model": embedding_model_label(embedding_provider, embedding_model_name),
-        "embedding_dimensions": embedding_dimensions,
+        "embedding_model": embedding_model_label(primary.provider, primary.model_name),
+        "embedding_dimensions": primary.dimensions,
     }
+    # Qdrant may hold several vector spaces in one point, so the payload records
+    # a per-slot label map that the vector-space guard can read back. Postgres
+    # has no such column, so the map stays out of index_metadata.
+    payload_metadata = dict(index_metadata)
+    if len(arms) > 1:
+        payload_metadata["embedding_models"] = {
+            arm.name: embedding_model_label(arm.provider, arm.model_name)
+            for arm, settings in zip(arms, arm_settings)
+        }
 
     return WorkerProcessor(
         repository=SupabaseDocumentRepository(supabase_url, service_role_key),
         storage=SupabaseDocumentStorage(supabase_url, service_role_key, bucket),
         extractor=DocumentTextExtractor(),
-        embedding_provider=create_embedding_provider(
-            provider_name=embedding_provider,
-            dimensions=embedding_dimensions,
-            model_name=embedding_model_name,
-            device=embedding_device,
-            remote_url=embedding_remote_url,
-            base_url=embedding_base_url,
-            api_key=embedding_api_key,
-        ),
+        embedding_arms=arms,
         vector_store=QdrantVectorStore(
             qdrant_url=qdrant_url,
             collection_name=collection_name,
-            dimensions=embedding_dimensions,
+            vectors=[
+                VectorSpace(
+                    name=arm.name,
+                    dimensions=settings.dimensions,
+                    model_label=embedding_model_label(settings.provider, settings.model_name),
+                )
+                for arm, settings in zip(arms, arm_settings)
+            ],
             api_key=qdrant_api_key,
-            index_metadata=index_metadata,
+            index_metadata=payload_metadata,
         ),
         max_chunk_words=max_chunk_words,
         overlap_words=chunk_overlap_words,

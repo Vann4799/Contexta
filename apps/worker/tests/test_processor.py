@@ -1,6 +1,6 @@
 from typing import Any
 
-from worker.processor import InMemoryDocumentRepository, WorkerProcessor
+from worker.processor import EmbeddingArm, InMemoryDocumentRepository, WorkerProcessor
 
 
 ExtractedDocument = dict[str, list[dict[str, str | int]]]
@@ -28,23 +28,32 @@ class FakeExtractor:
 
 
 class FakeEmbeddingProvider:
+    def __init__(self, tag: float = 1.0, drop_last: bool = False) -> None:
+        self.tag = tag
+        self.drop_last = drop_last
+        self.calls = 0
+
     def embed_texts(self, texts: list[str]) -> list[list[float]]:
-        return [[float(index), 1.0] for index, _ in enumerate(texts)]
+        self.calls += 1
+        vectors = [[float(index), self.tag] for index, _ in enumerate(texts)]
+        return vectors[:-1] if self.drop_last and len(vectors) > 1 else vectors
 
 
 class FakeVectorStore:
     def __init__(self) -> None:
         self.upserted: list[ProcessingChunk] = []
         self.pruned: list[tuple[str, int]] = []
+        self.embeddings: dict[str, list[list[float]]] = {}
 
     def upsert_chunks(
         self,
         document: dict[str, str],
         chunks: list[ProcessingChunk],
-        embeddings: list[list[float]],
+        embeddings: dict[str, list[list[float]]],
     ) -> list[str]:
-        assert len(chunks) == len(embeddings)
+        assert all(len(vectors) == len(chunks) for vectors in embeddings.values())
         self.upserted = chunks
+        self.embeddings = embeddings
         return [f"point-{chunk['chunk_index']}" for chunk in chunks]
 
     def prune_stale_chunks(self, document_id: str, chunk_count: int) -> None:
@@ -69,7 +78,7 @@ def test_process_once_marks_processing_document_ready() -> None:
         repository=repository,
         storage=FakeStorage({"user-1/doc-1.pdf": b"document bytes"}),
         extractor=FakeExtractor(),
-        embedding_provider=FakeEmbeddingProvider(),
+        embedding_arms=[EmbeddingArm(name="", provider=FakeEmbeddingProvider())],
         vector_store=vector_store,
         max_chunk_words=4,
         overlap_words=0,
@@ -118,6 +127,82 @@ def test_process_once_marks_processing_document_ready() -> None:
     assert vector_store.pruned == [("doc-1", 2)]
 
 
+def test_two_arms_embed_once_each_and_share_one_upsert() -> None:
+    repository = InMemoryDocumentRepository(
+        [
+            {
+                "id": "doc-1",
+                "user_id": "user-1",
+                "filename": "contract.pdf",
+                "file_type": "pdf",
+                "storage_path": "user-1/doc-1.pdf",
+                "status": "processing",
+            }
+        ]
+    )
+    vector_store = FakeVectorStore()
+    miniLM = FakeEmbeddingProvider(tag=1.0)
+    openai = FakeEmbeddingProvider(tag=2.0)
+    processor = WorkerProcessor(
+        repository=repository,
+        storage=FakeStorage({"user-1/doc-1.pdf": b"document bytes"}),
+        extractor=FakeExtractor(),
+        embedding_arms=[
+            EmbeddingArm(name="minilm", provider=miniLM),
+            EmbeddingArm(name="openai", provider=openai),
+        ],
+        vector_store=vector_store,
+        max_chunk_words=4,
+        overlap_words=0,
+        min_chunk_words=0,
+    )
+
+    processor.process_once()
+
+    assert (miniLM.calls, openai.calls) == (1, 1)
+    assert vector_store.embeddings == {
+        "minilm": [[0.0, 1.0], [1.0, 1.0]],
+        "openai": [[0.0, 2.0], [1.0, 2.0]],
+    }
+
+
+def test_document_fails_when_an_arm_returns_too_few_vectors() -> None:
+    repository = InMemoryDocumentRepository(
+        [
+            {
+                "id": "doc-1",
+                "user_id": "user-1",
+                "filename": "contract.pdf",
+                "file_type": "pdf",
+                "storage_path": "user-1/doc-1.pdf",
+                "status": "processing",
+            }
+        ]
+    )
+    vector_store = FakeVectorStore()
+    processor = WorkerProcessor(
+        repository=repository,
+        storage=FakeStorage({"user-1/doc-1.pdf": b"document bytes"}),
+        extractor=FakeExtractor(),
+        embedding_arms=[
+            EmbeddingArm(name="minilm", provider=FakeEmbeddingProvider()),
+            EmbeddingArm(name="openai", provider=FakeEmbeddingProvider(drop_last=True)),
+        ],
+        vector_store=vector_store,
+        max_chunk_words=4,
+        overlap_words=0,
+        min_chunk_words=0,
+    )
+
+    processor.process_once()
+
+    assert repository.documents[0]["status"] == "failed"
+    assert "arm 'openai' returned 1 vectors for 2 chunks" in (
+        repository.documents[0]["error_message"]
+    )
+    assert vector_store.embeddings == {}
+
+
 def test_short_pages_are_merged_into_one_document_window() -> None:
     class ThreePageExtractor:
         def extract(self, content: bytes, file_type: str) -> ExtractedDocument:
@@ -145,7 +230,7 @@ def test_short_pages_are_merged_into_one_document_window() -> None:
         repository=repository,
         storage=FakeStorage({"user-1/doc-1.pdf": b"document bytes"}),
         extractor=ThreePageExtractor(),
-        embedding_provider=FakeEmbeddingProvider(),
+        embedding_arms=[EmbeddingArm(name="", provider=FakeEmbeddingProvider())],
         vector_store=FakeVectorStore(),
         max_chunk_words=50,
         overlap_words=10,
@@ -191,7 +276,7 @@ def test_process_once_marks_document_failed_when_extraction_has_no_text() -> Non
         repository=repository,
         storage=FakeStorage({"user-1/doc-1.pdf": b"document bytes"}),
         extractor=EmptyExtractor(),
-        embedding_provider=FakeEmbeddingProvider(),
+        embedding_arms=[EmbeddingArm(name="", provider=FakeEmbeddingProvider())],
         vector_store=FakeVectorStore(),
     )
 

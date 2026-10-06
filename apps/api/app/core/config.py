@@ -25,6 +25,14 @@ class Settings(BaseSettings):
     embedding_remote_url: str = ""
     embedding_base_url: str = ""
     embedding_api_key: str = ""
+    embedding_vector_name: str = ""
+    secondary_embedding_provider: str = ""
+    secondary_embedding_model_name: str = "text-embedding-3-small"
+    secondary_embedding_dimensions: int = 1536
+    secondary_embedding_remote_url: str = ""
+    secondary_embedding_base_url: str = ""
+    secondary_embedding_api_key: str = ""
+    secondary_embedding_vector_name: str = "openai"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

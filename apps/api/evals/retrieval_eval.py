@@ -28,35 +28,38 @@ for _parent in API_ROOT.parents:
         sys.path.append(str(_rag_package))
         break
 
-from app.chat.retrieval import QdrantRetriever  # noqa: E402
+from app.chat.retrieval import QdrantRetriever, retriever_from_settings  # noqa: E402
 from app.core.config import Settings, get_settings  # noqa: E402
-from contexta_rag.embeddings import create_embedding_provider, embedding_model_label  # noqa: E402
 
 DEFAULT_CASES = API_ROOT / "evals" / "retrieval_cases.json"
 JUNK_TEXT_CHARS = 40
 KS = (1, 3, 5)
 
 
+def arm_descriptions(settings: Settings) -> list[dict[str, object]]:
+    """Describe the arms a run measured, so a result file says which index it used."""
+    arms = [
+        {
+            "slot": settings.embedding_vector_name or "default",
+            "provider": settings.embedding_provider,
+            "model": settings.embedding_model_name,
+            "dimensions": settings.embedding_dimensions,
+        }
+    ]
+    if settings.secondary_embedding_provider:
+        arms.append(
+            {
+                "slot": settings.secondary_embedding_vector_name,
+                "provider": settings.secondary_embedding_provider,
+                "model": settings.secondary_embedding_model_name,
+                "dimensions": settings.secondary_embedding_dimensions,
+            }
+        )
+    return arms
+
+
 def build_retriever(settings: Settings) -> QdrantRetriever:
-    return QdrantRetriever(
-        qdrant_url=settings.qdrant_url,
-        collection_name=settings.qdrant_collection,
-        embedding_provider=create_embedding_provider(
-            provider_name=settings.embedding_provider,
-            dimensions=settings.embedding_dimensions,
-            model_name=settings.embedding_model_name,
-            device=settings.embedding_device or None,
-            remote_url=settings.embedding_remote_url,
-            base_url=settings.embedding_base_url,
-            api_key=settings.embedding_api_key,
-        ),
-        api_key=settings.qdrant_api_key,
-        expected_dimensions=settings.embedding_dimensions,
-        expected_model_label=embedding_model_label(
-            settings.embedding_provider,
-            settings.embedding_model_name,
-        ),
-    )
+    return retriever_from_settings(settings)
 
 
 def grade_case(results: list[dict[str, Any]], gold: list[dict[str, Any]]) -> dict[str, Any]:
@@ -173,9 +176,11 @@ def main() -> int:
         cases = cases[: args.limit]
 
     retriever = build_retriever(settings)
+    arms = arm_descriptions(settings)
     print(
-        f"provider={settings.embedding_provider} model={settings.embedding_model_name} "
-        f"collection={settings.qdrant_collection} top_k={args.top_k}"
+        "arms="
+        + " + ".join(f"{arm['slot']}:{arm['model']}" for arm in arms)
+        + f" collection={settings.qdrant_collection} top_k={args.top_k}"
     )
 
     for case in cases:
@@ -197,6 +202,7 @@ def main() -> int:
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "embedding_provider": settings.embedding_provider,
         "embedding_model": settings.embedding_model_name,
+        "embedding_arms": arms,
         "collection": settings.qdrant_collection,
         "top_k": args.top_k,
         "cases_file": str(args.cases),
