@@ -289,8 +289,7 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
       ) : null}
 
       {document.status === "ready" && intelligence ? (
-      <section className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="flex min-w-0 flex-col gap-3">
+        <div className="flex flex-col gap-3">
           <article className="surface p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
@@ -302,10 +301,10 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
                 {isGeneratingBrief ? "Generating..." : "Generate AI brief"}
               </Button>
             </div>
-            <p className="mt-3 text-[13.5px] leading-6 text-ink">{intelligence.summary}</p>
+            <p className="mt-3 max-w-[950px] text-[13.5px] leading-6 text-ink">{intelligence.summary}</p>
             {briefError ? <p className="mt-3 text-[13px] text-danger">{briefError}</p> : null}
             {aiBrief ? (
-              <div className="mt-4 rounded-card border border-paper-line bg-paper-soft px-4 py-3">
+              <div className="mt-4 max-w-[950px] rounded-card border border-paper-line bg-paper-soft px-4 py-3">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <h4 className="text-[13.5px] font-semibold">AI brief</h4>
                   <Button className="w-full sm:w-auto" onClick={() => void handleCopyBrief()} variant="secondary">
@@ -323,7 +322,7 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
             <p className="eyebrow">Extracted</p>
             <h3 className="mt-1 text-[17px] font-semibold tracking-tight">Key points</h3>
             {intelligence.key_points.length > 0 ? (
-              <ul className="mt-3 flex flex-col gap-2 text-[13.5px] leading-6">
+              <ul className="mt-3 grid gap-2 text-[13.5px] leading-6 lg:grid-cols-2">
                 {intelligence.key_points.map((point) => (
                   <li key={point} className="rounded-control bg-paper-chip px-3 py-2">
                     {point}
@@ -334,46 +333,45 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
               <p className="mt-3 text-[13px] text-ink-muted">No text has been extracted yet.</p>
             )}
           </article>
+
+          <article className="surface grid gap-6 p-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+            <div className="min-w-0">
+              <p className="eyebrow">Entities</p>
+              <h3 className="mt-1 text-[17px] font-semibold tracking-tight">Detected fields</h3>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="min-w-0">
+                  <p className="mb-2 text-[12px] font-medium text-ink-muted">Names</p>
+                  <FieldList empty="No names detected yet." items={intelligence.candidate_names} />
+                </div>
+                <div className="min-w-0">
+                  <p className="mb-2 text-[12px] font-medium text-ink-muted">Emails</p>
+                  <FieldList empty="No emails detected yet." items={intelligence.emails} />
+                </div>
+                <div className="min-w-0">
+                  <p className="mb-2 text-[12px] font-medium text-ink-muted">Links</p>
+                  <FieldList empty="No links detected yet." items={intelligence.links} />
+                </div>
+              </div>
+            </div>
+
+            <div className="min-w-0">
+              <p className="eyebrow">Ask</p>
+              <h3 className="mt-1 text-[17px] font-semibold tracking-tight">Suggested questions</h3>
+              <div className="mt-3 flex flex-col gap-2">
+                {intelligence.suggested_questions.map((question) => (
+                  <Link
+                    key={question}
+                    className="focus-ring flex items-start gap-2 rounded-control border border-paper-line bg-paper-soft px-3 py-2 text-[13px] transition-colors hover:bg-paper-card"
+                    href={`/chat?question=${encodeURIComponent(question)}&documentId=${encodeURIComponent(document.id)}`}
+                  >
+                    <ArrowUpRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ink-faint" aria-hidden="true" />
+                    <span className="min-w-0">{question}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </article>
         </div>
-
-        <aside className="flex min-w-0 flex-col gap-3">
-          <article className="surface p-5">
-            <p className="eyebrow">Entities</p>
-            <h3 className="mt-1 text-[17px] font-semibold tracking-tight">Detected fields</h3>
-            <div className="mt-4 flex flex-col gap-4">
-              <div>
-                <p className="mb-2 text-[12px] font-medium text-ink-muted">Names</p>
-                <FieldList empty="No names detected yet." items={intelligence.candidate_names} />
-              </div>
-              <div>
-                <p className="mb-2 text-[12px] font-medium text-ink-muted">Emails</p>
-                <FieldList empty="No emails detected yet." items={intelligence.emails} />
-              </div>
-              <div>
-                <p className="mb-2 text-[12px] font-medium text-ink-muted">Links</p>
-                <FieldList empty="No links detected yet." items={intelligence.links} />
-              </div>
-            </div>
-          </article>
-
-          <article className="surface p-5">
-            <p className="eyebrow">Ask</p>
-            <h3 className="mt-1 text-[17px] font-semibold tracking-tight">Suggested questions</h3>
-            <div className="mt-3 flex flex-col gap-2">
-              {intelligence.suggested_questions.map((question) => (
-                <Link
-                  key={question}
-                  className="focus-ring flex items-start gap-2 rounded-control border border-paper-line bg-paper-soft px-3 py-2 text-[13px] transition-colors hover:bg-paper-card"
-                  href={`/chat?question=${encodeURIComponent(question)}&documentId=${encodeURIComponent(document.id)}`}
-                >
-                  <ArrowUpRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ink-faint" aria-hidden="true" />
-                  <span className="min-w-0">{question}</span>
-                </Link>
-              ))}
-            </div>
-          </article>
-        </aside>
-      </section>
       ) : null}
     </div>
   );
