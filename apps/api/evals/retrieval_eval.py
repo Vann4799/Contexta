@@ -46,6 +46,7 @@ def build_retriever(settings: Settings) -> QdrantRetriever:
             dimensions=settings.embedding_dimensions,
             model_name=settings.embedding_model_name,
             device=settings.embedding_device or None,
+            remote_url=settings.embedding_remote_url,
         ),
         api_key=settings.qdrant_api_key,
     )

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import math
+import time
 from collections.abc import Callable
 from typing import Protocol
 
@@ -32,6 +33,71 @@ class DeterministicEmbeddingProvider:
         if magnitude == 0:
             return vector
         return [value / magnitude for value in vector]
+
+
+class RemoteEmbeddingProvider:
+    """Calls an embedding service over HTTP so only one process holds the model."""
+
+    def __init__(
+        self,
+        base_url: str,
+        dimensions: int = 0,
+        timeout_seconds: float = 60.0,
+        max_attempts: int = 3,
+    ) -> None:
+        if not base_url.strip():
+            raise ValueError("base_url is required for the remote embedding provider")
+        self._endpoint = base_url.rstrip("/") + "/embed"
+        self._dimensions = dimensions
+        self._timeout_seconds = timeout_seconds
+        self._max_attempts = max(1, max_attempts)
+
+    def embed_texts(self, texts: list[str]) -> list[list[float]]:
+        if not texts:
+            return []
+
+        vectors = self._post(texts)
+        if len(vectors) != len(texts):
+            raise ValueError(
+                f"embedding service returned {len(vectors)} vectors for {len(texts)} texts"
+            )
+        for vector in vectors:
+            if self._dimensions and len(vector) != self._dimensions:
+                raise ValueError(
+                    f"embedding service returned {len(vector)} dimensions, "
+                    f"expected {self._dimensions}"
+                )
+        return [[float(value) for value in vector] for vector in vectors]
+
+    def _post(self, texts: list[str]) -> list[list[float]]:
+        try:
+            import httpx
+        except ModuleNotFoundError as exc:
+            raise RuntimeError(
+                "httpx is not installed. Install it before using a remote embedding service."
+            ) from exc
+
+        last_error: Exception | None = None
+        for attempt in range(self._max_attempts):
+            try:
+                response = httpx.post(
+                    self._endpoint,
+                    json={"texts": list(texts)},
+                    timeout=self._timeout_seconds,
+                )
+                if response.status_code < 500:
+                    response.raise_for_status()
+                    return list(response.json()["vectors"])
+                last_error = RuntimeError(
+                    f"embedding service returned HTTP {response.status_code}"
+                )
+            except httpx.HTTPError as exc:
+                last_error = exc
+
+            if attempt + 1 < self._max_attempts:
+                time.sleep(0.5 * 2**attempt)
+
+        raise RuntimeError(f"embedding service unavailable: {last_error}")
 
 
 class SentenceTransformerEmbeddingProvider:
@@ -82,6 +148,7 @@ def create_embedding_provider(
     dimensions: int = 384,
     model_name: str = "BAAI/bge-m3",
     device: str | None = None,
+    remote_url: str = "",
     model_loader: Callable[[str], object] | None = None,
 ) -> EmbeddingProvider:
     normalized_name = provider_name.strip().lower()
@@ -94,7 +161,16 @@ def create_embedding_provider(
             device=resolved_device,
             model_loader=model_loader,
         )
+    if normalized_name in {"remote", "service", "http"}:
+        if not remote_url.strip():
+            raise ValueError(
+                "EMBEDDING_PROVIDER=remote requires EMBEDDING_REMOTE_URL "
+                "(a word-hash fallback would quietly degrade retrieval)"
+            )
+        return RemoteEmbeddingProvider(base_url=remote_url, dimensions=dimensions)
     if normalized_name == "auto":
+        if remote_url.strip():
+            return RemoteEmbeddingProvider(base_url=remote_url, dimensions=dimensions)
         try:
             return SentenceTransformerEmbeddingProvider(
                 model_name=model_name,

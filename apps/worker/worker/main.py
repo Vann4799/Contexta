@@ -45,6 +45,7 @@ def create_processor() -> WorkerProcessor:
     embedding_model_name = os.environ.get("EMBEDDING_MODEL_NAME", "BAAI/bge-m3")
     embedding_device = os.environ.get("EMBEDDING_DEVICE") or None
     embedding_dimensions = int(os.environ.get("EMBEDDING_DIMENSIONS", "384"))
+    embedding_remote_url = os.environ.get("EMBEDDING_REMOTE_URL", "")
     max_chunk_words = int(os.environ.get("MAX_CHUNK_WORDS", "500"))
     chunk_overlap_words = int(os.environ.get("CHUNK_OVERLAP_WORDS", "100"))
     min_chunk_words = int(os.environ.get("MIN_CHUNK_WORDS", "40"))
@@ -58,6 +59,7 @@ def create_processor() -> WorkerProcessor:
             dimensions=embedding_dimensions,
             model_name=embedding_model_name,
             device=embedding_device,
+            remote_url=embedding_remote_url,
         ),
         vector_store=QdrantVectorStore(
             qdrant_url=qdrant_url,

@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     embedding_model_name: str = "BAAI/bge-m3"
     embedding_device: str = ""
     embedding_dimensions: int = 384
+    embedding_remote_url: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
