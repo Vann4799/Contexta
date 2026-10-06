@@ -131,7 +131,7 @@ export function DocumentChunksTable({ documentId, getAccessToken }: DocumentChun
                   <td className="nums px-3 py-2.5 font-mono text-[11.5px] text-ink-faint">{firstRow + index + 1}</td>
                   <td className="nums px-3 py-2.5 text-ink-muted">{chunk.page_number ?? "\u2014"}</td>
                   <td className="nums px-3 py-2.5 text-ink-muted">{chunk.char_count}</td>
-                  <td className="max-w-[520px] px-3 py-2.5">
+                  <td className="px-3 py-2.5">
                     <p className="line-clamp-2 leading-5 text-ink">{chunk.preview}</p>
                   </td>
                 </tr>

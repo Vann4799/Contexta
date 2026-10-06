@@ -285,6 +285,10 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
       ) : null}
 
       {document.status === "ready" && intelligence ? (
+        <DocumentChunksTable documentId={document.id} getAccessToken={getAccessToken} />
+      ) : null}
+
+      {document.status === "ready" && intelligence ? (
       <section className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="flex min-w-0 flex-col gap-3">
           <article className="surface p-5">
@@ -330,8 +334,6 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
               <p className="mt-3 text-[13px] text-ink-muted">No text has been extracted yet.</p>
             )}
           </article>
-
-          <DocumentChunksTable documentId={document.id} getAccessToken={getAccessToken} />
         </div>
 
         <aside className="flex min-w-0 flex-col gap-3">
