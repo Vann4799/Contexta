@@ -3,6 +3,7 @@ import pytest
 
 from contexta_rag.embeddings import (
     DeterministicEmbeddingProvider,
+    OpenAICompatibleEmbeddingProvider,
     RemoteEmbeddingProvider,
     SentenceTransformerEmbeddingProvider,
     create_embedding_provider,
@@ -161,3 +162,156 @@ def test_remote_provider_requires_a_url_rather_than_falling_back_to_hashes() -> 
     )
 
     assert isinstance(provider, RemoteEmbeddingProvider)
+
+
+def openai_payload(texts: list[str]) -> dict:
+    return {
+        "data": [
+            {"index": i, "embedding": [float(i), 1.0]} for i in range(len(texts))
+        ]
+    }
+
+
+def test_openai_provider_posts_to_the_embeddings_endpoint_with_a_bearer_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[dict] = []
+
+    def fake_post(url: str, headers: dict, json: dict, timeout: float) -> FakeResponse:
+        calls.append({"url": url, "headers": headers, "json": json, "timeout": timeout})
+        return FakeResponse(200, openai_payload(json["input"]))
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    provider = OpenAICompatibleEmbeddingProvider(
+        base_url="https://openrouter.ai/api/v1/",
+        api_key="sk-or-test",
+        model_name="openai/text-embedding-3-small",
+        dimensions=2,
+    )
+
+    assert provider.embed_texts(["alpha", "beta"]) == [[0.0, 1.0], [1.0, 1.0]]
+    assert calls == [
+        {
+            "url": "https://openrouter.ai/api/v1/embeddings",
+            "headers": {"Authorization": "Bearer sk-or-test"},
+            "json": {
+                "model": "openai/text-embedding-3-small",
+                "input": ["alpha", "beta"],
+            },
+            "timeout": 90.0,
+        }
+    ]
+
+
+def test_openai_provider_splits_texts_into_batches(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen: list[list[str]] = []
+
+    def fake_post(url: str, headers: dict, json: dict, timeout: float) -> FakeResponse:
+        seen.append(list(json["input"]))
+        return FakeResponse(200, openai_payload(json["input"]))
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    provider = OpenAICompatibleEmbeddingProvider(
+        base_url="https://x/v1", api_key="k", model_name="m", batch_size=2
+    )
+
+    vectors = provider.embed_texts(["a", "b", "c", "d", "e"])
+
+    assert seen == [["a", "b"], ["c", "d"], ["e"]]
+    assert len(vectors) == 5
+
+
+def test_openai_provider_orders_the_response_by_index(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_post(url: str, headers: dict, json: dict, timeout: float) -> FakeResponse:
+        return FakeResponse(
+            200,
+            {
+                "data": [
+                    {"index": 1, "embedding": [2.0]},
+                    {"index": 0, "embedding": [1.0]},
+                ]
+            },
+        )
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    provider = OpenAICompatibleEmbeddingProvider(
+        base_url="https://x/v1", api_key="k", model_name="m"
+    )
+
+    assert provider.embed_texts(["first", "second"]) == [[1.0], [2.0]]
+
+
+def test_openai_provider_rejects_a_wrong_dimension_count(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_post(url: str, headers: dict, json: dict, timeout: float) -> FakeResponse:
+        return FakeResponse(200, {"data": [{"index": 0, "embedding": [0.1, 0.2, 0.3]}]})
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    provider = OpenAICompatibleEmbeddingProvider(
+        base_url="https://x/v1", api_key="k", model_name="m", dimensions=1536
+    )
+
+    with pytest.raises(ValueError, match="expected 1536"):
+        provider.embed_texts(["alpha"])
+
+
+def test_openai_provider_retries_a_rate_limited_call_then_succeeds(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    attempts: list[int] = []
+
+    def flaky_post(url: str, headers: dict, json: dict, timeout: float) -> FakeResponse:
+        attempts.append(len(attempts))
+        if len(attempts) == 1:
+            return FakeResponse(429)
+        return FakeResponse(200, openai_payload(json["input"]))
+
+    monkeypatch.setattr(httpx, "post", flaky_post)
+    provider = OpenAICompatibleEmbeddingProvider(
+        base_url="https://x/v1", api_key="k", model_name="m"
+    )
+
+    assert provider.embed_texts(["alpha"]) == [[0.0, 1.0]]
+    assert len(attempts) == 2
+
+
+def test_openai_provider_gives_up_after_its_attempts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    attempts: list[int] = []
+
+    def down_post(url: str, headers: dict, json: dict, timeout: float) -> FakeResponse:
+        attempts.append(len(attempts))
+        return FakeResponse(500)
+
+    monkeypatch.setattr(httpx, "post", down_post)
+    provider = OpenAICompatibleEmbeddingProvider(
+        base_url="https://x/v1", api_key="k", model_name="m", max_attempts=3
+    )
+
+    with pytest.raises(RuntimeError, match="embedding API unavailable"):
+        provider.embed_texts(["alpha"])
+
+    assert len(attempts) == 3
+
+
+def test_openai_provider_refuses_to_run_without_a_key() -> None:
+    with pytest.raises(ValueError, match="EMBEDDING_API_KEY"):
+        create_embedding_provider(provider_name="openrouter", api_key="")
+
+    with pytest.raises(ValueError, match="EMBEDDING_MODEL_NAME"):
+        create_embedding_provider(
+            provider_name="openai", api_key="k", model_name="  "
+        )
+
+    provider = create_embedding_provider(
+        provider_name="openai", api_key="k", model_name="m"
+    )
+
+    assert isinstance(provider, OpenAICompatibleEmbeddingProvider)
+    assert provider._endpoint == "https://api.openai.com/v1/embeddings"

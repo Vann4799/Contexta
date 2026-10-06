@@ -46,6 +46,8 @@ def create_processor() -> WorkerProcessor:
     embedding_device = os.environ.get("EMBEDDING_DEVICE") or None
     embedding_dimensions = int(os.environ.get("EMBEDDING_DIMENSIONS", "384"))
     embedding_remote_url = os.environ.get("EMBEDDING_REMOTE_URL", "")
+    embedding_base_url = os.environ.get("EMBEDDING_BASE_URL", "")
+    embedding_api_key = os.environ.get("EMBEDDING_API_KEY", "")
     max_chunk_words = int(os.environ.get("MAX_CHUNK_WORDS", "500"))
     chunk_overlap_words = int(os.environ.get("CHUNK_OVERLAP_WORDS", "100"))
     min_chunk_words = int(os.environ.get("MIN_CHUNK_WORDS", "40"))
@@ -66,6 +68,8 @@ def create_processor() -> WorkerProcessor:
             model_name=embedding_model_name,
             device=embedding_device,
             remote_url=embedding_remote_url,
+            base_url=embedding_base_url,
+            api_key=embedding_api_key,
         ),
         vector_store=QdrantVectorStore(
             qdrant_url=qdrant_url,

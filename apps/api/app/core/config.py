@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     embedding_device: str = ""
     embedding_dimensions: int = 384
     embedding_remote_url: str = ""
+    embedding_base_url: str = ""
+    embedding_api_key: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

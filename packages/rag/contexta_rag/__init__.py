@@ -2,6 +2,7 @@ from contexta_rag.chunking import PageChunk, PageText, TextChunk, chunk_pages, c
 from contexta_rag.embeddings import (
     DeterministicEmbeddingProvider,
     EmbeddingProvider,
+    OpenAICompatibleEmbeddingProvider,
     RemoteEmbeddingProvider,
     SentenceTransformerEmbeddingProvider,
     create_embedding_provider,
@@ -14,6 +15,7 @@ __all__ = [
     "CitationContext",
     "DeterministicEmbeddingProvider",
     "EmbeddingProvider",
+    "OpenAICompatibleEmbeddingProvider",
     "PageChunk",
     "PageText",
     "RemoteEmbeddingProvider",
