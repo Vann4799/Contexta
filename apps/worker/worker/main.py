@@ -45,6 +45,9 @@ def create_processor() -> WorkerProcessor:
     embedding_model_name = os.environ.get("EMBEDDING_MODEL_NAME", "BAAI/bge-m3")
     embedding_device = os.environ.get("EMBEDDING_DEVICE") or None
     embedding_dimensions = int(os.environ.get("EMBEDDING_DIMENSIONS", "384"))
+    max_chunk_words = int(os.environ.get("MAX_CHUNK_WORDS", "500"))
+    chunk_overlap_words = int(os.environ.get("CHUNK_OVERLAP_WORDS", "100"))
+    min_chunk_words = int(os.environ.get("MIN_CHUNK_WORDS", "40"))
 
     return WorkerProcessor(
         repository=SupabaseDocumentRepository(supabase_url, service_role_key),
@@ -62,6 +65,9 @@ def create_processor() -> WorkerProcessor:
             dimensions=embedding_dimensions,
             api_key=qdrant_api_key,
         ),
+        max_chunk_words=max_chunk_words,
+        overlap_words=chunk_overlap_words,
+        min_chunk_words=min_chunk_words,
     )
 
 

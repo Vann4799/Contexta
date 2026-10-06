@@ -5,11 +5,11 @@ from pathlib import Path
 from typing import Literal, Protocol, TypedDict
 
 try:
-    from contexta_rag.chunking import chunk_text
+    from contexta_rag.chunking import chunk_pages
 except ModuleNotFoundError:
     rag_package_path = Path(__file__).resolve().parents[3] / "packages" / "rag"
     sys.path.append(str(rag_package_path))
-    from contexta_rag.chunking import chunk_text
+    from contexta_rag.chunking import chunk_pages
 
 
 DocumentStatus = Literal["processing", "ready", "failed"]
@@ -147,8 +147,9 @@ class WorkerProcessor:
         extractor: DocumentExtractor | None = None,
         embedding_provider: EmbeddingProvider | None = None,
         vector_store: VectorStore | None = None,
-        max_chunk_words: int = 800,
-        overlap_words: int = 120,
+        max_chunk_words: int = 500,
+        overlap_words: int = 100,
+        min_chunk_words: int = 40,
     ) -> None:
         self.repository = repository
         self.storage = storage or MissingDocumentStorage()
@@ -157,6 +158,7 @@ class WorkerProcessor:
         self.vector_store = vector_store or MissingVectorStore()
         self.max_chunk_words = max_chunk_words
         self.overlap_words = overlap_words
+        self.min_chunk_words = min_chunk_words
 
     def process_once(self) -> bool:
         document = self.repository.claim_next_processing_document()
@@ -201,24 +203,21 @@ class WorkerProcessor:
     def _build_chunks(
         self, document: ProcessingDocument, extracted_document: ExtractedDocument
     ) -> list[ProcessingChunk]:
-        chunks: list[ProcessingChunk] = []
+        page_chunks = chunk_pages(
+            extracted_document["pages"],
+            max_words=self.max_chunk_words,
+            overlap_words=self.overlap_words,
+            min_words=self.min_chunk_words,
+        )
 
-        for page in extracted_document["pages"]:
-            page_chunks = chunk_text(
-                page["text"],
-                max_words=self.max_chunk_words,
-                overlap_words=self.overlap_words,
-            )
-            for page_chunk in page_chunks:
-                chunks.append(
-                    {
-                        "document_id": document["id"],
-                        "user_id": document["user_id"],
-                        "chunk_index": len(chunks),
-                        "text": page_chunk["text"],
-                        "page_number": page["page_number"],
-                        "qdrant_point_id": "",
-                    }
-                )
-
-        return chunks
+        return [
+            {
+                "document_id": document["id"],
+                "user_id": document["user_id"],
+                "chunk_index": page_chunk["chunk_index"],
+                "text": page_chunk["text"],
+                "page_number": page_chunk["page_number"],
+                "qdrant_point_id": "",
+            }
+            for page_chunk in page_chunks
+        ]
