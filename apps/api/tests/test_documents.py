@@ -95,6 +95,8 @@ def test_create_document_metadata_then_list_documents() -> None:
         "file_type": "pdf",
         "file_size": 1200,
         "storage_path": f"{USER_ID}/{DOCUMENT_ID}/policy.pdf",
+        "doc_type": "policy",
+        "source_url": "https://example.com/policy.pdf",
     }
 
     create_response = client.post(
@@ -115,6 +117,9 @@ def test_create_document_metadata_then_list_documents() -> None:
         "status": "processing",
         "error_message": None,
         "chunk_count": 0,
+        "doc_type": "policy",
+        "source_url": "https://example.com/policy.pdf",
+        "doc_version": None,
         "created_at": created_document["created_at"],
         "updated_at": created_document["updated_at"],
     }
@@ -123,6 +128,38 @@ def test_create_document_metadata_then_list_documents() -> None:
 
     assert list_response.status_code == 200
     assert list_response.json() == [created_document]
+
+
+def test_create_document_rejects_unknown_doc_type() -> None:
+    create_response = client.post(
+        "/documents",
+        json={
+            "filename": "policy.pdf",
+            "file_type": "pdf",
+            "file_size": 1200,
+            "storage_path": f"{USER_ID}/{DOCUMENT_ID}/policy.pdf",
+            "doc_type": "invoice",
+        },
+        headers=auth_headers(),
+    )
+
+    assert create_response.status_code == 422
+
+
+def test_create_document_rejects_non_http_source_url() -> None:
+    create_response = client.post(
+        "/documents",
+        json={
+            "filename": "policy.pdf",
+            "file_type": "pdf",
+            "file_size": 1200,
+            "storage_path": f"{USER_ID}/{DOCUMENT_ID}/policy.pdf",
+            "source_url": "file:///etc/passwd",
+        },
+        headers=auth_headers(),
+    )
+
+    assert create_response.status_code == 422
 
 
 def test_get_document_returns_only_owned_document() -> None:
@@ -403,8 +440,36 @@ def test_upload_pdf_creates_document_and_stores_bytes() -> None:
     assert created_document["filename"] == "policy.pdf"
     assert created_document["file_type"] == "pdf"
     assert created_document["file_size"] == len(b"%PDF-1.7 policy")
+    assert created_document["doc_type"] == "unclassified"
     assert created_document["storage_path"].startswith(f"{USER_ID}/")
     assert storage.objects[created_document["storage_path"]] == b"%PDF-1.7 policy"
+
+
+def test_upload_accepts_document_type_from_form_field() -> None:
+    response = client.post(
+        "/documents/upload",
+        files={"file": ("thesis.pdf", b"%PDF-1.7 thesis", "application/pdf")},
+        data={"doc_type": "thesis"},
+        headers=auth_headers(),
+    )
+
+    assert response.status_code == 201
+    assert response.json()["doc_type"] == "thesis"
+
+
+def test_upload_rejects_unknown_document_type() -> None:
+    storage = InMemoryDocumentStorage()
+    app.dependency_overrides[get_document_storage] = lambda: storage
+
+    response = client.post(
+        "/documents/upload",
+        files={"file": ("policy.pdf", b"%PDF-1.7 policy", "application/pdf")},
+        data={"doc_type": "invoice"},
+        headers=auth_headers(),
+    )
+
+    assert response.status_code == 422
+    assert storage.objects == {}
 
 
 def test_upload_zip_returns_422() -> None:

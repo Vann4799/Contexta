@@ -4,7 +4,16 @@ from collections import Counter
 from typing import Annotated
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    UploadFile,
+    status,
+)
 
 from app.auth.dependencies import get_current_user
 from app.auth.supabase_jwt import CurrentUser
@@ -21,6 +30,7 @@ from app.documents.models import (
     DocumentCreate,
     DocumentIntelligenceResponse,
     DocumentResponse,
+    DocumentType,
 )
 from app.documents.repository import (
     DocumentRepository,
@@ -445,6 +455,7 @@ async def upload_document(
     storage: Annotated[DocumentStorage, Depends(get_document_storage)],
     repository: Annotated[DocumentRepository, Depends(get_document_repository)],
     file: Annotated[UploadFile, File(...)],
+    doc_type: Annotated[DocumentType, Form()] = "unclassified",
 ) -> DocumentResponse:
     filename = safe_upload_filename(file.filename or "")
     file_type = infer_upload_file_type(filename, file.content_type)
@@ -461,6 +472,7 @@ async def upload_document(
         file_type=file_type,
         file_size=len(content),
         storage_path=storage_path,
+        doc_type=doc_type,
     )
 
     await storage.upload_document(

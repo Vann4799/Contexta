@@ -1,5 +1,26 @@
 export type DocumentStatus = "uploaded" | "processing" | "ready" | "failed";
 
+export type DocumentType =
+  | "unclassified"
+  | "sop"
+  | "policy"
+  | "contract"
+  | "report"
+  | "thesis"
+  | "reference"
+  | "other";
+
+export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
+  unclassified: "Unclassified",
+  sop: "SOP",
+  policy: "Policy",
+  contract: "Contract",
+  report: "Report",
+  thesis: "Thesis / paper",
+  reference: "Reference",
+  other: "Other"
+};
+
 export type DocumentItem = {
   id: string;
   user_id: string;
@@ -10,6 +31,9 @@ export type DocumentItem = {
   status: DocumentStatus;
   error_message: string | null;
   chunk_count: number;
+  doc_type: DocumentType;
+  source_url: string | null;
+  doc_version: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -336,9 +360,14 @@ export async function generateDocumentAIBrief(accessToken: string, documentId: s
   return (await response.json()) as DocumentAIBrief;
 }
 
-export async function uploadDocument(accessToken: string, file: File) {
+export async function uploadDocument(
+  accessToken: string,
+  file: File,
+  docType: DocumentType = "unclassified"
+) {
   const formData = new FormData();
   formData.append("file", file);
+  formData.append("doc_type", docType);
 
   const response = await fetchApi("/documents/upload", {
     method: "POST",

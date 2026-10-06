@@ -64,6 +64,9 @@ class InMemoryDocumentRepository:
             status="processing",
             error_message=None,
             chunk_count=0,
+            doc_type=document.doc_type,
+            source_url=document.source_url,
+            doc_version=document.doc_version,
             created_at=now,
             updated_at=now,
         )

@@ -8,9 +8,11 @@ import {
   getIndexingHealth,
   retryDocument,
   uploadDocument,
+  DOCUMENT_TYPE_LABELS,
   listDocuments,
   type DocumentItem,
   type DocumentStatus,
+  type DocumentType,
   type IndexingHealth
 } from "@/lib/api";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
@@ -102,6 +104,7 @@ export function DocumentUploadPanel() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showAllDocuments, setShowAllDocuments] = useState(false);
+  const [docType, setDocType] = useState<DocumentType>("unclassified");
 
   const getAccessToken = useCallback(async () => {
     const supabase = getSupabaseBrowserClient();
@@ -180,7 +183,7 @@ export function DocumentUploadPanel() {
         return;
       }
 
-      const uploadedDocument = await uploadDocument(accessToken, file);
+      const uploadedDocument = await uploadDocument(accessToken, file, docType);
       setDocuments((currentDocuments) => [uploadedDocument, ...currentDocuments]);
       try {
         setIndexingHealth(await getIndexingHealth());
@@ -263,7 +266,23 @@ export function DocumentUploadPanel() {
             Add documents to the index. Supported formats: PDF and DOCX.
           </p>
         </div>
-        <div className="flex shrink-0 gap-2">
+        <div className="flex shrink-0 flex-wrap items-end gap-2">
+          <label className="grid gap-1.5 text-[12px] font-semibold text-ink-muted">
+            Document type
+            <select
+              aria-label="Document type"
+              className="focus-ring h-9 rounded-control border border-paper-line bg-paper-soft px-3 text-[13px] font-normal text-ink outline-none"
+              disabled={isUploading}
+              onChange={(event) => setDocType(event.target.value as DocumentType)}
+              value={docType}
+            >
+              {Object.entries(DOCUMENT_TYPE_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
           <Button disabled={isLoading || isUploading} onClick={() => void loadDocuments()} variant="secondary">
             <RefreshCw className="h-4 w-4" aria-hidden="true" />
             Refresh
