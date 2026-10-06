@@ -66,6 +66,11 @@ export type IndexingHealth = {
   checked_at: string;
 };
 
+export type ServiceHealth = {
+  status: "ok" | "unavailable";
+  service: string;
+};
+
 export type ChatCitation = {
   source_number: number;
   document_id: string;
@@ -242,6 +247,27 @@ export async function getIndexingHealth() {
   }
 
   return (await response.json()) as IndexingHealth;
+}
+
+export async function getApiHealth() {
+  const response = await fetchApi("/health", {
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to reach the API."));
+  }
+
+  return (await response.json()) as ServiceHealth;
+}
+
+export async function getVectorHealth() {
+  const response = await fetchApi("/health/vector", {
+    cache: "no-store"
+  });
+
+  // An unreachable vector store is an honest 503 with a body, not a transport failure.
+  return (await response.json()) as ServiceHealth;
 }
 
 export async function getDocument(accessToken: string, documentId: string) {

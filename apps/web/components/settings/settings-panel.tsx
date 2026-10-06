@@ -1,3 +1,6 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Bot,
@@ -5,13 +8,85 @@ import {
   FileUp,
   HardDrive,
   KeyRound,
+  RefreshCw,
   Server,
   ShieldCheck,
   SlidersHorizontal
 } from "lucide-react";
+import { getApiHealth, getIndexingHealth, getVectorHealth } from "@/lib/api";
+
+type CheckState = "checking" | "ok" | "warn" | "down";
+
+type StatusRow = {
+  label: string;
+  state: CheckState;
+  word: string;
+  detail: string;
+};
+
+const CHIP_CLASS: Record<CheckState, string> = {
+  checking: "",
+  ok: "bg-success-soft text-success-ink",
+  warn: "bg-warning-soft text-warning",
+  down: "bg-danger-soft text-danger"
+};
+
+function initialState(): StatusRow[] {
+  return [
+    { label: "API service", state: "checking", word: "Checking", detail: "Pinging /health" },
+    { label: "Vector store", state: "checking", word: "Checking", detail: "Pinging /health/vector" },
+    { label: "Indexing queue", state: "checking", word: "Checking", detail: "Reading /health/indexing" }
+  ];
+}
 
 export function SettingsPanel() {
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8001";
+  const [statusRows, setStatusRows] = useState<StatusRow[]>(initialState);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const runChecks = useCallback(async () => {
+    setIsRefreshing(true);
+    setStatusRows(initialState());
+
+    const [api, vector, indexing] = await Promise.all([
+      getApiHealth().catch(() => null),
+      getVectorHealth().catch(() => null),
+      getIndexingHealth().catch(() => null)
+    ]);
+
+    setStatusRows([
+      {
+        label: "API service",
+        state: api ? "ok" : "down",
+        word: api ? "Reachable" : "Unreachable",
+        detail: api ? api.service : "The API did not answer /health."
+      },
+      {
+        label: "Vector store",
+        state: !vector ? "down" : vector.status === "ok" ? "ok" : "down",
+        word: vector && vector.status === "ok" ? "Reachable" : "Unreachable",
+        detail: !vector
+          ? "Status unknown — no answer from the API."
+          : vector.status === "ok"
+            ? "Qdrant reported healthy."
+            : "Qdrant is not reachable from the API."
+      },
+      {
+        label: "Indexing queue",
+        state: !indexing ? "down" : indexing.status === "ok" ? "ok" : "warn",
+        word: !indexing ? "No answer" : indexing.status === "ok" ? "Active" : "Needs attention",
+        detail: !indexing
+          ? "Status unknown — no answer from the API."
+          : `${indexing.queued_documents} queued, ${indexing.processing_documents} processing, ` +
+            `${indexing.stale_processing_documents} stale over ${indexing.stale_after_minutes} min.`
+      }
+    ]);
+    setIsRefreshing(false);
+  }, []);
+
+  useEffect(() => {
+    void runChecks();
+  }, [runChecks]);
 
   const runtimeItems = [
     { label: "API base URL", value: apiBaseUrl, icon: Server },
@@ -23,8 +98,8 @@ export function SettingsPanel() {
   const capabilityItems = [
     { label: "Authentication", value: "Supabase email sign-in", icon: ShieldCheck },
     { label: "Document storage", value: "Supabase Storage", icon: HardDrive },
-    { label: "Vector search", value: "Local Qdrant via Docker", icon: Database },
-    { label: "Private keys", value: "Stored in server env only", icon: KeyRound }
+    { label: "Vector search", value: "Qdrant, called by the API", icon: Database },
+    { label: "Private keys", value: "Server env only, never sent here", icon: KeyRound }
   ];
 
   return (
@@ -85,11 +160,11 @@ export function SettingsPanel() {
 
         <aside className="space-y-4 lg:col-span-4">
           <article className="rounded-card border border-paper-line bg-paper-card p-5">
-            <h3 className="text-[17px] font-semibold text-ink">Mode</h3>
-            <div className="mt-4 rounded-control border border-success-line bg-success-soft p-4">
-              <p className="text-[13px] font-semibold text-success-ink">Single-user phase</p>
-              <p className="mt-1 text-[13px] text-success-ink">
-                Workspace is optimized for local development and one owner account.
+            <h3 className="text-[17px] font-semibold text-ink">Edit access</h3>
+            <div className="mt-4 rounded-control border border-paper-line bg-paper p-4">
+              <p className="text-[13px] font-semibold text-ink">Nothing here is writable</p>
+              <p className="mt-1 text-[13px] text-ink-muted">
+                Changing these values means editing the API server environment and restarting the service.
               </p>
             </div>
           </article>
@@ -120,19 +195,32 @@ export function SettingsPanel() {
       </section>
 
       <section className="rounded-card border border-paper-line bg-paper-card p-6">
-        <h3 className="text-[17px] font-semibold text-ink">Operational Checklist</h3>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 className="text-[17px] font-semibold text-ink">Service Status</h3>
+          <button
+            type="button"
+            onClick={() => void runChecks()}
+            disabled={isRefreshing}
+            className="focus-ring inline-flex h-9 items-center gap-2 rounded-control border border-paper-line bg-paper px-3 text-[13px] font-semibold text-ink transition hover:border-ink disabled:opacity-60"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} aria-hidden="true" />
+            {isRefreshing ? "Checking" : "Re-check"}
+          </button>
+        </div>
+
         <div className="mt-4 grid gap-3 md:grid-cols-3">
-          {[
-            "API server running on port 8001",
-            "Qdrant Docker container active",
-            "Supabase project keys configured"
-          ].map((item) => (
+          {statusRows.map((row) => (
             <div
-              key={item}
-              className="flex items-center gap-3 rounded-card border border-paper-line bg-paper px-4 py-3 text-[13px] text-ink"
+              key={row.label}
+              className="rounded-card border border-paper-line bg-paper p-4"
+              role="status"
+              aria-label={`${row.label}: ${row.word}`}
             >
-              <span className="h-2.5 w-2.5 rounded-full bg-success" aria-hidden="true" />
-              {item}
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[13px] font-semibold text-ink">{row.label}</span>
+                <span className={`chip ${CHIP_CLASS[row.state]}`}>{row.word}</span>
+              </div>
+              <p className="mt-2 text-[13px] leading-6 text-ink-muted">{row.detail}</p>
             </div>
           ))}
         </div>

@@ -202,8 +202,7 @@ export function ProfilePanel() {
   const accountItems = [
     { label: "Email address", value: profile?.email || "Loading...", icon: Mail },
     { label: "User ID", value: profile?.id || "Loading...", icon: KeyRound },
-    { label: "Joined", value: formatDate(profile?.createdAt ?? null), icon: CalendarDays },
-    { label: "Access mode", value: "Single-user workspace", icon: ShieldCheck }
+    { label: "Joined", value: formatDate(profile?.createdAt ?? null), icon: CalendarDays }
   ];
 
   return (
@@ -306,11 +305,17 @@ export function ProfilePanel() {
       </section>
 
       <section className="rounded-card border border-paper-line bg-paper-card p-6">
-        <h3 className="text-[17px] font-semibold text-ink">Security & Access</h3>
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          {["Email/password authentication", "Private document workspace", "Server-side API keys hidden"].map((item) => (
-            <div key={item} className="flex items-center gap-3 rounded-card border border-paper-line bg-paper px-4 py-3 text-[13px] text-ink">
-              <span className="h-2.5 w-2.5 rounded-full bg-success" aria-hidden="true" />
+        <h3 className="text-[17px] font-semibold text-ink">Security &amp; Access</h3>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          {[
+            "Email and password sign-in",
+            "Documents, chunks, and chats scoped to your account"
+          ].map((item) => (
+            <div
+              key={item}
+              className="flex items-center gap-3 rounded-card border border-paper-line bg-paper px-4 py-3 text-[13px] text-ink"
+            >
+              <ShieldCheck className="h-4 w-4 shrink-0 text-ink-muted" strokeWidth={2.1} aria-hidden="true" />
               {item}
             </div>
           ))}
