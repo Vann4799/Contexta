@@ -15,6 +15,13 @@ except ModuleNotFoundError:
     sys.path.append(str(rag_package_path))
     from contexta_rag.embeddings import DeterministicEmbeddingProvider
 
+_PAYLOAD_INDEXES = (
+    ("user_id", "keyword"),
+    ("document_id", "keyword"),
+    ("doc_type", "keyword"),
+    ("page_number", "integer"),
+)
+
 
 class QdrantVectorStore:
     def __init__(
@@ -39,6 +46,8 @@ class QdrantVectorStore:
         embeddings: list[list[float]],
     ) -> list[str]:
         self._ensure_collection()
+        doc_type = document.get("doc_type") or "unclassified"
+        doc_version = document.get("doc_version")
         point_ids = [self._point_id(chunk) for chunk in chunks]
         points = [
             {
@@ -48,9 +57,13 @@ class QdrantVectorStore:
                     "document_id": chunk["document_id"],
                     "user_id": chunk["user_id"],
                     "filename": document.get("filename", ""),
+                    "doc_type": doc_type,
+                    "doc_version": doc_version,
                     "chunk_index": chunk["chunk_index"],
                     "text": chunk["text"],
                     "page_number": chunk["page_number"],
+                    "section_path": chunk["section_path"],
+                    "is_table": chunk["is_table"],
                 },
             }
             for point_id, chunk, embedding in zip(point_ids, chunks, embeddings)
@@ -95,4 +108,18 @@ class QdrantVectorStore:
         else:
             response.raise_for_status()
 
+        self._ensure_payload_indexes()
         self._collection_checked = True
+
+    def _ensure_payload_indexes(self) -> None:
+        for field_name, field_type in _PAYLOAD_INDEXES:
+            index_response = self._client.put(
+                f"{self._qdrant_url}/collections/{self._collection_name}/index",
+                headers=self._headers,
+                params={"wait": "true"},
+                json={
+                    "field_name": field_name,
+                    "field_schema": {"type": field_type},
+                },
+            )
+            index_response.raise_for_status()

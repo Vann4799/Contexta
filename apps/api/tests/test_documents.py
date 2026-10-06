@@ -565,6 +565,24 @@ class FailingVectorCleanup:
     def delete_document_vectors(self, user_id: str, document_id: str) -> None:
         raise RuntimeError("qdrant unreachable")
 
+    def set_document_payload(
+        self, user_id: str, document_id: str, payload: dict[str, object]
+    ) -> None:
+        raise RuntimeError("qdrant unreachable")
+
+
+class RecordingVectorCleanup:
+    def __init__(self) -> None:
+        self.payload_syncs: list[tuple[str, str, dict[str, object]]] = []
+
+    def delete_document_vectors(self, user_id: str, document_id: str) -> None:
+        return None
+
+    def set_document_payload(
+        self, user_id: str, document_id: str, payload: dict[str, object]
+    ) -> None:
+        self.payload_syncs.append((user_id, document_id, dict(payload)))
+
 
 class FailingStorage:
     def __init__(self) -> None:
@@ -679,6 +697,145 @@ def test_retry_ready_document_returns_409() -> None:
     response = client.post(f"/documents/{created.id}/retry", headers=auth_headers())
 
     assert response.status_code == 409
+
+
+def seed_ready_document(repository: InMemoryDocumentRepository) -> DocumentResponse:
+    created = repository.create_document(
+        USER_ID,
+        DocumentCreate(
+            filename="runbook.pdf",
+            file_type="pdf",
+            file_size=1500,
+            storage_path=f"{USER_ID}/{DOCUMENT_ID}/runbook.pdf",
+        ),
+    )
+    repository.update_document_metadata(USER_ID, created.id, {"status": "ready"})
+    ready = repository.get_document(USER_ID, created.id)
+    assert ready is not None
+    return ready
+
+
+def test_patch_document_metadata_updates_row_and_vector_payload() -> None:
+    repository = InMemoryDocumentRepository()
+    vector_cleanup = RecordingVectorCleanup()
+    app.dependency_overrides[get_document_repository] = lambda: repository
+    app.dependency_overrides[get_document_vector_cleanup] = lambda: vector_cleanup
+    document = seed_ready_document(repository)
+
+    response = client.patch(
+        f"/documents/{document.id}/metadata",
+        json={"doc_type": "sop", "doc_version": "v3"},
+        headers=auth_headers(),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["doc_type"] == "sop"
+    assert body["doc_version"] == "v3"
+    assert vector_cleanup.payload_syncs == [
+        (USER_ID, document.id, {"doc_type": "sop", "doc_version": "v3"})
+    ]
+
+
+def test_patch_document_metadata_skips_vector_sync_for_fields_not_in_payload() -> None:
+    repository = InMemoryDocumentRepository()
+    vector_cleanup = RecordingVectorCleanup()
+    app.dependency_overrides[get_document_repository] = lambda: repository
+    app.dependency_overrides[get_document_vector_cleanup] = lambda: vector_cleanup
+    document = seed_ready_document(repository)
+
+    response = client.patch(
+        f"/documents/{document.id}/metadata",
+        json={"source_url": "https://example.com/runbook.pdf"},
+        headers=auth_headers(),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["source_url"] == "https://example.com/runbook.pdf"
+    assert response.json()["doc_type"] == "unclassified"
+    assert vector_cleanup.payload_syncs == []
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {},
+        {"doc_type": "invoice"},
+        {"source_url": "ftp://example.com/file"},
+    ],
+)
+def test_patch_document_metadata_rejects_invalid_body(payload: dict[str, str]) -> None:
+    repository = InMemoryDocumentRepository()
+    vector_cleanup = RecordingVectorCleanup()
+    app.dependency_overrides[get_document_repository] = lambda: repository
+    app.dependency_overrides[get_document_vector_cleanup] = lambda: vector_cleanup
+    document = seed_ready_document(repository)
+
+    response = client.patch(
+        f"/documents/{document.id}/metadata",
+        json=payload,
+        headers=auth_headers(),
+    )
+
+    assert response.status_code == 422
+    assert repository.get_document(USER_ID, document.id) == document
+    assert vector_cleanup.payload_syncs == []
+
+
+def test_patch_document_metadata_conflicts_while_indexing() -> None:
+    repository = InMemoryDocumentRepository()
+    app.dependency_overrides[get_document_repository] = lambda: repository
+    created = repository.create_document(
+        USER_ID,
+        DocumentCreate(
+            filename="runbook.pdf",
+            file_type="pdf",
+            file_size=1500,
+            storage_path=f"{USER_ID}/{DOCUMENT_ID}/runbook.pdf",
+        ),
+    )
+
+    response = client.patch(
+        f"/documents/{created.id}/metadata",
+        json={"doc_type": "sop"},
+        headers=auth_headers(),
+    )
+
+    assert response.status_code == 409
+    stored = repository.get_document(USER_ID, created.id)
+    assert stored is not None and stored.doc_type == "unclassified"
+
+
+def test_patch_document_metadata_of_other_users_document_returns_404() -> None:
+    repository = InMemoryDocumentRepository()
+    app.dependency_overrides[get_document_repository] = lambda: repository
+    document = seed_ready_document(repository)
+
+    response = client.patch(
+        f"/documents/{document.id}/metadata",
+        json={"doc_type": "sop"},
+        headers=auth_headers("someone-else"),
+    )
+
+    assert response.status_code == 404
+
+
+def test_patch_document_metadata_reports_stale_index_when_vector_sync_fails() -> None:
+    repository = InMemoryDocumentRepository()
+    app.dependency_overrides[get_document_repository] = lambda: repository
+    app.dependency_overrides[get_document_vector_cleanup] = lambda: FailingVectorCleanup()
+    document = seed_ready_document(repository)
+
+    response = client.patch(
+        f"/documents/{document.id}/metadata",
+        json={"doc_type": "sop"},
+        headers=auth_headers(),
+    )
+
+    assert response.status_code == 502
+    assert "search index is still stale" in response.json()["detail"]
+    stored = repository.get_document(USER_ID, document.id)
+    assert stored is not None and stored.doc_type == "sop"
 
 
 @pytest.mark.asyncio

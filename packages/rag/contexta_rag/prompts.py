@@ -5,6 +5,7 @@ class CitationContext(TypedDict):
     document_name: str
     text: str
     page_number: NotRequired[int | None]
+    section_path: NotRequired[str | None]
 
 
 def build_rag_prompt(question: str, contexts: list[CitationContext]) -> str:
@@ -12,12 +13,16 @@ def build_rag_prompt(question: str, contexts: list[CitationContext]) -> str:
     for index, context in enumerate(contexts, start=1):
         page_number = context.get("page_number")
         page_label = f"Page {page_number}" if page_number is not None else "Page unknown"
+        section_path = context.get("section_path")
+        location_lines = [page_label]
+        if section_path:
+            location_lines.append(f"Section: {section_path}")
         source_blocks.append(
             "\n".join(
                 [
                     f"[Source {index}]",
                     f"Document: {context['document_name']}",
-                    page_label,
+                    *location_lines,
                     "Content:",
                     context["text"],
                 ]

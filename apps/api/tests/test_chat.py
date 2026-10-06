@@ -52,8 +52,10 @@ def test_chat_query_returns_answer_with_citations() -> None:
             {
                 "document_id": "doc-1",
                 "document_name": "overview.pdf",
+                "doc_type": "report",
                 "chunk_index": 0,
                 "page_number": 2,
+                "section_path": "2. Architecture",
                 "text": "Contexta answers questions using uploaded documents.",
                 "score": 0.91,
             }
@@ -77,8 +79,10 @@ def test_chat_query_returns_answer_with_citations() -> None:
                 "source_number": 1,
                 "document_id": "doc-1",
                 "document_name": "overview.pdf",
+                "doc_type": "report",
                 "chunk_index": 0,
                 "page_number": 2,
+                "section_path": "2. Architecture",
                 "text": "Contexta answers questions using uploaded documents.",
                 "score": 0.91,
             }
@@ -87,6 +91,7 @@ def test_chat_query_returns_answer_with_citations() -> None:
     assert retriever.received_user_id == "user-chat-123"
     assert retriever.received_question == "What is Contexta?"
     assert "Document: overview.pdf" in answer_generator.prompt
+    assert "Section: 2. Architecture" in answer_generator.prompt
     app.dependency_overrides.clear()
 
 

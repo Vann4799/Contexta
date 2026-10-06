@@ -7,9 +7,19 @@ class DocumentVectorCleanup(Protocol):
     def delete_document_vectors(self, user_id: str, document_id: str) -> None:
         ...
 
+    def set_document_payload(
+        self, user_id: str, document_id: str, payload: dict[str, object]
+    ) -> None:
+        ...
+
 
 class NoopDocumentVectorCleanup:
     def delete_document_vectors(self, user_id: str, document_id: str) -> None:
+        return None
+
+    def set_document_payload(
+        self, user_id: str, document_id: str, payload: dict[str, object]
+    ) -> None:
         return None
 
 
@@ -37,6 +47,30 @@ class QdrantDocumentVectorCleanup:
                         {"key": "document_id", "match": {"value": document_id}},
                     ]
                 }
+            },
+        )
+        if response.status_code == 404:
+            return
+        response.raise_for_status()
+
+    def set_document_payload(
+        self, user_id: str, document_id: str, payload: dict[str, object]
+    ) -> None:
+        if not payload:
+            return
+
+        response = self._client.post(
+            f"{self._qdrant_url}/collections/{self._collection_name}/points/payload",
+            headers=self._headers,
+            params={"wait": "true"},
+            json={
+                "payload": payload,
+                "filter": {
+                    "must": [
+                        {"key": "user_id", "match": {"value": user_id}},
+                        {"key": "document_id", "match": {"value": document_id}},
+                    ]
+                },
             },
         )
         if response.status_code == 404:

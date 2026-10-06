@@ -28,6 +28,21 @@ def contains_path_traversal(value: str) -> bool:
     return any(segment == ".." for segment in value.split("/"))
 
 
+def normalize_blank(value: object) -> object:
+    if isinstance(value, str):
+        stripped = value.strip()
+        return stripped or None
+    return value
+
+
+def validate_http_url(source_url: str | None) -> str | None:
+    if source_url is None:
+        return None
+    if not re.match(r"^https?://\S+$", source_url, flags=re.IGNORECASE):
+        raise ValueError("source_url must be an http(s) URL")
+    return source_url
+
+
 class DocumentCreate(BaseModel):
     filename: str = Field(min_length=1, max_length=255)
     file_type: DocumentFileType
@@ -47,21 +62,12 @@ class DocumentCreate(BaseModel):
     @field_validator("source_url", "doc_version", mode="before")
     @classmethod
     def blank_to_none(cls, value: object) -> object:
-        if isinstance(value, str):
-            stripped = value.strip()
-            if not stripped:
-                return None
-            return stripped
-        return value
+        return normalize_blank(value)
 
     @field_validator("source_url")
     @classmethod
-    def validate_source_url(cls, source_url: str | None) -> str | None:
-        if source_url is None:
-            return None
-        if not re.match(r"^https?://\S+$", source_url, flags=re.IGNORECASE):
-            raise ValueError("source_url must be an http(s) URL")
-        return source_url
+    def source_url_must_be_http(cls, source_url: str | None) -> str | None:
+        return validate_http_url(source_url)
 
     @field_validator("storage_path")
     @classmethod
@@ -82,6 +88,28 @@ class DocumentCreate(BaseModel):
             raise ValueError("filename extension must match file_type")
         if not self.storage_path.lower().endswith(extension):
             raise ValueError("storage_path extension must match file_type")
+        return self
+
+
+class DocumentMetadataUpdate(BaseModel):
+    doc_type: DocumentType | None = None
+    source_url: str | None = Field(default=None, max_length=2048)
+    doc_version: str | None = Field(default=None, max_length=64)
+
+    @field_validator("source_url", "doc_version", mode="before")
+    @classmethod
+    def blank_to_none(cls, value: object) -> object:
+        return normalize_blank(value)
+
+    @field_validator("source_url")
+    @classmethod
+    def source_url_must_be_http(cls, source_url: str | None) -> str | None:
+        return validate_http_url(source_url)
+
+    @model_validator(mode="after")
+    def require_a_change(self) -> "DocumentMetadataUpdate":
+        if not self.model_fields_set:
+            raise ValueError("at least one metadata field must be provided")
         return self
 
 
@@ -108,6 +136,10 @@ class DocumentChunkResponse(BaseModel):
     chunk_index: int
     text: str
     page_number: int | None
+    section_path: str | None = None
+    is_table: bool = False
+    char_count: int | None = None
+    token_count: int | None = None
     qdrant_point_id: str
 
 
@@ -119,7 +151,10 @@ MAX_CHUNK_PAGE_SIZE = 50
 class DocumentChunkRow(BaseModel):
     chunk_index: int
     page_number: int | None
+    section_path: str | None = None
+    is_table: bool = False
     char_count: int
+    token_count: int | None = None
     preview: str
 
 

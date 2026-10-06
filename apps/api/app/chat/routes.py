@@ -140,8 +140,10 @@ def build_chat_response(answer: str, contexts: list[dict[str, object]]) -> ChatQ
                 source_number=index,
                 document_id=str(context["document_id"]),
                 document_name=str(context["document_name"]),
+                doc_type=str(context.get("doc_type") or "unclassified"),
                 chunk_index=int(context["chunk_index"]),
                 page_number=context["page_number"],
+                section_path=context.get("section_path"),
                 text=str(context["text"]),
                 score=float(context["score"]),
             )
@@ -224,8 +226,10 @@ def build_highest_metric_response(
             source_number=1,
             document_id=best_chunk.document_id,
             document_name=document.filename,
+            doc_type=document.doc_type,
             chunk_index=best_chunk.chunk_index,
             page_number=best_chunk.page_number,
+            section_path=best_chunk.section_path,
             text=best_row,
             score=1.0,
         )
@@ -297,8 +301,10 @@ def build_exact_count_response(
             source_number=index,
             document_id=chunk.document_id,
             document_name=document.filename,
+            doc_type=document.doc_type,
             chunk_index=chunk.chunk_index,
             page_number=chunk.page_number,
+            section_path=chunk.section_path,
             text=record_text,
             score=1.0,
         )

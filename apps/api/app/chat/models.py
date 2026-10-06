@@ -13,8 +13,10 @@ class ChatQueryRequest(BaseModel):
 class RetrievedContext(TypedDict):
     document_id: str
     document_name: str
+    doc_type: str
     chunk_index: int
     page_number: int | None
+    section_path: str | None
     text: str
     score: float
 
@@ -25,6 +27,8 @@ class ChatCitation(BaseModel):
     document_name: str
     chunk_index: int
     page_number: int | None
+    doc_type: str = "unclassified"
+    section_path: str | None = None
     text: str
     score: float
 

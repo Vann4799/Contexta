@@ -29,6 +29,7 @@ from app.documents.models import (
     DocumentChunkRow,
     DocumentCreate,
     DocumentIntelligenceResponse,
+    DocumentMetadataUpdate,
     DocumentResponse,
     DocumentType,
 )
@@ -57,6 +58,7 @@ EMAIL_PATTERN = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b"
 LINK_PATTERN = re.compile(r"https?://[^\s,)]+")
 NAME_PATTERN = re.compile(r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3}\b")
 MAX_AI_BRIEF_CONTEXT_CHARS = 14000
+_PAYLOAD_SYNCED_FIELDS = frozenset({"doc_type", "doc_version"})
 
 
 def safe_upload_filename(filename: str) -> str:
@@ -266,7 +268,10 @@ def chunk_row(chunk: DocumentChunkResponse) -> DocumentChunkRow:
     return DocumentChunkRow(
         chunk_index=chunk.chunk_index,
         page_number=chunk.page_number,
+        section_path=chunk.section_path,
+        is_table=chunk.is_table,
         char_count=len(chunk.text),
+        token_count=chunk.token_count,
         preview=collapsed[:CHUNK_PREVIEW_MAX_CHARS],
     )
 
@@ -425,6 +430,54 @@ def retry_document_processing(
     if not retried_document:
         raise HTTPException(status_code=404, detail="document not found")
     return retried_document
+
+
+@router.patch("/{document_id}/metadata", response_model=DocumentResponse)
+def update_document_metadata(
+    document_id: str,
+    metadata: DocumentMetadataUpdate,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    repository: Annotated[DocumentRepository, Depends(get_document_repository)],
+    vector_cleanup: Annotated[DocumentVectorCleanup, Depends(get_document_vector_cleanup)],
+) -> DocumentResponse:
+    document = repository.get_document(current_user.id, document_id)
+    if not document:
+        raise HTTPException(status_code=404, detail="document not found")
+    if document.status in {"uploaded", "processing"}:
+        raise HTTPException(
+            status_code=409,
+            detail="document metadata cannot be edited while indexing is running",
+        )
+
+    changes = metadata.model_dump(exclude_unset=True)
+    updated_document = repository.update_document_metadata(
+        current_user.id,
+        document_id,
+        changes,
+    )
+    if not updated_document:
+        raise HTTPException(status_code=404, detail="document not found")
+
+    payload_changes = {
+        key: value
+        for key, value in changes.items()
+        if key in _PAYLOAD_SYNCED_FIELDS
+    }
+    if payload_changes:
+        try:
+            vector_cleanup.set_document_payload(
+                current_user.id,
+                document_id,
+                payload_changes,
+            )
+        except Exception as exc:
+            logger.exception("could not sync metadata for document %s", document_id)
+            raise HTTPException(
+                status_code=502,
+                detail="Document metadata was saved, but the search index is still stale.",
+            ) from exc
+
+    return updated_document
 
 
 @router.post(

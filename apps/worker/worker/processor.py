@@ -29,6 +29,9 @@ class ProcessingDocument(TypedDict, total=False):
     status: DocumentStatus
     error_message: str
     chunk_count: int
+    doc_type: str
+    doc_version: str
+    source_url: str
 
 
 class ExtractedPage(TypedDict):

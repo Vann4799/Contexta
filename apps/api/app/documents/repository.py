@@ -39,6 +39,14 @@ class DocumentRepository(Protocol):
     ) -> DocumentResponse | None:
         ...
 
+    def update_document_metadata(
+        self,
+        user_id: str,
+        document_id: str,
+        changes: dict[str, object],
+    ) -> DocumentResponse | None:
+        ...
+
 
 class InMemoryDocumentRepository:
     def __init__(self) -> None:
@@ -142,6 +150,21 @@ class InMemoryDocumentRepository:
                 return retried
         return None
 
+    def update_document_metadata(
+        self,
+        user_id: str,
+        document_id: str,
+        changes: dict[str, object],
+    ) -> DocumentResponse | None:
+        for index, document in enumerate(self._documents):
+            if document.user_id == user_id and document.id == document_id:
+                updated = document.model_copy(
+                    update={**changes, "updated_at": datetime.now(timezone.utc)}
+                )
+                self._documents[index] = updated
+                return updated
+        return None
+
 
 class SupabaseDocumentRepository:
     def __init__(self, supabase_url: str, service_role_key: str) -> None:
@@ -222,7 +245,10 @@ class SupabaseDocumentRepository:
                 "document_id": f"eq.{document_id}",
                 "user_id": f"eq.{user_id}",
                 "order": "chunk_index.asc",
-                "select": "document_id,user_id,chunk_index,text,page_number,qdrant_point_id",
+                "select": (
+                    "document_id,user_id,chunk_index,text,page_number,"
+                    "section_path,is_table,char_count,token_count,qdrant_point_id"
+                ),
             },
         )
         response.raise_for_status()
@@ -266,6 +292,34 @@ class SupabaseDocumentRepository:
                 "chunk_count": 0,
                 "processing_started_at": None,
             },
+        )
+        response.raise_for_status()
+        documents = response.json()
+        if not documents:
+            return None
+        return DocumentResponse.model_validate(documents[0])
+
+    def update_document_metadata(
+        self,
+        user_id: str,
+        document_id: str,
+        changes: dict[str, object],
+    ) -> DocumentResponse | None:
+        if not changes:
+            return self.get_document(user_id, document_id)
+
+        response = httpx.patch(
+            f"{self._supabase_url}/rest/v1/documents",
+            headers={
+                **self._headers,
+                "Content-Type": "application/json",
+                "Prefer": "return=representation",
+            },
+            params={
+                "id": f"eq.{document_id}",
+                "user_id": f"eq.{user_id}",
+            },
+            json=changes,
         )
         response.raise_for_status()
         documents = response.json()
