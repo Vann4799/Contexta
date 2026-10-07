@@ -230,6 +230,13 @@ async function getErrorMessage(response: Response, fallback: string) {
     if (typeof body.message === "string") {
       return body.message;
     }
+    // The metered /v1 surface and the key routes answer with { detail: { code, message } }.
+    if (body.detail && typeof body.detail === "object" && !Array.isArray(body.detail)) {
+      const message = (body.detail as { message?: unknown }).message;
+      if (typeof message === "string") {
+        return message;
+      }
+    }
     if (Array.isArray(body.detail)) {
       return body.detail
         .map((item) => {
