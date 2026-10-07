@@ -370,6 +370,11 @@ def test_documents_listing_follows_the_key_subset() -> None:
     inside = make_document(documents, USER_ID, "inside.pdf")
     make_document(documents, USER_ID, "outside.pdf")
     make_document(documents, OTHER_USER_ID, "nope.pdf")
+    # The worker writes indexed_at in Postgres, so a live row always carries a datetime.
+    # Left as None here, /v1/documents answered 200 in the suite and 500 in production.
+    documents._documents[0] = inside.model_copy(
+        update={"indexed_at": datetime(2026, 10, 7, 3, 4, 5, tzinfo=timezone.utc)}
+    )
     retriever = FakeRetriever()
     wire(keys, documents, retriever)
     key = make_key(keys, USER_ID, document_ids=[inside.id])
@@ -381,6 +386,7 @@ def test_documents_listing_follows_the_key_subset() -> None:
     assert [item["id"] for item in body["data"]] == [inside.id]
     assert body["meta"]["total"] == 1
     assert "storage_path" not in body["data"][0]
+    assert body["data"][0]["indexed_at"] == "2026-10-07T03:04:05+00:00"
 
 
 def test_keys_me_reports_the_live_quota() -> None:

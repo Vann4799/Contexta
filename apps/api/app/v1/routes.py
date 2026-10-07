@@ -237,7 +237,10 @@ def _respond(
     latency_ms = int((time.perf_counter() - request.state.started_at) * 1000)
     response = JSONResponse(
         status_code=200,
-        content=body,
+        # model_dump() leaves real datetime objects in the body (indexed_at), and
+        # JSONResponse hands those to json.dumps, which raises TypeError. Every /v1
+        # response goes through here, so the encoder belongs here too.
+        content=jsonable_encoder(body),
         headers=quota_headers(principal),
     )
     hit_ids = sorted(
