@@ -1,0 +1,1112 @@
+{
+  "generated_at": "2026-10-07T07:02:57+00:00",
+  "cases_file": "/app/apps/api/evals/query_rewrite_cases.json",
+  "collection": "contexta_chunks_v3",
+  "embedding_arms": [
+    {
+      "slot": "minilm",
+      "provider": "remote",
+      "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+      "dimensions": 384
+    },
+    {
+      "slot": "openai",
+      "provider": "openrouter",
+      "model": "text-embedding-3-small",
+      "dimensions": 1536
+    }
+  ],
+  "top_k": 5,
+  "arm_window": 10,
+  "rewrite_model": "deepseek-chat",
+  "rewrite_enabled": true,
+  "metrics_raw": {
+    "cases": 12,
+    "hit@1": 0.25,
+    "hit@3": 0.3333,
+    "hit@5": 0.4167,
+    "doc_hit@5": 1.0,
+    "mrr@5": 0.2944,
+    "mean_junk_in_top5": 0.0
+  },
+  "metrics_rewritten": {
+    "cases": 12,
+    "hit@1": 0.0833,
+    "hit@3": 0.4167,
+    "hit@5": 0.8333,
+    "doc_hit@5": 1.0,
+    "mrr@5": 0.3139,
+    "mean_junk_in_top5": 0.0
+  },
+  "rewritten_count": 10,
+  "better": [
+    "mt-flutter-vendor",
+    "mt-testing-purpose",
+    "mt-usecase-purpose",
+    "mt-forum-purpose",
+    "mt-submission-table"
+  ],
+  "worse": [
+    "mt-saran-pengembangan",
+    "mt-research-stages"
+  ],
+  "gate_mismatches": [],
+  "per_case": [
+    {
+      "id": "mt-flutter-vendor",
+      "question": "yang kedua itu dikembangkan oleh siapa?",
+      "history_turns": 2,
+      "expect_rewrite": true,
+      "retrieval_query": "Flutter dikembangkan oleh siapa",
+      "rewrite": "applied",
+      "rewrite_ms": 987,
+      "raw_hit_rank": null,
+      "ab_hit_rank": 3,
+      "verdict": "better",
+      "raw": {
+        "hit_at": {
+          "hit@1": false,
+          "hit@3": false,
+          "hit@5": false
+        },
+        "doc_hit@5": true,
+        "reciprocal_rank": 0.0,
+        "first_hit_rank": null,
+        "junk_in_top5": 0,
+        "returned": [
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 11,
+            "score": 0.3458
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 5,
+            "score": 0.3459
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 15,
+            "score": 0.36
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 0,
+            "score": 0.3706
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 6,
+            "score": 0.2556
+          }
+        ]
+      },
+      "ab": {
+        "hit_at": {
+          "hit@1": false,
+          "hit@3": true,
+          "hit@5": true
+        },
+        "doc_hit@5": true,
+        "reciprocal_rank": 0.3333333333333333,
+        "first_hit_rank": 3,
+        "junk_in_top5": 0,
+        "returned": [
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 43,
+            "score": 0.3971
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 11,
+            "score": 0.321
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 9,
+            "score": 0.4475
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 16,
+            "score": 0.2882
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 38,
+            "score": 0.4314
+          }
+        ]
+      }
+    },
+    {
+      "id": "mt-testing-purpose",
+      "question": "untuk apa itu dilakukan?",
+      "history_turns": 2,
+      "expect_rewrite": true,
+      "retrieval_query": "tujuan penggunaan Black Box Testing untuk seluruh fitur",
+      "rewrite": "applied",
+      "rewrite_ms": 812,
+      "raw_hit_rank": null,
+      "ab_hit_rank": 4,
+      "verdict": "better",
+      "raw": {
+        "hit_at": {
+          "hit@1": false,
+          "hit@3": false,
+          "hit@5": false
+        },
+        "doc_hit@5": true,
+        "reciprocal_rank": 0.0,
+        "first_hit_rank": null,
+        "junk_in_top5": 0,
+        "returned": [
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 18,
+            "score": 0.3593
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 16,
+            "score": 0.3557
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 5,
+            "score": 0.3783
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 1,
+            "score": 0.3429
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 43,
+            "score": 0.3136
+          }
+        ]
+      },
+      "ab": {
+        "hit_at": {
+          "hit@1": false,
+          "hit@3": false,
+          "hit@5": true
+        },
+        "doc_hit@5": true,
+        "reciprocal_rank": 0.25,
+        "first_hit_rank": 4,
+        "junk_in_top5": 0,
+        "returned": [
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 2,
+            "score": 0.458
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 11,
+            "score": 0.4032
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 9,
+            "score": 0.5036
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 41,
+            "score": 0.4981
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 34,
+            "score": 0.3975
+          }
+        ]
+      }
+    },
+    {
+      "id": "mt-saran-pengembangan",
+      "question": "kalau sarannya apa?",
+      "history_turns": 2,
+      "expect_rewrite": true,
+      "retrieval_query": "saran dalam BAB VI Penutup hasil penelitian",
+      "rewrite": "applied",
+      "rewrite_ms": 1114,
+      "raw_hit_rank": 1,
+      "ab_hit_rank": 5,
+      "verdict": "worse",
+      "raw": {
+        "hit_at": {
+          "hit@1": true,
+          "hit@3": true,
+          "hit@5": true
+        },
+        "doc_hit@5": true,
+        "reciprocal_rank": 1.0,
+        "first_hit_rank": 1,
+        "junk_in_top5": 0,
+        "returned": [
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 44,
+            "score": 0.2817
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 1,
+            "score": 0.2773
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 3,
+            "score": 0.2811
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 45,
+            "score": 0.1476
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 31,
+            "score": 0.3115
+          }
+        ]
+      },
+      "ab": {
+        "hit_at": {
+          "hit@1": false,
+          "hit@3": false,
+          "hit@5": true
+        },
+        "doc_hit@5": true,
+        "reciprocal_rank": 0.2,
+        "first_hit_rank": 5,
+        "junk_in_top5": 0,
+        "returned": [
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 5,
+            "score": 0.5405
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 6,
+            "score": 0.5429
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 2,
+            "score": 0.4641
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 0,
+            "score": 0.4489
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 44,
+            "score": 0.4133
+          }
+        ]
+      }
+    },
+    {
+      "id": "mt-usecase-purpose",
+      "question": "yang buat skenario pengguna itu fungsinya apa?",
+      "history_turns": 2,
+      "expect_rewrite": true,
+      "retrieval_query": "use case diagram fungsinya apa",
+      "rewrite": "applied",
+      "rewrite_ms": 744,
+      "raw_hit_rank": null,
+      "ab_hit_rank": 2,
+      "verdict": "better",
+      "raw": {
+        "hit_at": {
+          "hit@1": false,
+          "hit@3": false,
+          "hit@5": false
+        },
+        "doc_hit@5": true,
+        "reciprocal_rank": 0.0,
+        "first_hit_rank": null,
+        "junk_in_top5": 0,
+        "returned": [
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 20,
+            "score": 0.6166
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 19,
+            "score": 0.5363
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 38,
+            "score": 0.5271
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 10,
+            "score": 0.5081
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 12,
+            "score": 0.5547
+          }
+        ]
+      },
+      "ab": {
+        "hit_at": {
+          "hit@1": false,
+          "hit@3": true,
+          "hit@5": true
+        },
+        "doc_hit@5": true,
+        "reciprocal_rank": 0.5,
+        "first_hit_rank": 2,
+        "junk_in_top5": 0,
+        "returned": [
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 19,
+            "score": 0.5021
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 11,
+            "score": 0.4872
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 2,
+            "score": 0.4398
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 20,
+            "score": 0.4846
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 22,
+            "score": 0.4242
+          }
+        ]
+      }
+    },
+    {
+      "id": "mt-forum-purpose",
+      "question": "yang buat ngobrol itu fungsinya apa?",
+      "history_turns": 2,
+      "expect_rewrite": true,
+      "retrieval_query": "forum diskusi fungsinya apa",
+      "rewrite": "applied",
+      "rewrite_ms": 431,
+      "raw_hit_rank": null,
+      "ab_hit_rank": 4,
+      "verdict": "better",
+      "raw": {
+        "hit_at": {
+          "hit@1": false,
+          "hit@3": false,
+          "hit@5": false
+        },
+        "doc_hit@5": true,
+        "reciprocal_rank": 0.0,
+        "first_hit_rank": null,
+        "junk_in_top5": 0,
+        "returned": [
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 17,
+            "score": 0.32
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 18,
+            "score": 0.3524
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 5,
+            "score": 0.3129
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 44,
+            "score": 0.4639
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 20,
+            "score": 0.3193
+          }
+        ]
+      },
+      "ab": {
+        "hit_at": {
+          "hit@1": false,
+          "hit@3": false,
+          "hit@5": true
+        },
+        "doc_hit@5": true,
+        "reciprocal_rank": 0.25,
+        "first_hit_rank": 4,
+        "junk_in_top5": 0,
+        "returned": [
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 21,
+            "score": 0.5289
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 20,
+            "score": 0.4578
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 44,
+            "score": 0.5192
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 33,
+            "score": 0.4554
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 6,
+            "score": 0.499
+          }
+        ]
+      }
+    },
+    {
+      "id": "mt-research-stages",
+      "question": "habis itu tahapannya apa aja?",
+      "history_turns": 2,
+      "expect_rewrite": true,
+      "retrieval_query": "tahapan setelah prosedur pengumpulan data di bab tiga",
+      "rewrite": "applied",
+      "rewrite_ms": 1141,
+      "raw_hit_rank": 1,
+      "ab_hit_rank": 2,
+      "verdict": "worse",
+      "raw": {
+        "hit_at": {
+          "hit@1": true,
+          "hit@3": true,
+          "hit@5": true
+        },
+        "doc_hit@5": true,
+        "reciprocal_rank": 1.0,
+        "first_hit_rank": 1,
+        "junk_in_top5": 0,
+        "returned": [
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 15,
+            "score": 0.356
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 17,
+            "score": 0.3235
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 20,
+            "score": 0.3705
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 43,
+            "score": 0.214
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 18,
+            "score": 0.3582
+          }
+        ]
+      },
+      "ab": {
+        "hit_at": {
+          "hit@1": false,
+          "hit@3": true,
+          "hit@5": true
+        },
+        "doc_hit@5": true,
+        "reciprocal_rank": 0.5,
+        "first_hit_rank": 2,
+        "junk_in_top5": 0,
+        "returned": [
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 12,
+            "score": 0.4952
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 15,
+            "score": 0.4481
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 13,
+            "score": 0.4349
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 20,
+            "score": 0.4527
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 2,
+            "score": 0.417
+          }
+        ]
+      }
+    },
+    {
+      "id": "mt-background-problem",
+      "question": "masalah apa sih yang melatarbelakanginya di SMK?",
+      "history_turns": 2,
+      "expect_rewrite": true,
+      "retrieval_query": "latar belakang masalah di SMK",
+      "rewrite": "applied",
+      "rewrite_ms": 660,
+      "raw_hit_rank": 5,
+      "ab_hit_rank": 5,
+      "verdict": "same",
+      "raw": {
+        "hit_at": {
+          "hit@1": false,
+          "hit@3": false,
+          "hit@5": true
+        },
+        "doc_hit@5": true,
+        "reciprocal_rank": 0.2,
+        "first_hit_rank": 5,
+        "junk_in_top5": 0,
+        "returned": [
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 43,
+            "score": 0.4995
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 16,
+            "score": 0.4967
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 6,
+            "score": 0.4947
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 17,
+            "score": 0.4917
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 5,
+            "score": 0.4717
+          }
+        ]
+      },
+      "ab": {
+        "hit_at": {
+          "hit@1": false,
+          "hit@3": false,
+          "hit@5": true
+        },
+        "doc_hit@5": true,
+        "reciprocal_rank": 0.2,
+        "first_hit_rank": 5,
+        "junk_in_top5": 0,
+        "returned": [
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 43,
+            "score": 0.5678
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 16,
+            "score": 0.5235
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 14,
+            "score": 0.5353
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 0,
+            "score": 0.5639
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 5,
+            "score": 0.5383
+          }
+        ]
+      }
+    },
+    {
+      "id": "mt-gamification-elements",
+      "question": "elemen apa di situ yang bisa naikkan motivasi intrinsik?",
+      "history_turns": 2,
+      "expect_rewrite": true,
+      "retrieval_query": "elemen gamifikasi yang bisa naikkan motivasi intrinsik siswa di e-learning",
+      "rewrite": "applied",
+      "rewrite_ms": 1020,
+      "raw_hit_rank": 1,
+      "ab_hit_rank": 1,
+      "verdict": "same",
+      "raw": {
+        "hit_at": {
+          "hit@1": true,
+          "hit@3": true,
+          "hit@5": true
+        },
+        "doc_hit@5": true,
+        "reciprocal_rank": 1.0,
+        "first_hit_rank": 1,
+        "junk_in_top5": 0,
+        "returned": [
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 7,
+            "score": 0.5784
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 44,
+            "score": 0.4603
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 6,
+            "score": 0.3736
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 45,
+            "score": 0.3205
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 0,
+            "score": 0.3132
+          }
+        ]
+      },
+      "ab": {
+        "hit_at": {
+          "hit@1": true,
+          "hit@3": true,
+          "hit@5": true
+        },
+        "doc_hit@5": true,
+        "reciprocal_rank": 1.0,
+        "first_hit_rank": 1,
+        "junk_in_top5": 0,
+        "returned": [
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 7,
+            "score": 0.8611
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 44,
+            "score": 0.6988
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 8,
+            "score": 0.7195
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 6,
+            "score": 0.6835
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 0,
+            "score": 0.6569
+          }
+        ]
+      }
+    },
+    {
+      "id": "mt-submission-table",
+      "question": "yang nyatet pengumpulan tugas itu yang mana?",
+      "history_turns": 2,
+      "expect_rewrite": true,
+      "retrieval_query": "sequence diagram yang mencatat pengumpulan tugas",
+      "rewrite": "applied",
+      "rewrite_ms": 944,
+      "raw_hit_rank": null,
+      "ab_hit_rank": 5,
+      "verdict": "better",
+      "raw": {
+        "hit_at": {
+          "hit@1": false,
+          "hit@3": false,
+          "hit@5": false
+        },
+        "doc_hit@5": true,
+        "reciprocal_rank": 0.0,
+        "first_hit_rank": null,
+        "junk_in_top5": 0,
+        "returned": [
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 12,
+            "score": 0.4813
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 16,
+            "score": 0.5734
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 30,
+            "score": 0.4536
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 6,
+            "score": 0.5342
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 19,
+            "score": 0.4066
+          }
+        ]
+      },
+      "ab": {
+        "hit_at": {
+          "hit@1": false,
+          "hit@3": false,
+          "hit@5": true
+        },
+        "doc_hit@5": true,
+        "reciprocal_rank": 0.2,
+        "first_hit_rank": 5,
+        "junk_in_top5": 0,
+        "returned": [
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 19,
+            "score": 0.5768
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 3,
+            "score": 0.4953
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 12,
+            "score": 0.7901
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 16,
+            "score": 0.5616
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 20,
+            "score": 0.5445
+          }
+        ]
+      }
+    },
+    {
+      "id": "mt-abstract-english",
+      "question": "the english one, what development method does it mention?",
+      "history_turns": 2,
+      "expect_rewrite": true,
+      "retrieval_query": "what development method does the e-learning gamification research mention",
+      "rewrite": "applied",
+      "rewrite_ms": 1062,
+      "raw_hit_rank": null,
+      "ab_hit_rank": null,
+      "verdict": "same",
+      "raw": {
+        "hit_at": {
+          "hit@1": false,
+          "hit@3": false,
+          "hit@5": false
+        },
+        "doc_hit@5": true,
+        "reciprocal_rank": 0.0,
+        "first_hit_rank": null,
+        "junk_in_top5": 0,
+        "returned": [
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 15,
+            "score": 0.4652
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 8,
+            "score": 0.3933
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 43,
+            "score": 0.4216
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 45,
+            "score": 0.3865
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 17,
+            "score": 0.4969
+          }
+        ]
+      },
+      "ab": {
+        "hit_at": {
+          "hit@1": false,
+          "hit@3": false,
+          "hit@5": false
+        },
+        "doc_hit@5": true,
+        "reciprocal_rank": 0.0,
+        "first_hit_rank": null,
+        "junk_in_top5": 0,
+        "returned": [
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 7,
+            "score": 0.7247
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 44,
+            "score": 0.5976
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 45,
+            "score": 0.6682
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 6,
+            "score": 0.559
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 18,
+            "score": 0.5512
+          }
+        ]
+      }
+    },
+    {
+      "id": "ctl-self-contained-question",
+      "question": "Bagaimana cara kerja leaderboard dalam menampilkan posisi siswa di kelas?",
+      "history_turns": 2,
+      "expect_rewrite": false,
+      "retrieval_query": "Bagaimana cara kerja leaderboard dalam menampilkan posisi siswa di kelas?",
+      "rewrite": "standalone",
+      "rewrite_ms": 0,
+      "raw_hit_rank": 3,
+      "ab_hit_rank": 3,
+      "verdict": "same",
+      "raw": {
+        "hit_at": {
+          "hit@1": false,
+          "hit@3": true,
+          "hit@5": true
+        },
+        "doc_hit@5": true,
+        "reciprocal_rank": 0.3333333333333333,
+        "first_hit_rank": 3,
+        "junk_in_top5": 0,
+        "returned": [
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 32,
+            "score": 0.7499
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 31,
+            "score": 0.5931
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 13,
+            "score": 0.7231
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 26,
+            "score": 0.6859
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 40,
+            "score": 0.5412
+          }
+        ]
+      },
+      "ab": {
+        "hit_at": {
+          "hit@1": false,
+          "hit@3": true,
+          "hit@5": true
+        },
+        "doc_hit@5": true,
+        "reciprocal_rank": 0.3333333333333333,
+        "first_hit_rank": 3,
+        "junk_in_top5": 0,
+        "returned": [
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 32,
+            "score": 0.7499
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 31,
+            "score": 0.5931
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 13,
+            "score": 0.7231
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 26,
+            "score": 0.6859
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 40,
+            "score": 0.5412
+          }
+        ]
+      }
+    },
+    {
+      "id": "ctl-no-history",
+      "question": "terus hasilnya gimana?",
+      "history_turns": 0,
+      "expect_rewrite": false,
+      "retrieval_query": "terus hasilnya gimana?",
+      "rewrite": "no_history",
+      "rewrite_ms": 0,
+      "raw_hit_rank": null,
+      "ab_hit_rank": null,
+      "verdict": "same",
+      "raw": {
+        "hit_at": {
+          "hit@1": false,
+          "hit@3": false,
+          "hit@5": false
+        },
+        "doc_hit@5": true,
+        "reciprocal_rank": 0.0,
+        "first_hit_rank": null,
+        "junk_in_top5": 0,
+        "returned": [
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 3,
+            "score": 0.3192
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 0,
+            "score": 0.2884
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 2,
+            "score": 0.2933
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 6,
+            "score": 0.3003
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 15,
+            "score": 0.2962
+          }
+        ]
+      },
+      "ab": {
+        "hit_at": {
+          "hit@1": false,
+          "hit@3": false,
+          "hit@5": false
+        },
+        "doc_hit@5": true,
+        "reciprocal_rank": 0.0,
+        "first_hit_rank": null,
+        "junk_in_top5": 0,
+        "returned": [
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 3,
+            "score": 0.3192
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 0,
+            "score": 0.2884
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 2,
+            "score": 0.2933
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 6,
+            "score": 0.3003
+          },
+          {
+            "document": "e5c9610c-2229-4502-a7d0-778e43499e16",
+            "chunk": 15,
+            "score": 0.2962
+          }
+        ]
+      }
+    }
+  ]
+}
