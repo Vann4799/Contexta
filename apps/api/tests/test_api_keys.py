@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from app.apikeys.dependencies import _failed_lookups, get_api_key_repository
 from app.apikeys.repository import InMemoryApiKeyRepository
-from app.apikeys.secrets import API_KEY_PREFIX, hash_api_key
+from app.apikeys.secrets import API_KEY_PREFIX, generate_api_key, hash_api_key
 from app.auth.dependencies import get_current_user
 from app.auth.supabase_jwt import CurrentUser
 from app.chat.routes import get_retriever
@@ -555,6 +555,19 @@ def test_key_created_through_the_api_authorizes_the_next_request() -> None:
 
     assert response.status_code == 200, response.text
     assert keys.list_keys(USER_ID)[0]["last_used_at"] is not None
+
+
+def test_generated_key_is_the_promised_shape() -> None:
+    """token_urlsafe counts bytes, not characters: 26 of them encode to 35 characters.
+
+    The published shape is ctx_live_ + 26 characters, so the generator slices.
+    """
+    plaintext, key_hash, key_prefix, last_four = generate_api_key()
+
+    assert len(plaintext) == len(API_KEY_PREFIX) + 26
+    assert key_prefix == plaintext[: len(API_KEY_PREFIX) + 4]
+    assert last_four == plaintext[-4:]
+    assert key_hash == hash_api_key(plaintext)
 
 
 class _BrokenApiKeyStore(InMemoryApiKeyRepository):
