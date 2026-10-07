@@ -884,32 +884,75 @@ async def test_supabase_storage_url_encodes_path_segments(
     assert "policy%20%231.pdf" in captured["url"]
 
 
+class RecordingDeleteClient:
+    """Mirrors httpx.AsyncClient.delete's signature so an unsupported argument fails."""
+
+    def __init__(self, captured: dict[str, object], status_code: int) -> None:
+        self._captured = captured
+        self.status_code = status_code
+
+    async def __aenter__(self) -> "RecordingDeleteClient":
+        return self
+
+    async def __aexit__(self, *args: object) -> None:
+        return None
+
+    async def delete(
+        self,
+        url: str,
+        *,
+        params: object = None,
+        headers: object = None,
+        timeout: object = None,
+    ) -> "FakeDeleteResponse":
+        self._captured["url"] = url
+        self._captured["headers"] = headers
+        return FakeDeleteResponse(self.status_code)
+
+
+class FakeDeleteResponse:
+    def __init__(self, status_code: int) -> None:
+        self.status_code = status_code
+
+    def raise_for_status(self) -> None:
+        if self.status_code >= 400:
+            raise RuntimeError(f"storage delete failed: {self.status_code}")
+
+
+@pytest.mark.asyncio
+async def test_supabase_storage_delete_addresses_the_object_itself(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+    monkeypatch.setattr(
+        "app.documents.storage.httpx.AsyncClient",
+        lambda *args, **kwargs: RecordingDeleteClient(captured, 200),
+    )
+
+    storage = SupabaseDocumentStorage(
+        "https://example.supabase.co",
+        "service-role-key",
+        "documents",
+    )
+
+    await storage.delete_document(f"{USER_ID}/{DOCUMENT_ID}/run book#1.pdf")
+
+    url = str(captured["url"])
+    assert url.startswith("https://example.supabase.co/storage/v1/object/documents/")
+    assert f"{USER_ID}/{DOCUMENT_ID}/" in url
+    assert "run book#1.pdf" not in url
+    assert "run%20book%231.pdf" in url
+
+
 @pytest.mark.asyncio
 async def test_supabase_storage_delete_tolerates_missing_object(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    class FakeResponse:
-        status_code = 404
-
-        def raise_for_status(self) -> None:
-            raise RuntimeError("object not found")
-
-    class FakeAsyncClient:
-        async def __aenter__(self) -> "FakeAsyncClient":
-            return self
-
-        async def __aexit__(self, *args: object) -> None:
-            return None
-
-        async def delete(
-            self,
-            url: str,
-            json: dict[str, list[str]],
-            headers: dict[str, str],
-        ) -> FakeResponse:
-            return FakeResponse()
-
-    monkeypatch.setattr("app.documents.storage.httpx.AsyncClient", FakeAsyncClient)
+    captured: dict[str, object] = {}
+    monkeypatch.setattr(
+        "app.documents.storage.httpx.AsyncClient",
+        lambda *args, **kwargs: RecordingDeleteClient(captured, 404),
+    )
 
     storage = SupabaseDocumentStorage(
         "https://example.supabase.co",

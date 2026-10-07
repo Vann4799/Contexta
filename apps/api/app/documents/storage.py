@@ -55,18 +55,16 @@ class SupabaseDocumentStorage:
         headers = {
             "apikey": self._service_role_key,
             "Authorization": f"Bearer {self._service_role_key}",
-            "Content-Type": "application/json",
         }
         encoded_storage_path = "/".join(
             quote(segment, safe="") for segment in storage_path.split("/")
         )
-        url = f"{self._supabase_url}/storage/v1/object/{self._bucket}"
+        url = (
+            f"{self._supabase_url}/storage/v1/object/"
+            f"{self._bucket}/{encoded_storage_path}"
+        )
         async with httpx.AsyncClient() as client:
-            response = await client.delete(
-                url,
-                json={"prefixes": [encoded_storage_path]},
-                headers=headers,
-            )
+            response = await client.delete(url, headers=headers)
             if response.status_code == 404:
                 return
             response.raise_for_status()
