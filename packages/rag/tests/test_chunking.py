@@ -218,6 +218,7 @@ def test_section_titles_that_read_like_real_headings_are_kept(title):
         "Tabel 4.1 Ringkasan Hasil",
         "mengetahui jadwal kegiatan belajar dengan lebih mudah. Tampilan antarmuka",
         "sistem yang dibangun menggunakan framework fastapi untuk melayani",
+        "Halaman kelola jadwal mingguan digunakan untuk mengatur jadwal",
         " ".join(f"word{index}" for index in range(13)),
     ],
 )

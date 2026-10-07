@@ -8,7 +8,7 @@ _SENTENCE_SNAP_RATIO = 0.85
 _SENTENCE_TERMINATORS = (".", "!", "?", "…")
 _SENTENCE_CLOSERS = ("\"", "'", "”", "’", ")", "]", "»")
 
-_HEADING_MAX_WORDS = 12
+_HEADING_MAX_WORDS = 7
 _CAPTION_PREFIXES = frozenset(
     {"gambar", "tabel", "diagram", "grafik", "bagan", "figure", "table", "chart"}
 )
@@ -330,6 +330,10 @@ def _is_section_title(title: str) -> bool:
 
     MarkItDown turns page numbers, raw HTML and figure captions into '#' lines,
     and every one of them would otherwise be stored as a chunk's section_path.
+    The word cap is the caption separator: the longest real title in the indexed
+    corpus is 7 words, every screenshot caption emitted as a heading is longer.
+    Rejecting too much is the safe direction - the chunk then keeps the section
+    it falls under instead of losing text.
     """
     words = title.split()
     if not words or len(words) > _HEADING_MAX_WORDS:
