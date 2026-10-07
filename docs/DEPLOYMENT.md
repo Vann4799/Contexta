@@ -86,10 +86,17 @@ QDRANT_COLLECTION=contexta_chunks
 DEEPSEEK_API_KEY=<deepseek key>
 DEEPSEEK_MODEL=deepseek-v4-pro
 DEEPSEEK_MAX_TOKENS=3500
+DEEPSEEK_REWRITE_MODEL=deepseek-chat
 EMBEDDING_PROVIDER=deterministic
 EMBEDDING_DIMENSIONS=384
 API_CORS_ORIGINS=https://<vercel-web-domain>
 ```
+
+`DEEPSEEK_REWRITE_MODEL` resolves a follow-up question into a standalone search query before
+retrieval. It is not yet written to `.env.production`, and it does not need to be: the code default
+above plus an existing `DEEPSEEK_API_KEY` means the rewrite is live as soon as the api image is
+rebuilt. To switch it off without a code change, set `DEEPSEEK_REWRITE_MODEL=` to an empty value and
+restart the api service; follow-ups then search with the raw question.
 
 Optional worker setting:
 

@@ -16,7 +16,7 @@ except ModuleNotFoundError:
 
 from app.auth.dependencies import get_current_user
 from app.auth.supabase_jwt import CurrentUser
-from app.chat.llm import AnswerGenerator, DeepSeekAnswerGenerator
+from app.chat.llm import AnswerGenerator, DeepSeekAnswerGenerator, DeepSeekQueryRewriter, QueryRewriter
 from app.chat.models import (
     ChatCitation,
     ChatQueryRequest,
@@ -33,6 +33,7 @@ from app.chat.repository import (
     chat_repository,
 )
 from app.chat.retrieval import QdrantRetriever, retriever_from_settings
+from app.chat.rewrite import conversation_history, resolve_retrieval_query
 from app.documents.repository import (
     DocumentRepository,
     SupabaseDocumentRepository,
@@ -116,6 +117,18 @@ def get_answer_generator(
         api_key=settings.deepseek_api_key,
         model=settings.deepseek_model,
         max_tokens=settings.deepseek_max_tokens,
+    )
+
+
+def get_query_rewriter(
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> QueryRewriter | None:
+    """None is the kill switch: follow-ups then search with the raw question."""
+    if not settings.deepseek_api_key or not settings.deepseek_rewrite_model:
+        return None
+    return DeepSeekQueryRewriter(
+        api_key=settings.deepseek_api_key,
+        model=settings.deepseek_rewrite_model,
     )
 
 
@@ -400,12 +413,19 @@ def create_chat_message(
     document_repository: Annotated[DocumentRepository, Depends(get_document_repository)],
     retriever: Annotated[QdrantRetriever, Depends(get_retriever)],
     answer_generator: Annotated[AnswerGenerator, Depends(get_answer_generator)],
+    query_rewriter: Annotated[QueryRewriter | None, Depends(get_query_rewriter)],
 ) -> ChatSessionMessageResponse:
     session = repository.get_session(current_user.id, session_id)
     if not session:
         raise HTTPException(status_code=403, detail="chat session is not accessible")
 
     existing_messages = repository.list_messages(current_user.id, session_id)
+    history = conversation_history(existing_messages)
+    retrieval_query, rewrite_reason = resolve_retrieval_query(
+        payload.question,
+        history,
+        query_rewriter,
+    )
     if session.title == "New chat" and not existing_messages:
         repository.update_session_activity(
             current_user.id,
@@ -439,11 +459,11 @@ def create_chat_message(
         else:
             contexts = retriever.retrieve(
                 user_id=current_user.id,
-                question=payload.question,
+                question=retrieval_query,
                 document_ids=payload.document_ids,
             )
             if contexts:
-                prompt = build_rag_prompt(payload.question, contexts)
+                prompt = build_rag_prompt(payload.question, contexts, history)
                 try:
                     answer = answer_generator.generate_answer(prompt)
                 except Exception as exc:
@@ -461,6 +481,7 @@ def create_chat_message(
         "assistant",
         chat_response.answer,
         citations=chat_response.citations,
+        metadata={"retrieval_query": retrieval_query, "rewrite": rewrite_reason},
     )
     repository.update_session_activity(current_user.id, session_id)
     return ChatSessionMessageResponse(
