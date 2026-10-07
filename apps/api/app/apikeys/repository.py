@@ -254,11 +254,14 @@ class InMemoryApiKeyRepository:
                 return
 
     def usage(self, user_id: str, key_id: str, days: int) -> dict[str, object]:
-        logs = [log for log in self._logs if log["key_id"] == key_id]
         by_day: dict[str, dict[str, int]] = {}
         for offset in range(days - 1, -1, -1):
             day = (self._now() - timedelta(days=offset)).strftime("%Y-%m-%d")
             by_day[day] = {"date": day, "allowed": 0, "rejected": 0}
+
+        # One window for every figure: counting the whole history here while by_day
+        # respected `days` is the divergence the live RPC had too.
+        logs = [log for log in self._logs if log["key_id"] == key_id and str(log["created_at"])[:10] in by_day]
 
         by_outcome: dict[str, int] = {}
         for log in logs:

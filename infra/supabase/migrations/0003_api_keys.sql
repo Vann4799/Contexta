@@ -208,13 +208,30 @@ language sql
 stable
 set search_path = public, pg_temp
 as $$
+  with counted as (
+    select outcome, created_at::date as day
+    from public.api_request_logs
+    where key_id = p_key_id
+      -- p_days has to bound the rows themselves, not only the day series below, or the
+      -- totals describe the key's entire history while by_day describes the window.
+      and created_at >= date_trunc('day', now()) - make_interval(days => p_days - 1)
+  )
   select jsonb_build_object(
     'key_id', p_key_id,
     'days', p_days,
-    'total', count(*),
-    'allowed', count(*) filter (where outcome = 'allowed'),
-    'rejected', count(*) filter (where outcome <> 'allowed'),
-    'by_outcome', jsonb_object_agg(outcome, counted.total) ,
+    -- These three count log rows. Writing them as count(*) over the per-outcome groups
+    -- below returned the number of outcomes seen (2) instead of the number of requests.
+    'total', (select count(*) from counted),
+    'allowed', (select count(*) from counted where outcome = 'allowed'),
+    'rejected', (select count(*) from counted where outcome <> 'allowed'),
+    'by_outcome', (
+      select coalesce(jsonb_object_agg(per_outcome.outcome, per_outcome.total), '{}'::jsonb)
+      from (
+        select outcome, count(*) as total
+        from counted
+        group by outcome
+      ) per_outcome
+    ),
     'by_day', (
       select coalesce(
         jsonb_agg(
@@ -236,21 +253,14 @@ as $$
       ) d
       left join (
         select
-          created_at::date as day,
+          day,
           count(*) filter (where outcome = 'allowed') as allowed,
           count(*) filter (where outcome <> 'allowed') as rejected
-        from public.api_request_logs
-        where key_id = p_key_id
-        group by 1
+        from counted
+        group by day
       ) day_stats on day_stats.day = d.day
     )
   )
-  from (
-    select outcome, count(*) as total
-    from public.api_request_logs
-    where key_id = p_key_id
-    group by outcome
-  ) counted
 $$;
 
 revoke all on function public.api_key_usage(uuid, integer) from public;

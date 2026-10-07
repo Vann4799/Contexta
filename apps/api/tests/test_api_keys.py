@@ -506,6 +506,35 @@ def test_usage_reports_counts_per_day_and_outcome() -> None:
     assert client.get(f"/api-keys/{key_id}/usage?days=999").status_code == 422
 
 
+def test_usage_window_bounds_the_totals_not_only_the_day_columns() -> None:
+    """The live RPC reported total=2 next to by_outcome showing 64 requests because the
+    window filtered by_day only. One window, applied to every figure."""
+    keys = InMemoryApiKeyRepository()
+    documents = InMemoryDocumentRepository()
+    retriever = FakeRetriever([context("doc-1")])
+    wire(keys, documents, retriever)
+    key = make_key(keys, USER_ID)
+    key_id = keys.list_keys(USER_ID)[0]["id"]
+    client.post("/v1/retrieve", json={"query": "today"}, headers=bearer(key))
+    keys._logs.append(
+        {
+            "id": 999,
+            "key_id": key_id,
+            "user_id": USER_ID,
+            "outcome": "allowed",
+            "status_code": 200,
+            "created_at": datetime.now(timezone.utc) - timedelta(days=40),
+        }
+    )
+
+    body = client.get(f"/api-keys/{key_id}/usage?days=14").json()
+
+    assert body["total"] == 1
+    assert body["allowed"] == 1
+    assert body["by_outcome"] == {"allowed": 1}
+    assert sum(day["allowed"] + day["rejected"] for day in body["by_day"]) == body["total"]
+
+
 def test_v1_is_not_open_to_browser_origins() -> None:
     keys = InMemoryApiKeyRepository()
     documents = InMemoryDocumentRepository()
