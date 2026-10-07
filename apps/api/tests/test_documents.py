@@ -120,6 +120,10 @@ def test_create_document_metadata_then_list_documents() -> None:
         "doc_type": "policy",
         "source_url": "https://example.com/policy.pdf",
         "doc_version": None,
+        "indexed_at": None,
+        "embedding_model": None,
+        "embedding_dimensions": None,
+        "chunker_version": None,
         "created_at": created_document["created_at"],
         "updated_at": created_document["updated_at"],
     }

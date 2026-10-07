@@ -126,6 +126,10 @@ class DocumentResponse(BaseModel):
     doc_type: DocumentType = "unclassified"
     source_url: str | None = None
     doc_version: str | None = None
+    indexed_at: datetime | None = None
+    embedding_model: str | None = None
+    embedding_dimensions: int | None = None
+    chunker_version: str | None = None
     created_at: datetime
     updated_at: datetime
 
