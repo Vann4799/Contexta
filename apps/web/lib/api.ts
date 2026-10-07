@@ -600,3 +600,93 @@ export async function sendChatMessage(accessToken: string, sessionId: string, qu
 
   return (await response.json()) as ChatSessionMessageResponse;
 }
+
+export type ApiKey = {
+  id: string;
+  name: string;
+  key_prefix: string;
+  last_four: string;
+  document_ids: string[];
+  scopes: string[];
+  revoked_at: string | null;
+  expires_at: string | null;
+  last_used_at: string | null;
+  created_at: string;
+};
+
+export type CreatedApiKey = ApiKey & { api_key: string };
+
+export type ApiKeyUsage = {
+  key_id: string;
+  days: number;
+  total: number;
+  allowed: number;
+  rejected: number;
+  by_outcome: Record<string, number>;
+  by_day: { date: string; allowed: number; rejected: number }[];
+};
+
+export async function listApiKeys(accessToken: string): Promise<ApiKey[]> {
+  const response = await fetchApi("/api-keys", {
+    cache: "no-store",
+    headers: { Authorization: `Bearer ${accessToken}` }
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to load API keys."));
+  }
+
+  return (await response.json()) as ApiKey[];
+}
+
+export async function createApiKey(
+  accessToken: string,
+  name: string,
+  documentIds: string[]
+): Promise<CreatedApiKey> {
+  const response = await fetchApi("/api-keys", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ name, document_ids: documentIds })
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to create an API key."));
+  }
+
+  return (await response.json()) as CreatedApiKey;
+}
+
+export async function revokeApiKey(accessToken: string, keyId: string): Promise<ApiKey> {
+  const response = await fetchApi(`/api-keys/${keyId}/revoke`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}` }
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to revoke this key."));
+  }
+
+  return (await response.json()) as ApiKey;
+}
+
+export async function getApiKeyUsage(accessToken: string, keyId: string, days = 14): Promise<ApiKeyUsage> {
+  const response = await fetchApi(`/api-keys/${keyId}/usage?days=${days}`, {
+    cache: "no-store",
+    headers: { Authorization: `Bearer ${accessToken}` }
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to load key usage."));
+  }
+
+  return (await response.json()) as ApiKeyUsage;
+}
+
+/**
+ * The origin a machine caller reaches. The browser itself talks to a same-origin proxy,
+ * so apiBaseUrl() is the wrong thing to print inside a curl example.
+ */
+export function publicApiBaseUrl() {
+  return process.env.NEXT_PUBLIC_PUBLIC_API_BASE_URL || "https://api.3.27.119.26.sslip.io";
+}

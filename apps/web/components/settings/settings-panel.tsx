@@ -114,6 +114,13 @@ export function SettingsPanel() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Link
+            href="/settings/developer"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-card border border-paper-line bg-paper px-4 text-[13px] font-semibold text-ink transition hover:border-ink"
+          >
+            <KeyRound className="h-4 w-4" strokeWidth={2.1} aria-hidden="true" />
+            API keys
+          </Link>
+          <Link
             href="/documents"
             className="inline-flex h-10 items-center justify-center rounded-card border border-paper-line bg-paper-card px-4 text-[13px] font-semibold text-ink transition hover:border-ink hover:text-ink"
           >
