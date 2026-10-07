@@ -19,6 +19,18 @@ from app.core.config import Settings, get_settings
 logger = logging.getLogger(__name__)
 
 
+def _store_detail(exc: Exception) -> str:
+    """PostgREST's own words, which is the only useful thing to log here.
+
+    The ambiguous-column bug in api_key_authorize was invisible in the API and spelled
+    out in this body; class name alone would have sent me chasing a network timeout.
+    """
+    response = getattr(exc, "response", None)
+    if response is not None:
+        return f"{response.status_code} {response.text[:300]}"
+    return f"{type(exc).__name__}: {exc}"
+
+
 @contextmanager
 def api_key_store() -> Iterator[None]:
     """Turn a key-store failure into a 503 the caller can actually read.
@@ -32,7 +44,7 @@ def api_key_store() -> Iterator[None]:
     except HTTPException:
         raise
     except Exception as exc:  # noqa: BLE001 - PostgREST failure must not leak internals
-        logger.exception("api key store request failed")
+        logger.exception("api key store request failed: %s", _store_detail(exc))
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail={
@@ -154,6 +166,9 @@ def get_api_key_principal(
             settings.api_key_day_limit,
         )
     except Exception as exc:  # noqa: BLE001 - PostgREST failure must not leak internals
+        # Without this line the host shows a 503 and no cause, and the only way to find
+        # out what PostgREST said is to reproduce the call by hand.
+        logger.exception("api key authorization failed: %s", _store_detail(exc))
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail={

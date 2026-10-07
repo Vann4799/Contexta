@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+import httpx
+import pytest
 from fastapi.testclient import TestClient
 
 from app.apikeys.dependencies import _failed_lookups, get_api_key_repository
@@ -591,3 +594,26 @@ def test_store_failures_reach_the_caller_instead_of_looking_like_cors() -> None:
         assert response.status_code == 503, response.text
         assert response.json()["detail"]["code"] == "api_key_store_unavailable"
     assert "relation" not in listed.text
+
+
+def test_postgrest_message_reaches_the_log_not_just_the_status_code(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """The live authorize failure was a 42702 inside a 503 with no cause anywhere the
+    operator could read, so PostgREST's own body has to land in the log."""
+    documents = InMemoryDocumentRepository()
+    wire(_AmbiguousColumnStore(), documents, FakeRetriever())
+
+    with caplog.at_level(logging.ERROR):
+        assert client.get("/api-keys").status_code == 503
+
+    assert "ambiguous" in caplog.text
+
+
+class _AmbiguousColumnStore(InMemoryApiKeyRepository):
+    def list_keys(self, user_id: str) -> list[dict[str, object]]:
+        request = httpx.Request("GET", "https://example/rest/v1/api_keys")
+        response = httpx.Response(
+            400, request=request, content=b'{"code":"42702","message":"column reference \\"outcome\\" is ambiguous"}'
+        )
+        raise httpx.HTTPStatusError("400", request=request, response=response)

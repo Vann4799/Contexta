@@ -138,7 +138,10 @@ begin
     into used_minute, used_day
     from public.api_request_logs
     where api_request_logs.key_id = key_record.id
-      and outcome = 'allowed';
+      -- api_request_logs.outcome, never the plpgsql variable of the same name: an
+      -- unqualified reference here is a 42702 "ambiguous column" at runtime, and it
+      -- only surfaces on the allowed path because the other branches skip this count.
+      and api_request_logs.outcome = 'allowed';
 
     if used_minute >= p_minute_limit then
       outcome := 'quota_minute';
