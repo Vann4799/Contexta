@@ -1,0 +1,23 @@
+[project]
+name = "contexta-mcp"
+version = "0.1.0"
+description = "MCP front door for the Contexta retrieval API"
+requires-python = ">=3.11"
+# mcp 2.x renamed FastMCP to MCPServer and moved the HTTP client to the `httpx2`
+# package, so both names are pinned to the major this code was written against.
+dependencies = [
+    "httpx2>=2.13.0",
+    "mcp>=2.3.0,<3",
+    "uvicorn>=0.31.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.2.0",
+    "pytest-asyncio>=0.24.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"

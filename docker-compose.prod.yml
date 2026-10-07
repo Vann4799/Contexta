@@ -20,6 +20,25 @@ services:
       embeddings:
         condition: service_healthy
 
+  # Protocol adapter for MCP clients. It holds no keys and no database access: it
+  # forwards the caller's bearer token to the api over this network, so quota, scope and
+  # revocation remain decisions the api makes alone.
+  mcp:
+    build:
+      context: .
+      dockerfile: apps/mcp/Dockerfile
+    container_name: contexta-mcp
+    restart: unless-stopped
+    env_file:
+      - ${CONTEXTA_ENV_FILE:-.env.production}
+    environment:
+      CONTEXTA_API_INTERNAL_URL: http://api:8001
+    expose:
+      - "8080"
+    depends_on:
+      api:
+        condition: service_started
+
   worker:
     build:
       context: .

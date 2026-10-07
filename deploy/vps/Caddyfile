@@ -5,5 +5,12 @@
     Strict-Transport-Security "max-age=31536000; includeSubDomains"
   }
 
-  reverse_proxy api:8001
+  # MCP clients talk to a separate adapter process; the browser API keeps the rest.
+  handle /mcp* {
+    reverse_proxy mcp:8080
+  }
+
+  handle {
+    reverse_proxy api:8001
+  }
 }
