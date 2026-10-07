@@ -1,0 +1,141 @@
+{
+  "version": 1,
+  "user_id": "09f59060-e9a9-47d1-8b45-ba1d253d0957",
+  "note": "Multi-turn A/B for T5. Gold labels are copied from retrieval_cases.json, so every target chunk here is a chunk already labelled from the live corpus dump - no label is invented for the rewritten wording. `expect_rewrite: false` cases are controls: the gate must leave them alone.",
+  "documents": {
+    "laporan-ta": "e5c9610c-2229-4502-a7d0-778e43499e16",
+    "contexta-qa": "3afbdf71-7767-4529-8113-faf3e9cebd14"
+  },
+  "cases": [
+    {
+      "id": "mt-flutter-vendor",
+      "history": [
+        { "role": "user", "content": "Apa saja framework yang dibahas di landasan teori?" },
+        { "role": "assistant", "content": "Ada Laravel untuk web dan Flutter untuk mobile." }
+      ],
+      "question": "yang kedua itu dikembangkan oleh siapa?",
+      "gold": [{ "document": "laporan-ta", "chunks": [9] }],
+      "source_case": "flutter-vendor",
+      "note": "'yang kedua' = Flutter; answer is in 2.2.5"
+    },
+    {
+      "id": "mt-testing-purpose",
+      "history": [
+        { "role": "user", "content": "Metode pengujian apa yang dipakai dalam penelitian ini?" },
+        { "role": "assistant", "content": "Penulis memakai Black Box Testing untuk seluruh fitur." }
+      ],
+      "question": "untuk apa itu dilakukan?",
+      "gold": [{ "document": "laporan-ta", "chunks": [41] }],
+      "source_case": "testing-purpose",
+      "note": "'itu' = pengujian aplikasi, 5.2"
+    },
+    {
+      "id": "mt-saran-pengembangan",
+      "history": [
+        { "role": "user", "content": "Apa simpulan hasil penelitian ini?" },
+        { "role": "assistant", "content": "Simpulannya ada di BAB VI Penutup." }
+      ],
+      "question": "kalau sarannya apa?",
+      "gold": [{ "document": "laporan-ta", "chunks": [44] }],
+      "source_case": "saran-pengembangan",
+      "note": "topic switch inside the same chapter: 6.2 Saran"
+    },
+    {
+      "id": "mt-usecase-purpose",
+      "history": [
+        { "role": "user", "content": "Diagram apa saja yang dijelaskan di bab dua?" },
+        { "role": "assistant", "content": "Ada sequence diagram, use case diagram, dan ERD." }
+      ],
+      "question": "yang buat skenario pengguna itu fungsinya apa?",
+      "gold": [{ "document": "laporan-ta", "chunks": [11] }],
+      "source_case": "usecase-purpose",
+      "note": "reference resolved by description, not by name"
+    },
+    {
+      "id": "mt-forum-purpose",
+      "history": [
+        { "role": "user", "content": "Halaman apa saja yang ada di aplikasinya?" },
+        { "role": "assistant", "content": "Dashboard, materi, tugas, kuis, forum diskusi, dan leaderboard." }
+      ],
+      "question": "yang buat ngobrol itu fungsinya apa?",
+      "gold": [{ "document": "laporan-ta", "chunks": [24, 33] }],
+      "source_case": "forum-purpose",
+      "note": "'yang buat ngobrol' = forum diskusi"
+    },
+    {
+      "id": "mt-research-stages",
+      "history": [
+        { "role": "user", "content": "Bagaimana penulis mengumpulkan data penelitian?" },
+        { "role": "assistant", "content": "Lewat prosedur pengumpulan data yang dijelaskan di bab tiga." }
+      ],
+      "question": "habis itu tahapannya apa aja?",
+      "gold": [{ "document": "laporan-ta", "chunks": [15, 16] }],
+      "source_case": "research-stages",
+      "note": "3.3 Tahapan penelitian"
+    },
+    {
+      "id": "mt-background-problem",
+      "history": [
+        { "role": "user", "content": "Di mana penulis menjelaskan rumusan masalah?" },
+        { "role": "assistant", "content": "Itu ada di bagian awal BAB I." }
+      ],
+      "question": "masalah apa sih yang melatarbelakanginya di SMK?",
+      "gold": [{ "document": "laporan-ta", "chunks": [4, 5] }],
+      "source_case": "background-problem",
+      "note": "1.1 Latar belakang"
+    },
+    {
+      "id": "mt-gamification-elements",
+      "history": [
+        { "role": "user", "content": "Ada penelitian terdahulu tentang gamifikasi?" },
+        { "role": "assistant", "content": "Ada, yang menilai motivasi dan keterlibatan siswa di e-learning." }
+      ],
+      "question": "elemen apa di situ yang bisa naikkan motivasi intrinsik?",
+      "gold": [{ "document": "laporan-ta", "chunks": [7] }],
+      "source_case": "gamification-elements",
+      "note": "'di situ' = studi terdahulu itu"
+    },
+    {
+      "id": "mt-submission-table",
+      "history": [
+        { "role": "user", "content": "Ada tabel atau diagram sequence di dokumen ini?" },
+        { "role": "assistant", "content": "Ada beberapa sequence diagram untuk alur siswa dan guru." }
+      ],
+      "question": "yang nyatet pengumpulan tugas itu yang mana?",
+      "gold": [{ "document": "laporan-ta", "chunks": [20] }],
+      "source_case": "submission-table",
+      "note": "sequence diagram tugas"
+    },
+    {
+      "id": "mt-abstract-english",
+      "history": [
+        { "role": "user", "content": "Ringkas tujuan penelitian ini." },
+        { "role": "assistant", "content": "Penelitian ini membangun e-learning gamifikasi berbasis web dan mobile untuk SMK." }
+      ],
+      "question": "the english one, what development method does it mention?",
+      "gold": [{ "document": "laporan-ta", "chunks": [0] }],
+      "source_case": "abstract-english",
+      "note": "code-switching follow-up: 'the english one' = ABSTRACT"
+    },
+    {
+      "id": "ctl-self-contained-question",
+      "expect_rewrite": false,
+      "history": [
+        { "role": "user", "content": "Apa saja fitur gamifikasi di aplikasi ini?" },
+        { "role": "assistant", "content": "Ada point, badge, leaderboard, dan penukaran hadiah." }
+      ],
+      "question": "Bagaimana cara kerja leaderboard dalam menampilkan posisi siswa di kelas?",
+      "gold": [{ "document": "laporan-ta", "chunks": [13, 24] }],
+      "source_case": "student-rank-feature",
+      "note": "control: history exists but the question already stands alone"
+    },
+    {
+      "id": "ctl-no-history",
+      "expect_rewrite": false,
+      "history": [],
+      "question": "terus hasilnya gimana?",
+      "gold": [{ "document": "laporan-ta", "chunks": [41] }],
+      "note": "control: an unresolvable follow-up with no turns to resolve it against"
+    }
+  ]
+}
