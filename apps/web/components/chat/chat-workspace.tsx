@@ -27,6 +27,60 @@ function initialsFromUser(email?: string, fullName?: string) {
   return words.slice(0, 2).map((word) => word[0]?.toUpperCase()).join("") || "CT";
 }
 
+type MessageSegment = { kind: "text"; value: string } | { kind: "source"; number: number };
+
+const CITATION_MARKER = /\[Source\s+(\d+)\]/g;
+
+function splitCitationMarkers(content: string): MessageSegment[] {
+  const segments: MessageSegment[] = [];
+  let cursor = 0;
+  for (const match of content.matchAll(CITATION_MARKER)) {
+    const start = match.index ?? 0;
+    if (start > cursor) {
+      segments.push({ kind: "text", value: content.slice(cursor, start) });
+    }
+    segments.push({ kind: "source", number: Number(match[1]) });
+    cursor = start + match[0].length;
+  }
+  if (cursor < content.length) {
+    segments.push({ kind: "text", value: content.slice(cursor) });
+  }
+  return segments;
+}
+
+function citationLabel(citation: ChatCitation) {
+  const trail = [citation.document_name];
+  if (citation.section_path) trail.push(citation.section_path);
+  if (citation.page_number) trail.push(`hlm. ${citation.page_number}`);
+  return `Sumber ${citation.source_number} — ${trail.join(", ")}`;
+}
+
+function CitationChip({
+  marker,
+  citation,
+  onCite
+}: {
+  marker: number;
+  citation?: ChatCitation;
+  onCite: () => void;
+}) {
+  if (!citation) {
+    return <span className="nums">[Source {marker}]</span>;
+  }
+
+  return (
+    <button
+      aria-label={`Buka sumber ${marker}: ${citationLabel(citation)}`}
+      className="focus-ring nums ml-1 inline-flex shrink-0 items-center rounded-chip bg-accent px-1.5 py-0.5 align-baseline text-[11px] font-bold text-ink transition hover:brightness-95"
+      onClick={onCite}
+      title={citationLabel(citation)}
+      type="button"
+    >
+      S{citation.source_number}
+    </button>
+  );
+}
+
 export function ChatWorkspace() {
   const searchParams = useSearchParams();
   const requestedQuestion = searchParams.get("question");
@@ -42,6 +96,7 @@ export function ChatWorkspace() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [isSourcesOpen, setIsSourcesOpen] = useState(false);
+  const [highlightedSource, setHighlightedSource] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [userInitials, setUserInitials] = useState("CT");
   const activeRequestRef = useRef<AbortController | null>(null);
@@ -63,6 +118,21 @@ export function ChatWorkspace() {
 
     return assistantWithSources?.citations[0]?.document_id ?? null;
   }
+
+  function focusCitedSource(messageCitations: ChatCitation[], sourceNumber: number) {
+    setCitations(messageCitations);
+    setIsSourcesOpen(true);
+    setHighlightedSource(sourceNumber);
+    document
+      .getElementById(`chat-source-${sourceNumber}`)
+      ?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  useEffect(() => {
+    if (highlightedSource === null) return;
+    const timeout = setTimeout(() => setHighlightedSource(null), 1600);
+    return () => clearTimeout(timeout);
+  }, [highlightedSource]);
 
   const loadSessionMessages = useCallback(
     async (sessionId: string, accessToken?: string) => {
@@ -419,13 +489,28 @@ export function ChatWorkspace() {
                 </div>
               ) : null}
               <div
-                className={`max-w-[78%] rounded-card px-4 py-3 text-[13.5px] leading-6 ${
+                className={`max-w-[78%] whitespace-pre-line rounded-card px-4 py-3 text-[13.5px] leading-6 ${
                   message.role === "user"
                     ? "bg-night text-white shadow-node"
                     : "border border-paper-line bg-paper-card text-ink shadow-card"
                 }`}
               >
-                {message.content}
+                {message.role === "assistant"
+                  ? splitCitationMarkers(message.content).map((segment, segmentIndex) =>
+                      segment.kind === "text" ? (
+                        segment.value
+                      ) : (
+                        <CitationChip
+                          key={`source-${segment.number}-${segmentIndex}`}
+                          citation={message.citations.find(
+                            (item) => item.source_number === segment.number
+                          )}
+                          marker={segment.number}
+                          onCite={() => focusCitedSource(message.citations, segment.number)}
+                        />
+                      )
+                    )
+                  : message.content}
               </div>
               {message.role === "user" ? (
                 <div className="grid h-9 w-9 shrink-0 place-items-center rounded-control bg-paper-chip font-mono text-[11px] font-bold text-ink-muted" aria-hidden="true">
@@ -501,7 +586,15 @@ export function ChatWorkspace() {
             {citations.length > 0 ? (
               <div className="flex flex-col gap-3">
                 {citations.map((citation) => (
-                  <article key={`${citation.document_id}-${citation.chunk_index}`} className="rounded-control border border-paper-line bg-paper-soft p-3">
+                  <article
+                    id={`chat-source-${citation.source_number}`}
+                    key={`${citation.document_id}-${citation.chunk_index}`}
+                    className={`rounded-control border bg-paper-soft p-3 transition-shadow ${
+                      highlightedSource === citation.source_number
+                        ? "border-accent ring-2 ring-accent"
+                        : "border-paper-line"
+                    }`}
+                  >
                     <div className="flex items-start justify-between gap-2">
                       <Link className="min-w-0 truncate text-[13.5px] font-medium hover:underline" href={`/documents/${citation.document_id}`}>
                         {citation.document_name}
@@ -511,8 +604,8 @@ export function ChatWorkspace() {
                       </span>
                     </div>
                     <p className="nums mt-1 font-mono text-[11.5px] text-ink-muted">
-                      {citation.page_number ? `Page ${citation.page_number}` : "Page unknown"}
-                      {citation.section_path ? ` · ${citation.section_path}` : ""} · Score {citation.score.toFixed(2)}
+                      {citation.section_path ? `${citation.section_path} · ` : ""}
+                      {citation.page_number ? `hlm. ${citation.page_number}` : "halaman tidak diketahui"} · Score {citation.score.toFixed(2)}
                     </p>
                     <p className="mt-2 line-clamp-6 text-[13px] leading-5 text-ink-muted">{citation.text}</p>
                   </article>
