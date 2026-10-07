@@ -4,6 +4,7 @@ from fastapi import FastAPI, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.account.routes import router as account_router
 from app.apikeys.routes import router as api_keys_router
 from app.chat.routes import router as chat_router
 from app.convert.routes import router as convert_router
@@ -25,6 +26,7 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["Content-Disposition"],
 )
+app.include_router(account_router)
 app.include_router(documents_router)
 app.include_router(chat_router)
 app.include_router(convert_router)
