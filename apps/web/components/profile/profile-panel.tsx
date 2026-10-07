@@ -1,9 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CalendarDays, Database, FileText, KeyRound, Mail, MessageSquare, Save, ShieldCheck, UserRound } from "lucide-react";
-import { listChatSessions, listDocuments, type ChatSession, type DocumentItem } from "@/lib/api";
+import {
+  ArrowRight,
+  BadgeAlert,
+  BadgeCheck,
+  CalendarDays,
+  Database,
+  FileText,
+  KeyRound,
+  LogIn,
+  Mail,
+  MessageSquare,
+  Save,
+  UserRound,
+  type LucideIcon
+} from "lucide-react";
+import { DOCUMENT_TYPE_LABELS, getAccountSummary, type AccountSummary } from "@/lib/api";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 
@@ -19,6 +34,8 @@ type UserProfile = {
   email: string;
   fullName: string;
   createdAt: string | null;
+  provider: string;
+  emailConfirmedAt: string | null;
   profile: ProfileRow | null;
 };
 
@@ -51,10 +68,57 @@ function formatDate(value: string | null) {
   }).format(new Date(value));
 }
 
+function formatRelative(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const diffDays = Math.round((new Date(value).getTime() - Date.now()) / 86_400_000);
+  if (diffDays === 0) {
+    return "Today";
+  }
+  if (diffDays === -1) {
+    return "Yesterday";
+  }
+  if (diffDays < 0) {
+    return `${Math.abs(diffDays)} days ago`;
+  }
+
+  return formatDate(value);
+}
+
+function plural(count: number, noun: string) {
+  return `${count} ${noun}${count === 1 ? "" : "s"}`;
+}
+
 function initialsFromProfile(profile: UserProfile | null) {
   const source = profile?.fullName || profile?.email?.split("@")[0] || "Contexta";
   const words = source.split(/[\s._-]+/).filter(Boolean);
   return words.slice(0, 2).map((word) => word[0]?.toUpperCase()).join("") || "CT";
+}
+
+const EMAIL_PASSWORD_LABEL = "Email & password";
+
+const PROVIDER_LABELS: Record<string, string> = {
+  email: EMAIL_PASSWORD_LABEL,
+  password: EMAIL_PASSWORD_LABEL,
+  google: "Google",
+  github: "GitHub",
+  magiclink: "Magic link",
+  oauth: "OAuth"
+};
+
+function providerLabel(provider: string) {
+  if (!provider) {
+    return null;
+  }
+
+  const keyed = PROVIDER_LABELS[provider.toLowerCase()];
+  if (keyed) {
+    return keyed;
+  }
+
+  return provider.charAt(0).toUpperCase() + provider.slice(1);
 }
 
 function profileErrorMessage(error: unknown) {
@@ -65,12 +129,36 @@ function profileErrorMessage(error: unknown) {
   return "Unable to load profile.";
 }
 
+function Chip({
+  icon: Icon,
+  tone = "neutral",
+  children
+}: {
+  icon: LucideIcon;
+  tone?: "neutral" | "success" | "warning";
+  children: ReactNode;
+}) {
+  const tones = {
+    neutral: "border-paper-line bg-paper text-ink",
+    success: "border-success-line bg-success-soft text-success-ink",
+    warning: "border-warning-line bg-warning-soft text-warning"
+  };
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-chip border px-2.5 py-1 text-[11.5px] font-semibold leading-none ${tones[tone]}`}
+    >
+      <Icon className="h-3.5 w-3.5 shrink-0" strokeWidth={2.1} aria-hidden="true" />
+      {children}
+    </span>
+  );
+}
+
 export function ProfilePanel() {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [displayName, setDisplayName] = useState("");
-  const [documents, setDocuments] = useState<DocumentItem[]>([]);
-  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [summary, setSummary] = useState<AccountSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -102,23 +190,22 @@ export function ProfilePanel() {
 
       const nameFromMetadata = typeof session.user.user_metadata?.full_name === "string" ? session.user.user_metadata.full_name : "";
       const resolvedName = profileRow?.display_name || nameFromMetadata || "";
+      const provider = typeof session.user.app_metadata?.provider === "string" ? session.user.app_metadata.provider : "";
 
       setProfile({
         id: session.user.id,
         email: session.user.email ?? "",
         fullName: resolvedName,
         createdAt: session.user.created_at ?? null,
+        provider,
+        emailConfirmedAt: session.user.email_confirmed_at ?? null,
         profile: profileRow ?? null
       });
       setDisplayName(resolvedName);
 
-      const [loadedDocuments, loadedSessions] = await Promise.all([
-        listDocuments(session.access_token),
-        listChatSessions(session.access_token)
-      ]);
-      setDocuments(loadedDocuments);
-      setSessions(loadedSessions);
+      setSummary(await getAccountSummary(session.access_token));
     } catch (error) {
+      setSummary(null);
       setMessage({ type: "error", text: profileErrorMessage(error) });
     } finally {
       setIsLoading(false);
@@ -129,18 +216,42 @@ export function ProfilePanel() {
     void loadProfile();
   }, [loadProfile]);
 
-  const stats = useMemo(() => {
-    const readyDocuments = documents.filter((document) => document.status === "ready").length;
-    const chunks = documents.reduce((sum, document) => sum + document.chunk_count, 0);
-    const storage = documents.reduce((sum, document) => sum + document.file_size, 0);
+  const stats = summary
+    ? [
+        {
+          label: "Documents",
+          value: summary.documents.total.toString(),
+          helper: `${summary.documents.by_status.ready} ready, ${summary.documents.by_status.failed} failed`,
+          icon: FileText
+        },
+        {
+          label: "Chat sessions",
+          value: summary.sessions.toString(),
+          helper: `${plural(summary.activity.chats_7d, "question")} in the last 7 days`,
+          icon: MessageSquare
+        },
+        {
+          label: "Indexed chunks",
+          value: summary.chunks.toString(),
+          helper: "Searchable text blocks",
+          icon: Database
+        },
+        {
+          label: "Storage used",
+          value: formatBytes(summary.storage_bytes),
+          helper: "Total size of uploaded files",
+          icon: Save
+        }
+      ]
+    : [];
 
-    return [
-      { label: "Documents", value: documents.length.toString(), helper: `${readyDocuments} ready`, icon: FileText },
-      { label: "Chat sessions", value: sessions.length.toString(), helper: "Saved conversations", icon: MessageSquare },
-      { label: "Indexed chunks", value: chunks.toString(), helper: "Searchable blocks", icon: Database },
-      { label: "Storage used", value: formatBytes(storage), helper: "Uploaded files", icon: Save }
-    ];
-  }, [documents, sessions]);
+  const activity = summary
+    ? [
+        { label: "Upload", count: summary.activity.uploads_7d, last: formatRelative(summary.activity.last_upload_at) },
+        { label: "Indexing", count: summary.activity.indexed_7d, last: formatRelative(summary.activity.last_index_at) },
+        { label: "Chat", count: summary.activity.chats_7d, last: formatRelative(summary.activity.last_chat_at) }
+      ]
+    : [];
 
   async function handleSaveProfile() {
     if (!profile) {
@@ -205,10 +316,13 @@ export function ProfilePanel() {
     { label: "Joined", value: formatDate(profile?.createdAt ?? null), icon: CalendarDays }
   ];
 
+  const signedInWith = profile ? providerLabel(profile.provider) : null;
+  const topDocType = summary?.top_doc_type ?? null;
+
   return (
     <div className="space-y-3">
-      <section className="grid gap-3 lg:grid-cols-12">
-        <article className="rounded-card border border-paper-line bg-paper-card p-6 lg:col-span-8 lg:self-start">
+      <section className="grid items-start gap-3 lg:grid-cols-12">
+        <article className="rounded-card border border-paper-line bg-paper-card p-6 lg:col-span-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex min-w-0 items-center gap-3">
               <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-card bg-night text-[17px] font-semibold text-white">
@@ -227,12 +341,33 @@ export function ProfilePanel() {
             </Button>
           </div>
 
+          {profile ? (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {signedInWith ? <Chip icon={LogIn}>{signedInWith}</Chip> : null}
+              {profile.emailConfirmedAt ? (
+                <Chip icon={BadgeCheck} tone="success">
+                  Email verified
+                </Chip>
+              ) : (
+                <Chip icon={BadgeAlert} tone="warning">
+                  Email not verified
+                </Chip>
+              )}
+              {topDocType ? (
+                <Chip icon={FileText}>
+                  {DOCUMENT_TYPE_LABELS[topDocType.doc_type]} · {plural(topDocType.documents, "document")}
+                </Chip>
+              ) : null}
+            </div>
+          ) : null}
+
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            <label className="grid gap-2 text-[13px] font-semibold text-ink">
+            <label className="grid gap-2 text-[13px] font-semibold text-ink" htmlFor="profile-display-name">
               Display name
               <input
                 className="h-10 rounded-control border border-paper-line bg-paper-card px-3 text-[13px] font-normal text-ink outline-none transition focus:border-ink"
                 disabled={isLoading || isSaving}
+                id="profile-display-name"
                 onChange={(event) => setDisplayName(event.target.value)}
                 placeholder="Add your display name"
                 value={displayName}
@@ -284,41 +419,70 @@ export function ProfilePanel() {
         </aside>
       </section>
 
-      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {stats.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <article key={stat.label} className="rounded-card border border-paper-line bg-paper-card p-5">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-[13px] font-medium text-ink-muted">{stat.label}</p>
-                  <p className="mt-3 nums text-[26px] font-semibold text-ink">{isLoading ? "..." : stat.value}</p>
-                  <p className="mt-1 text-[11.5px] text-ink-muted">{isLoading ? "Loading profile..." : stat.helper}</p>
-                </div>
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-card bg-paper-chip text-ink">
-                  <Icon className="h-5 w-5" strokeWidth={2.2} aria-hidden="true" />
-                </div>
-              </div>
-            </article>
-          );
-        })}
+      <section aria-busy={isLoading} className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {isLoading
+          ? Array.from({ length: 4 }, (_, index) => (
+              <article
+                aria-hidden="true"
+                className="h-[112px] animate-pulse rounded-card border border-paper-line bg-paper-card"
+                key={index}
+              />
+            ))
+          : stats.map((stat) => {
+              const Icon = stat.icon;
+              return (
+                <article key={stat.label} className="rounded-card border border-paper-line bg-paper-card p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[13px] font-medium text-ink-muted">{stat.label}</p>
+                      <p className="nums mt-3 text-[26px] font-semibold text-ink">{stat.value}</p>
+                      <p className="mt-1 text-pretty text-[11.5px] text-ink-muted">{stat.helper}</p>
+                    </div>
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-card bg-paper-chip text-ink">
+                      <Icon className="h-5 w-5" strokeWidth={2.2} aria-hidden="true" />
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
       </section>
 
       <section className="rounded-card border border-paper-line bg-paper-card p-6">
-        <h3 className="text-[17px] font-semibold text-ink">Security &amp; Access</h3>
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
-          {[
-            "Email and password sign-in",
-            "Documents, chunks, and chats scoped to your account"
-          ].map((item) => (
-            <div
-              key={item}
-              className="flex items-center gap-3 rounded-card border border-paper-line bg-paper px-4 py-3 text-[13px] text-ink"
-            >
-              <ShieldCheck className="h-4 w-4 shrink-0 text-ink-muted" strokeWidth={2.1} aria-hidden="true" />
-              {item}
-            </div>
-          ))}
+        <h3 className="text-[17px] font-semibold text-ink">Activity in the last 7 days</h3>
+
+        {isLoading ? (
+          <div aria-hidden="true" className="mt-4 h-[76px] animate-pulse rounded-control border border-paper-line bg-paper" />
+        ) : summary ? (
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            {activity.map((item) => (
+              <div key={item.label} className="rounded-control border border-paper-line bg-paper p-4">
+                <p className="text-[11.5px] font-semibold text-ink-muted">{item.label}</p>
+                <p className="nums mt-2 text-[24px] font-semibold text-ink">{item.count}</p>
+                <p className="mt-1 text-[11.5px] text-ink-muted">
+                  {item.last ? `Last: ${item.last}` : "No activity in this window"}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-4 text-[13px] text-danger">Activity numbers could not be loaded. Try Refresh.</p>
+        )}
+
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-paper-line pt-4">
+          <p className="text-[13px] text-ink-muted">
+            {isLoading
+              ? "Loading API keys..."
+              : summary
+                ? `${plural(summary.developer.api_keys_active, "active key")} · ${summary.developer.api_requests_14d} requests in the last 14 days`
+                : "API key usage could not be loaded."}
+          </p>
+          <Link
+            className="focus-ring inline-flex h-10 items-center gap-2 rounded-control px-3 text-[13.5px] font-medium text-ink transition-colors hover:bg-paper-chip"
+            href="/settings/developer"
+          >
+            Manage API keys
+            <ArrowRight className="h-4 w-4" strokeWidth={2.1} aria-hidden="true" />
+          </Link>
         </div>
       </section>
     </div>

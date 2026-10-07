@@ -690,6 +690,42 @@ export async function getApiKeyUsage(accessToken: string, keyId: string, days = 
   return (await response.json()) as ApiKeyUsage;
 }
 
+export type AccountSummary = {
+  documents: {
+    total: number;
+    by_status: Record<DocumentStatus, number>;
+  };
+  chunks: number;
+  storage_bytes: number;
+  top_doc_type: { doc_type: DocumentType; documents: number } | null;
+  sessions: number;
+  activity: {
+    uploads_7d: number;
+    indexed_7d: number;
+    chats_7d: number;
+    last_upload_at: string | null;
+    last_index_at: string | null;
+    last_chat_at: string | null;
+  };
+  developer: {
+    api_keys_active: number;
+    api_requests_14d: number;
+  };
+};
+
+export async function getAccountSummary(accessToken: string): Promise<AccountSummary> {
+  const response = await fetchApi("/account/summary", {
+    cache: "no-store",
+    headers: { Authorization: `Bearer ${accessToken}` }
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to load account summary."));
+  }
+
+  return (await response.json()) as AccountSummary;
+}
+
 /**
  * The origin a machine caller reaches. The browser itself talks to a same-origin proxy,
  * so apiBaseUrl() is the wrong thing to print inside a curl example.
