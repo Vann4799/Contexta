@@ -116,6 +116,43 @@ outside that subset simply return nothing, and exports of those documents answer
 same response as for a document that does not exist, so a scoped key cannot probe the rest
 of the workspace.
 
+## MCP (Claude Desktop, Cursor, any MCP client)
+
+The same key works as an MCP server, so an agent can search your documents without you
+writing any HTTP glue:
+
+```
+https://api.3.27.119.26.sslip.io/mcp
+```
+
+```json
+{
+  "mcpServers": {
+    "contexta": {
+      "url": "https://api.3.27.119.26.sslip.io/mcp",
+      "headers": { "Authorization": "Bearer ctx_live_xxxxxxxxxxxxxxxxxxxxxxxxxx" }
+    }
+  }
+}
+```
+
+Three tools are exposed, one per endpoint above:
+
+| Tool | Returns |
+|---|---|
+| `contexta_retrieve` | the top chunks for a query, with `document_name`, `page_number`, `section_path` and a fusion score |
+| `contexta_list_documents` | every document this key can read, with `chunk_count` and `status` |
+| `contexta_export_document` | one whole document as markdown or JSONL |
+
+Nothing about MCP is privileged or separate: the tool call carries your key to the same
+`/v1` endpoint, so it consumes the same quota and appears in the same usage panel. A
+request whose arguments fail the tool schema (a missing `query`, `top_k` above 20) is
+rejected before it reaches the API and costs nothing. A call without any `Authorization`
+header is refused at the MCP layer with `401 missing_api_key`.
+
+There are no MCP *resources* or *prompts* — Contexta hands back retrieved text and leaves
+the answering to whatever is on the other end.
+
 ## Errors
 
 ```json

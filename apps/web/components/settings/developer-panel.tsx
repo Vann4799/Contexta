@@ -389,7 +389,8 @@ export function DeveloperPanel() {
         <h3 className="text-[17px] font-semibold text-ink">Using a key</h3>
         <p className="mt-2 text-[13px] text-ink-muted">
           Retrieval only — no answer generation. Send the key as a bearer token; a browser login token is not accepted
-          here. Full endpoint reference lives in <code className="font-mono">docs/api-v1.md</code>.
+          here. Full endpoint reference lives in <code className="font-mono">docs/api-v1.md</code>. The same key works on
+          our MCP server at <code className="font-mono">/mcp</code> for Claude, Cursor, or any other MCP client.
         </p>
         <pre className="mt-4 overflow-x-auto rounded-control border border-paper-line bg-paper p-4 font-mono text-[12.5px] leading-6 text-ink">
           {`curl -X POST ${publicApiBaseUrl()}/v1/retrieve \\
