@@ -9,11 +9,16 @@ from contexta_rag.embeddings import (
     embedding_model_label,
 )
 from contexta_rag.fusion import order_by_fusion, reciprocal_rank_fusion
-from contexta_rag.prompts import CitationContext, build_rag_prompt
+from contexta_rag.prompts import (
+    ConversationTurn,
+    build_query_rewrite_prompt,
+    build_rag_prompt,
+)
 from contexta_rag.vector_space import VectorSpace, assert_vector_spaces_match
 
 __all__ = [
     "CitationContext",
+    "ConversationTurn",
     "DeterministicEmbeddingProvider",
     "EmbeddingProvider",
     "OpenAICompatibleEmbeddingProvider",
@@ -24,6 +29,7 @@ __all__ = [
     "TextChunk",
     "VectorSpace",
     "assert_vector_spaces_match",
+    "build_query_rewrite_prompt",
     "build_rag_prompt",
     "chunk_pages",
     "chunk_text",
