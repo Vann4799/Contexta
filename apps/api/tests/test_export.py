@@ -358,3 +358,22 @@ def test_workspace_requires_authentication() -> None:
     response = client.get("/export/workspace", headers={})
 
     assert response.status_code in {401, 403}
+
+
+def test_browser_can_read_the_export_filename_from_a_cross_origin_call() -> None:
+    """Without CORS exposure the web app has to guess the downloaded filename."""
+    documents = InMemoryDocumentRepository()
+    chats = InMemoryChatRepository()
+    document = ready_document(documents, USER_ID, "skripsi.pdf", 1)
+    add_chunk(documents, document, 0, "Bab satu berisi latar belakang.", 12)
+    override_repositories(documents, chats)
+
+    response = client.get(
+        f"/documents/{document.id}/export?format=md",
+        headers={"Origin": "http://localhost:3000"},
+    )
+
+    assert response.status_code == 200, response.text
+    exposed = response.headers.get("access-control-expose-headers", "")
+    assert "content-disposition" in exposed.lower()
+    setup_module(None)

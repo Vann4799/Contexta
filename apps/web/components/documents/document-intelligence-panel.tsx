@@ -2,15 +2,18 @@
 
 import Link from "next/link";
 import { Fragment, useCallback, useEffect, useState } from "react";
-import { ArrowLeft, ArrowUpRight, Copy, FileText, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Copy, Download, FileText, Sparkles } from "lucide-react";
 import {
+  exportDocument,
   generateDocumentAIBrief,
   getDocument,
   getDocumentIntelligence,
+  type DocumentExportFormat,
   type DocumentIntelligence,
   type DocumentItem
 } from "@/lib/api";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { saveBlobAsFile } from "@/lib/download";
 import { StatusPill } from "@/components/ui/status-pill";
 import { Button } from "@/components/ui/button";
 import { DocumentChunksTable } from "@/components/documents/document-chunks-table";
@@ -110,6 +113,8 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
   const [error, setError] = useState<string | null>(null);
   const [briefError, setBriefError] = useState<string | null>(null);
   const [copyMessage, setCopyMessage] = useState<string | null>(null);
+  const [exportingFormat, setExportingFormat] = useState<DocumentExportFormat | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const getAccessToken = useCallback(async () => {
     const supabase = getSupabaseBrowserClient();
@@ -215,6 +220,29 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
     }
   };
 
+  const handleExport = async (format: DocumentExportFormat) => {
+    if (!document) {
+      return;
+    }
+
+    setExportError(null);
+    setExportingFormat(format);
+
+    try {
+      const accessToken = await getAccessToken();
+      if (!accessToken) {
+        throw new Error("Sign in to export this document.");
+      }
+
+      const file = await exportDocument(accessToken, documentId, format, document.filename);
+      saveBlobAsFile(file.blob, file.filename);
+    } catch (downloadError) {
+      setExportError(downloadError instanceof Error ? downloadError.message : "Unable to export document.");
+    } finally {
+      setExportingFormat(null);
+    }
+  };
+
   if (isLoading) {
     return <section className="surface p-5 text-[13px] text-ink-muted">Loading document intelligence...</section>;
   }
@@ -259,7 +287,36 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
             </p>
           </div>
         </div>
+        {document.status === "ready" ? (
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="text-[12px] font-semibold text-ink-muted">Export</span>
+            <Button
+              disabled={exportingFormat !== null}
+              onClick={() => void handleExport("md")}
+              variant="ghost"
+              className="h-9 px-3"
+            >
+              <Download className="h-4 w-4" aria-hidden="true" />
+              {exportingFormat === "md" ? "Exporting..." : "Markdown"}
+            </Button>
+            <Button
+              disabled={exportingFormat !== null}
+              onClick={() => void handleExport("jsonl")}
+              variant="ghost"
+              className="h-9 px-3"
+            >
+              <Download className="h-4 w-4" aria-hidden="true" />
+              {exportingFormat === "jsonl" ? "Exporting..." : "JSONL"}
+            </Button>
+          </div>
+        ) : null}
       </section>
+
+      {exportError ? (
+        <p className="text-[13px] text-danger" role="alert">
+          {exportError}
+        </p>
+      ) : null}
 
       {normalizedStatus === "processing" ? (
         <section className="surface border-ink/15 px-5 py-4">

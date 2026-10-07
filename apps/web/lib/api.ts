@@ -457,6 +457,68 @@ export async function retryDocument(accessToken: string, documentId: string) {
   return (await response.json()) as DocumentItem;
 }
 
+export type DocumentExportFormat = "md" | "jsonl";
+
+export interface ExportedFile {
+  blob: Blob;
+  filename: string;
+}
+
+/** The API names the download with RFC 5987 (`filename*=UTF-8''...`) so unicode and spaces survive. */
+function filenameFromDisposition(header: string | null) {
+  if (!header) {
+    return null;
+  }
+
+  const extended = /filename\*=(?:UTF-8'')?([^;]+)/i.exec(header);
+  if (extended) {
+    try {
+      return decodeURIComponent(extended[1].trim().replace(/^"|"$/g, ""));
+    } catch {
+      return extended[1].trim();
+    }
+  }
+
+  const quoted = /filename="([^"]+)"/i.exec(header);
+  return quoted ? quoted[1] : null;
+}
+
+async function fetchExport(path: string, accessToken: string, fallbackName: string): Promise<ExportedFile> {
+  const response = await fetchApi(path, {
+    cache: "no-store",
+    headers: {
+      Authorization: `Bearer ${accessToken}`
+    }
+  }, FILE_TRANSFER_TIMEOUT_MS);
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to export."));
+  }
+
+  return {
+    blob: await response.blob(),
+    filename: filenameFromDisposition(response.headers.get("content-disposition")) ?? fallbackName
+  };
+}
+
+export async function exportWorkspace(accessToken: string) {
+  const stamp = new Date().toISOString().slice(0, 10);
+  return fetchExport("/export/workspace", accessToken, `contexta-workspace-${stamp}.zip`);
+}
+
+export async function exportDocument(
+  accessToken: string,
+  documentId: string,
+  format: DocumentExportFormat,
+  filename: string
+) {
+  return fetchExport(
+    `/documents/${documentId}/export?format=${format}`,
+    accessToken,
+    `${filename.replace(/\.[^.]+$/, "")}.${format}`
+  );
+}
+
 export async function queryChat(accessToken: string, question: string) {
   const response = await fetchApi("/chat/query", {
     method: "POST",

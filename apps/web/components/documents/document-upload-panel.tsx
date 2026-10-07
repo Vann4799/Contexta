@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { CloudUpload, RefreshCw, Upload } from "lucide-react";
+import { CloudUpload, Download, RefreshCw, Upload } from "lucide-react";
 import {
   deleteDocument,
+  exportWorkspace,
   getIndexingHealth,
   retryDocument,
   uploadDocument,
@@ -17,6 +18,7 @@ import {
   type IndexingHealth
 } from "@/lib/api";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { saveBlobAsFile } from "@/lib/download";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/status-pill";
 import { cn } from "@/lib/utils";
@@ -99,6 +101,7 @@ export function DocumentUploadPanel() {
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [mutatingDocumentId, setMutatingDocumentId] = useState<string | null>(null);
   const [indexingHealth, setIndexingHealth] = useState<IndexingHealth | null>(null);
@@ -277,6 +280,28 @@ export function DocumentUploadPanel() {
     }
   };
 
+  const handleExportWorkspace = async () => {
+    setError(null);
+    setSuccess(null);
+    setIsExporting(true);
+
+    try {
+      const accessToken = await getAccessToken();
+      if (!accessToken) {
+        setError("Sign in to export your workspace.");
+        return;
+      }
+
+      const file = await exportWorkspace(accessToken);
+      saveBlobAsFile(file.blob, file.filename);
+      setSuccess(`Exported ${file.filename}.`);
+    } catch (exportError) {
+      setError(uploadErrorMessage(exportError, "Unable to export workspace."));
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const totalStorage = documents.reduce((sum, document) => sum + document.file_size, 0);
   const queueCount = documents.filter((document) => document.status === "uploaded" || document.status === "processing").length;
   const readyCount = documents.filter((document) => document.status === "ready").length;
@@ -313,6 +338,10 @@ export function DocumentUploadPanel() {
           <Button disabled={isLoading || isUploading} onClick={() => void loadDocuments()} variant="secondary">
             <RefreshCw className="h-4 w-4" aria-hidden="true" />
             Refresh
+          </Button>
+          <Button disabled={isLoading || isUploading || isExporting} onClick={() => void handleExportWorkspace()} variant="secondary">
+            <Download className="h-4 w-4" aria-hidden="true" />
+            {isExporting ? "Exporting..." : "Export workspace"}
           </Button>
           <Button disabled={isUploading} onClick={() => fileInputRef.current?.click()}>
             <Upload className="h-4 w-4" aria-hidden="true" />
