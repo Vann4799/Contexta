@@ -1,11 +1,20 @@
 from __future__ import annotations
 
+import re
 from typing import TypedDict
 
 _TABLE_ROW_LIMIT_RATIO = 1.5
 _SENTENCE_SNAP_RATIO = 0.85
 _SENTENCE_TERMINATORS = (".", "!", "?", "…")
 _SENTENCE_CLOSERS = ("\"", "'", "”", "’", ")", "]", "»")
+
+_HEADING_MAX_WORDS = 12
+_CAPTION_PREFIXES = frozenset(
+    {"gambar", "tabel", "diagram", "grafik", "bagan", "figure", "table", "chart"}
+)
+_PAGE_NUMBER_ONLY = re.compile(r"[\d\s./-]+")
+_PAGE_MARKER = re.compile(r"^(halaman|page)\s*\.?\s*\d+$", re.IGNORECASE)
+_SENTENCE_PERIOD = re.compile(r"[A-Za-z]\.\s")
 
 
 class TextChunk(TypedDict):
@@ -131,12 +140,13 @@ class _Document:
                 if heading:
                     level, title = heading
                     words = words[1:]
-                    headings = {
-                        saved_level: saved_title
-                        for saved_level, saved_title in headings.items()
-                        if saved_level < level
-                    }
-                    headings[level] = title
+                    if _is_section_title(title):
+                        headings = {
+                            saved_level: saved_title
+                            for saved_level, saved_title in headings.items()
+                            if saved_level < level
+                        }
+                        headings[level] = title
 
                 line_id = len(self.line_bounds)
                 self.line_bounds.append((len(self.words), len(self.words) + len(words)))
@@ -313,3 +323,36 @@ def _heading(words: list[str]) -> tuple[int, str] | None:
     if not title:
         return None
     return level, title
+
+
+def _is_section_title(title: str) -> bool:
+    """Accept only headings that read like a section name.
+
+    MarkItDown turns page numbers, raw HTML and figure captions into '#' lines,
+    and every one of them would otherwise be stored as a chunk's section_path.
+    """
+    words = title.split()
+    if not words or len(words) > _HEADING_MAX_WORDS:
+        return False
+    if any(character in title for character in "<>|"):
+        return False
+    if _PAGE_NUMBER_ONLY.fullmatch(title):
+        return False
+    if _PAGE_MARKER.fullmatch(title):
+        return False
+    if _SENTENCE_PERIOD.search(title):
+        return False
+    if words[0][0].islower():
+        return False
+    if _is_caption(words):
+        return False
+    return True
+
+
+def _is_caption(words: list[str]) -> bool:
+    if words[0].lower().rstrip(".") not in _CAPTION_PREFIXES:
+        return False
+    if len(words) == 1:
+        return True
+    number = words[1].rstrip(".:")
+    return bool(re.fullmatch(r"\d+(\.\d+)?", number))

@@ -1,6 +1,6 @@
 import pytest
 
-from contexta_rag.chunking import chunk_pages, chunk_text
+from contexta_rag.chunking import _is_section_title, chunk_pages, chunk_text
 
 
 def _words(count: int, prefix: str = "w", terminal: bool = False) -> str:
@@ -188,3 +188,98 @@ def test_is_table_marks_only_chunks_that_span_a_table_row():
             line.strip().startswith("|") for line in chunk["text"].splitlines()
         )
         assert chunk["is_table"] == has_row
+
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        "BAB IV HASIL DAN PEMBAHASAN",
+        "4.3 Hasil",
+        "Scenario C - Sharp Correction",
+        "PRODUCT REQUIREMENT DOCUMENT (PRD)",
+        "Admin Dashboard",
+        "UML",
+    ],
+)
+def test_section_titles_that_read_like_real_headings_are_kept(title):
+    assert _is_section_title(title)
+
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        "79",
+        "5.",
+        "- - -",
+        "Halaman 45",
+        "Page 12",
+        "</div>",
+        "Gambar 5.3 Potongan Kode Halaman Login User",
+        "Tabel 4.1 Ringkasan Hasil",
+        "mengetahui jadwal kegiatan belajar dengan lebih mudah. Tampilan antarmuka",
+        "sistem yang dibangun menggunakan framework fastapi untuk melayani",
+        " ".join(f"word{index}" for index in range(13)),
+    ],
+)
+def test_page_numbers_html_and_captions_are_not_section_titles(title):
+    assert not _is_section_title(title)
+
+
+def test_heading_lines_that_are_not_sections_keep_the_section_they_fall_under():
+    pages = [
+        {
+            "page_number": 40,
+            "text": (
+                "## BAB IV HASIL DAN PEMBAHASAN\n"
+                "### 4.3 Hasil\n"
+                + _words(12, prefix="maka")
+                + "\n# 79\n"
+                + _words(12, prefix="selanjutnya")
+            ),
+        }
+    ]
+
+    chunks = chunk_pages(pages, max_words=20, overlap_words=0, min_words=2)
+
+    assert [chunk["section_path"] for chunk in chunks] == [
+        "BAB IV HASIL DAN PEMBAHASAN",
+        "BAB IV HASIL DAN PEMBAHASAN > 4.3 Hasil",
+    ]
+    assert "#" not in "".join(chunk["text"] for chunk in chunks)
+
+
+def test_figure_caption_heading_does_not_become_the_page_section():
+    pages = [
+        {
+            "page_number": 60,
+            "text": (
+                "## Gambar 5.57 Halaman Profil Mobile\n"
+                + _words(20, prefix="profil")
+            ),
+        }
+    ]
+
+    chunks = chunk_pages(pages, max_words=10, overlap_words=0, min_words=2)
+
+    assert len(chunks) > 1
+    assert [chunk["section_path"] for chunk in chunks] == [None] * len(chunks)
+
+
+def test_rejected_heading_words_stay_in_the_stream():
+    pages = [
+        {
+            "page_number": 1,
+            "text": "## Judul Asli\n# 79\n" + _words(8, prefix="isi"),
+        }
+    ]
+
+    accepted = chunk_pages(pages, max_words=5, overlap_words=0, min_words=1)
+    plain = chunk_pages(
+        [{"page_number": 1, "text": "Judul Asli\n79\n" + _words(8, prefix="isi")}],
+        max_words=5,
+        overlap_words=0,
+        min_words=1,
+    )
+
+    assert [chunk["text"] for chunk in accepted] == [chunk["text"] for chunk in plain]
+    assert _covered(accepted) == set(range(11))
