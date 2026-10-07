@@ -73,15 +73,15 @@ function formatRelative(value: string | null) {
     return null;
   }
 
-  const diffDays = Math.round((new Date(value).getTime() - Date.now()) / 86_400_000);
-  if (diffDays === 0) {
+  const elapsedDays = Math.floor((Date.now() - new Date(value).getTime()) / 86_400_000);
+  if (elapsedDays <= 0) {
     return "Today";
   }
-  if (diffDays === -1) {
+  if (elapsedDays === 1) {
     return "Yesterday";
   }
-  if (diffDays < 0) {
-    return `${Math.abs(diffDays)} days ago`;
+  if (elapsedDays <= 30) {
+    return `${elapsedDays} days ago`;
   }
 
   return formatDate(value);
