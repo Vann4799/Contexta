@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 import json
 
 import httpx
@@ -167,3 +168,43 @@ def test_storage_downloads_encoded_object_path() -> None:
 
     assert content == b"file bytes"
     assert seen_url.endswith("/storage/v1/object/contexta-documents/user-1/folder%20name/file.pdf")
+
+
+def test_prune_api_request_logs_deletes_past_retention_and_reports_the_count() -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(204, headers={"content-range": "0-11/12"})
+
+    repository = SupabaseDocumentRepository(
+        supabase_url="https://example.supabase.co",
+        service_role_key="service-key",
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+
+    pruned = repository.prune_api_request_logs(retention_days=90)
+
+    assert pruned == 12
+    assert requests[0].method == "DELETE"
+    assert requests[0].url.path == "/rest/v1/api_request_logs"
+    assert requests[0].headers["prefer"] == "count=exact"
+    cutoff = requests[0].url.params["created_at"]
+    assert cutoff.startswith("lt.")
+    # The cutoff has to be ~90 days back, not a day or a week: a wrong sign here
+    # quietly deletes the whole audit trail.
+    cutoff_date = datetime.fromisoformat(cutoff.removeprefix("lt."))
+    assert (datetime.now(timezone.utc) - cutoff_date).days == 90
+
+
+def test_prune_api_request_logs_reports_zero_when_postgrest_omits_the_count() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(204)
+
+    repository = SupabaseDocumentRepository(
+        supabase_url="https://example.supabase.co",
+        service_role_key="service-key",
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+
+    assert repository.prune_api_request_logs(retention_days=90) == 0

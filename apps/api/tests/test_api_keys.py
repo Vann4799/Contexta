@@ -1,0 +1,557 @@
+from __future__ import annotations
+
+from datetime import datetime, timedelta, timezone
+from typing import Any
+
+from fastapi.testclient import TestClient
+
+from app.apikeys.dependencies import _failed_lookups, get_api_key_repository
+from app.apikeys.repository import InMemoryApiKeyRepository
+from app.apikeys.secrets import API_KEY_PREFIX, hash_api_key
+from app.auth.dependencies import get_current_user
+from app.auth.supabase_jwt import CurrentUser
+from app.chat.routes import get_retriever
+from app.core.config import Settings, get_settings
+from app.documents.models import DocumentCreate, DocumentResponse
+from app.documents.repository import InMemoryDocumentRepository
+from app.documents.routes import get_document_repository
+from app.main import app
+
+
+client = TestClient(app)
+
+USER_ID = "user-keys-1"
+OTHER_USER_ID = "user-keys-2"
+KEY_ID_HEADER = "Authorization"
+
+
+class FakeRetriever:
+    """Stands in for QdrantRetriever and records the filters it was handed."""
+
+    def __init__(self, contexts: list[dict[str, Any]] | None = None) -> None:
+        self.calls: list[dict[str, Any]] = []
+        # Each fixture context carries the owner it belongs to, the way a Qdrant payload
+        # does, so scoping by user is exercised rather than assumed.
+        self._contexts = contexts or []
+
+    def retrieve(
+        self,
+        user_id: str,
+        question: str,
+        document_ids: list[str] | None = None,
+        top_k: int = 5,
+        doc_types: list[str] | None = None,
+    ) -> list[dict[str, Any]]:
+        self.calls.append(
+            {
+                "user_id": user_id,
+                "question": question,
+                "document_ids": document_ids,
+                "top_k": top_k,
+                "doc_types": doc_types,
+            }
+        )
+        if document_ids is not None and not document_ids:
+            return []
+        return [
+            {key: value for key, value in context.items() if key != "owner"}
+            for context in self._contexts
+            if context["owner"] == user_id
+            and (document_ids is None or context["document_id"] in document_ids)
+        ]
+
+
+def context(document_id: str, chunk_index: int = 0, owner: str = USER_ID) -> dict[str, Any]:
+    return {
+        "owner": owner,
+        "document_id": document_id,
+        "document_name": f"{document_id}.pdf",
+        "doc_type": "report",
+        "chunk_index": chunk_index,
+        "page_number": 1,
+        "section_path": "1. Intro",
+        "text": f"body of {document_id} chunk {chunk_index}",
+        "score": 0.72,
+    }
+
+
+def settings(**overrides: Any) -> Settings:
+    values: dict[str, Any] = {
+        "environment": "test",
+        "api_key_minute_limit": 3,
+        "api_key_day_limit": 6,
+        **overrides,
+    }
+    return Settings(**values)
+
+
+def make_document(repository: InMemoryDocumentRepository, user_id: str, filename: str) -> DocumentResponse:
+    return repository.create_document(
+        user_id,
+        DocumentCreate(
+            filename=filename,
+            file_type="pdf",
+            file_size=2048,
+            storage_path=f"{user_id}/{filename}",
+            doc_type="report",
+        ),
+    )
+
+
+def make_key(
+    repository: InMemoryApiKeyRepository,
+    user_id: str,
+    *,
+    name: str = "ci",
+    document_ids: list[str] | None = None,
+    expires_at: datetime | None = None,
+) -> str:
+    plaintext = f"{API_KEY_PREFIX}secret-for-{user_id}-{name}-{len(repository.list_keys(user_id))}"
+    repository.create_key(
+        user_id=user_id,
+        name=name,
+        key_hash=hash_api_key(plaintext),
+        key_prefix=plaintext[:13],
+        last_four=plaintext[-4:],
+        document_ids=document_ids or [],
+        scopes=["retrieve"],
+        expires_at=expires_at,
+    )
+    return plaintext
+
+
+def wire(
+    keys: InMemoryApiKeyRepository,
+    documents: InMemoryDocumentRepository,
+    retriever: FakeRetriever,
+    current_user_id: str = USER_ID,
+    **setting_overrides: Any,
+) -> None:
+    app.dependency_overrides[get_api_key_repository] = lambda: keys
+    app.dependency_overrides[get_document_repository] = lambda: documents
+    app.dependency_overrides[get_retriever] = lambda: retriever
+    app.dependency_overrides[get_settings] = lambda: settings(**setting_overrides)
+    app.dependency_overrides[get_current_user] = (
+        lambda: CurrentUser(id=current_user_id, email="u@example.com", role="authenticated")
+    )
+    _failed_lookups.reset()
+
+
+def bearer(key: str) -> dict[str, str]:
+    return {KEY_ID_HEADER: f"Bearer {key}"}
+
+
+def teardown_function(_context) -> None:
+    app.dependency_overrides.clear()
+
+
+def test_valid_key_returns_only_that_users_chunks() -> None:
+    keys = InMemoryApiKeyRepository()
+    documents = InMemoryDocumentRepository()
+    mine = make_document(documents, USER_ID, "mine.pdf")
+    theirs = make_document(documents, OTHER_USER_ID, "theirs.pdf")
+    retriever = FakeRetriever([context(mine.id), context(theirs.id, owner=OTHER_USER_ID)])
+    wire(keys, documents, retriever)
+    key = make_key(keys, USER_ID)
+
+    response = client.post("/v1/retrieve", json={"query": "what"}, headers=bearer(key))
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert [item["document_id"] for item in body["data"]] == [mine.id]
+    assert body["meta"]["retrieved"] == 1
+    # The retriever is scoped by the key's owner, never by anything the caller sent.
+    assert retriever.calls[0]["user_id"] == USER_ID
+    assert "user_id" not in body["data"][0]
+
+
+def test_body_cannot_borrow_another_users_document() -> None:
+    keys = InMemoryApiKeyRepository()
+    documents = InMemoryDocumentRepository()
+    mine = make_document(documents, USER_ID, "mine.pdf")
+    retriever = FakeRetriever([context(mine.id)])
+    wire(keys, documents, retriever)
+    key = make_key(keys, USER_ID)
+
+    response = client.post(
+        "/v1/retrieve",
+        json={"query": "what", "user_id": OTHER_USER_ID},
+        headers=bearer(key),
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["code"] == "invalid_request"
+    assert retriever.calls == []
+
+
+def test_missing_and_bogus_keys_get_the_same_generic_401() -> None:
+    keys = InMemoryApiKeyRepository()
+    documents = InMemoryDocumentRepository()
+    retriever = FakeRetriever()
+    wire(keys, documents, retriever)
+
+    anonymous = client.post("/v1/retrieve", json={"query": "what"})
+    wrong = client.post("/v1/retrieve", json={"query": "what"}, headers=bearer("ctx_live_nope"))
+
+    assert anonymous.status_code == 401
+    assert wrong.status_code == 401
+    # No leak of whether the key exists, and no hint the JWT path is different.
+    assert anonymous.json()["detail"]["code"] == wrong.json()["detail"]["code"]
+    assert "not recognized" in wrong.json()["detail"]["message"].lower()
+
+
+def test_revoked_and_expired_keys_are_403_with_distinct_codes() -> None:
+    documents = InMemoryDocumentRepository()
+    retriever = FakeRetriever()
+
+    keys = InMemoryApiKeyRepository()
+    wire(keys, documents, retriever)
+    key = make_key(keys, USER_ID)
+    row = keys.list_keys(USER_ID)[0]
+    keys.revoke_key(USER_ID, row["id"])
+    revoked = client.post("/v1/retrieve", json={"query": "what"}, headers=bearer(key))
+    assert revoked.status_code == 403
+    assert revoked.json()["detail"]["code"] == "api_key_revoked"
+
+    keys = InMemoryApiKeyRepository()
+    wire(keys, documents, retriever)
+    key = make_key(keys, USER_ID, expires_at=datetime.now(timezone.utc) - timedelta(minutes=1))
+    expired = client.post("/v1/retrieve", json={"query": "what"}, headers=bearer(key))
+    assert expired.status_code == 403
+    assert expired.json()["detail"]["code"] == "api_key_expired"
+    assert retriever.calls == []
+
+
+def test_minute_quota_rejects_with_retry_after() -> None:
+    keys = InMemoryApiKeyRepository()
+    documents = InMemoryDocumentRepository()
+    retriever = FakeRetriever([context("doc-1")])
+    wire(keys, documents, retriever, api_key_minute_limit=2, api_key_day_limit=50)
+    key = make_key(keys, USER_ID)
+
+    statuses = [
+        client.post("/v1/retrieve", json={"query": "what"}, headers=bearer(key)).status_code
+        for _ in range(4)
+    ]
+
+    assert statuses == [200, 200, 429, 429]
+    blocked = client.post("/v1/retrieve", json={"query": "what"}, headers=bearer(key))
+    assert blocked.headers["retry-after"].isdigit()
+    assert blocked.json()["detail"]["code"] == "quota_minute_exceeded"
+
+
+def test_day_quota_is_separate_from_the_minute_window() -> None:
+    clock_time = {"now": datetime(2026, 10, 7, 9, 0, 0, tzinfo=timezone.utc)}
+    keys = InMemoryApiKeyRepository(clock=lambda: clock_time["now"])
+    documents = InMemoryDocumentRepository()
+    retriever = FakeRetriever([context("doc-1")])
+    wire(keys, documents, retriever, api_key_minute_limit=10, api_key_day_limit=3)
+    key = make_key(keys, USER_ID)
+
+    assert [
+        client.post("/v1/retrieve", json={"query": "what"}, headers=bearer(key)).status_code
+        for _ in range(3)
+    ] == [200, 200, 200]
+
+    # Past the minute boundary the short window resets, but the day total has not.
+    clock_time["now"] += timedelta(minutes=2)
+    over = client.post("/v1/retrieve", json={"query": "what"}, headers=bearer(key))
+    assert over.status_code == 429
+    assert over.json()["detail"]["code"] == "quota_day_exceeded"
+
+
+def test_unknown_body_field_cannot_silently_widen_the_filter() -> None:
+    keys = InMemoryApiKeyRepository()
+    documents = InMemoryDocumentRepository()
+    retriever = FakeRetriever([context("doc-1")])
+    wire(keys, documents, retriever)
+    key = make_key(keys, USER_ID)
+
+    response = client.post(
+        "/v1/retrieve",
+        json={"query": "what", "document_id": "doc-1"},
+        headers=bearer(key),
+    )
+
+    assert response.status_code == 422
+    assert retriever.calls == []
+
+
+def test_doc_types_are_whitelisted_before_they_reach_the_index() -> None:
+    keys = InMemoryApiKeyRepository()
+    documents = InMemoryDocumentRepository()
+    retriever = FakeRetriever([context("doc-1")])
+    wire(keys, documents, retriever)
+    key = make_key(keys, USER_ID)
+
+    rejected = client.post(
+        "/v1/retrieve",
+        json={"query": "what", "doc_types": ["passwords"]},
+        headers=bearer(key),
+    )
+
+    assert rejected.status_code == 422
+    assert retriever.calls == []
+
+    accepted = client.post(
+        "/v1/retrieve",
+        json={"query": "what", "doc_types": ["sop"]},
+        headers=bearer(key),
+    )
+    assert accepted.status_code == 200
+    assert retriever.calls[-1]["doc_types"] == ["sop"]
+
+
+def test_subset_key_cannot_read_documents_outside_its_scope() -> None:
+    keys = InMemoryApiKeyRepository()
+    documents = InMemoryDocumentRepository()
+    inside = make_document(documents, USER_ID, "inside.pdf")
+    outside = make_document(documents, USER_ID, "outside.pdf")
+    retriever = FakeRetriever([context(inside.id), context(outside.id)])
+    wire(keys, documents, retriever)
+    key = make_key(keys, USER_ID, document_ids=[inside.id])
+
+    response = client.post("/v1/retrieve", json={"query": "what"}, headers=bearer(key))
+
+    assert response.status_code == 200
+    assert [item["document_id"] for item in response.json()["data"]] == [inside.id]
+    assert retriever.calls[0]["document_ids"] == [inside.id]
+    assert response.json()["meta"]["document_scope"] == "subset"
+
+
+def test_export_path_404s_for_documents_the_key_may_not_read() -> None:
+    keys = InMemoryApiKeyRepository()
+    documents = InMemoryDocumentRepository()
+    inside = make_document(documents, USER_ID, "inside.pdf")
+    outside = make_document(documents, USER_ID, "outside.pdf")
+    other = make_document(documents, OTHER_USER_ID, "other.pdf")
+    documents.add_chunks(
+        [
+            {
+                "document_id": inside.id,
+                "user_id": USER_ID,
+                "chunk_index": 0,
+                "text": "content the key may read",
+                "page_number": 1,
+                "section_path": None,
+                "qdrant_point_id": f"point-{inside.id}",
+            }
+        ]
+    )
+    retriever = FakeRetriever()
+    wire(keys, documents, retriever)
+    key = make_key(keys, USER_ID, document_ids=[inside.id])
+
+    allowed = client.get(f"/v1/documents/{inside.id}/export?format=md", headers=bearer(key))
+    scoped_out = client.get(f"/v1/documents/{outside.id}/export?format=md", headers=bearer(key))
+    foreign = client.get(f"/v1/documents/{other.id}/export?format=md", headers=bearer(key))
+    unindexed = client.get(
+        f"/v1/documents/{outside.id}/export?format=jsonl",
+        headers=bearer(make_key(keys, USER_ID, name="all")),
+    )
+
+    assert allowed.status_code == 200
+    assert "content the key may read" in allowed.text
+    # Existence is not confirmed for either a foreign document or an out-of-scope one.
+    assert scoped_out.status_code == 404
+    assert foreign.status_code == 404
+    assert scoped_out.json()["detail"]["code"] == foreign.json()["detail"]["code"]
+    # A document the key may read but that has no chunks is a different, honest answer.
+    assert unindexed.status_code == 409
+    assert unindexed.json()["detail"]["code"] == "document_not_exportable"
+
+
+def test_documents_listing_follows_the_key_subset() -> None:
+    keys = InMemoryApiKeyRepository()
+    documents = InMemoryDocumentRepository()
+    inside = make_document(documents, USER_ID, "inside.pdf")
+    make_document(documents, USER_ID, "outside.pdf")
+    make_document(documents, OTHER_USER_ID, "nope.pdf")
+    retriever = FakeRetriever()
+    wire(keys, documents, retriever)
+    key = make_key(keys, USER_ID, document_ids=[inside.id])
+
+    response = client.get("/v1/documents", headers=bearer(key))
+
+    assert response.status_code == 200
+    body = response.json()
+    assert [item["id"] for item in body["data"]] == [inside.id]
+    assert body["meta"]["total"] == 1
+    assert "storage_path" not in body["data"][0]
+
+
+def test_keys_me_reports_the_live_quota() -> None:
+    keys = InMemoryApiKeyRepository()
+    documents = InMemoryDocumentRepository()
+    retriever = FakeRetriever([context("doc-1")])
+    wire(keys, documents, retriever, api_key_minute_limit=5, api_key_day_limit=50)
+    key = make_key(keys, USER_ID, name="named-key")
+
+    response = client.get("/v1/keys/me", headers=bearer(key))
+
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["name"] == "named-key"
+    assert data["limits"] == {"per_minute": 5, "per_day": 50}
+    # The request that asked is itself counted, so one slot of the minute window is gone.
+    assert data["remaining"] == {"minute": 4, "day": 49}
+    assert "api_key" not in str(response.json())
+
+
+def test_quota_headers_are_on_every_allowed_response() -> None:
+    keys = InMemoryApiKeyRepository()
+    documents = InMemoryDocumentRepository()
+    retriever = FakeRetriever([context("doc-1")])
+    wire(keys, documents, retriever, api_key_minute_limit=7, api_key_day_limit=70)
+    key = make_key(keys, USER_ID)
+
+    response = client.post("/v1/retrieve", json={"query": "what"}, headers=bearer(key))
+
+    assert response.headers["x-ratelimit-limit-minute"] == "7"
+    assert response.headers["x-ratelimit-remaining-minute"] == "6"
+    assert response.headers["x-ratelimit-remaining-day"] == "69"
+
+
+def test_audit_log_records_outcomes_without_storing_content() -> None:
+    keys = InMemoryApiKeyRepository()
+    documents = InMemoryDocumentRepository()
+    retriever = FakeRetriever([context("doc-1")])
+    wire(keys, documents, retriever, api_key_minute_limit=1, api_key_day_limit=5)
+    key = make_key(keys, USER_ID)
+
+    client.post("/v1/retrieve", json={"query": "salary secrets"}, headers=bearer(key))
+    client.post("/v1/retrieve", json={"query": "second"}, headers=bearer(key))
+    client.post("/v1/retrieve", json={"query": "third"}, headers=bearer("ctx_live_bad"))
+
+    outcomes = [log["outcome"] for log in keys._logs]
+    assert outcomes == ["allowed", "quota_minute", "invalid"]
+    assert keys._logs[0]["status_code"] == 200
+    assert keys._logs[0]["document_ids_hit"] == ["doc-1"]
+    assert keys._logs[0]["latency_ms"] is not None
+    # The audit trail counts requests; it never copies the question or the chunk text.
+    assert "salary secrets" not in str(keys._logs)
+    assert all(log["user_id"] == USER_ID for log in keys._logs[:2])
+    assert keys._logs[2]["user_id"] is None
+
+
+def test_owner_can_create_list_and_revoke_a_key() -> None:
+    keys = InMemoryApiKeyRepository()
+    documents = InMemoryDocumentRepository()
+    document = make_document(documents, USER_ID, "mine.pdf")
+    retriever = FakeRetriever()
+    wire(keys, documents, retriever)
+
+    created = client.post(
+        "/api-keys",
+        json={"name": "notebook", "document_ids": [document.id]},
+    )
+
+    assert created.status_code == 201, created.text
+    assert created.headers["location"] == f"/api-keys/{created.json()['id']}"
+    plaintext = created.json()["api_key"]
+    assert plaintext.startswith(API_KEY_PREFIX)
+    assert created.json()["key_prefix"] == plaintext[:13]
+    assert created.json()["last_four"] == plaintext[-4:]
+
+    listed = client.get("/api-keys")
+    assert listed.status_code == 200
+    assert [item["name"] for item in listed.json()] == ["notebook"]
+    # The list view has no secret field at all.
+    assert "api_key" not in listed.text
+    assert "key_hash" not in listed.text
+
+    revoked = client.post(f"/api-keys/{listed.json()[0]['id']}/revoke")
+    assert revoked.status_code == 200
+    assert revoked.json()["revoked_at"] is not None
+
+    assert client.post("/api-keys/missing/revoke").status_code == 404
+
+
+def test_create_rejects_document_ids_the_user_does_not_own() -> None:
+    keys = InMemoryApiKeyRepository()
+    documents = InMemoryDocumentRepository()
+    theirs = make_document(documents, OTHER_USER_ID, "theirs.pdf")
+    retriever = FakeRetriever()
+    wire(keys, documents, retriever)
+
+    response = client.post("/api-keys", json={"name": "x", "document_ids": [theirs.id]})
+
+    assert response.status_code == 422
+    assert keys.list_keys(USER_ID) == []
+
+
+def test_usage_reports_counts_per_day_and_outcome() -> None:
+    keys = InMemoryApiKeyRepository()
+    documents = InMemoryDocumentRepository()
+    retriever = FakeRetriever([context("doc-1")])
+    wire(keys, documents, retriever, api_key_minute_limit=2, api_key_day_limit=50)
+    key = make_key(keys, USER_ID)
+    key_id = keys.list_keys(USER_ID)[0]["id"]
+    for _ in range(3):
+        client.post("/v1/retrieve", json={"query": "what"}, headers=bearer(key))
+
+    response = client.get(f"/api-keys/{key_id}/usage?days=14")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 3
+    assert body["allowed"] == 2
+    assert body["rejected"] == 1
+    assert body["by_outcome"]["quota_minute"] == 1
+    assert len(body["by_day"]) == 14
+    assert body["by_day"][-1] == {"date": body["by_day"][-1]["date"], "allowed": 2, "rejected": 1}
+    assert client.get(f"/api-keys/{key_id}/usage?days=999").status_code == 422
+
+
+def test_v1_is_not_open_to_browser_origins() -> None:
+    keys = InMemoryApiKeyRepository()
+    documents = InMemoryDocumentRepository()
+    retriever = FakeRetriever([context("doc-1")])
+    wire(keys, documents, retriever)
+    key = make_key(keys, USER_ID)
+
+    response = client.post(
+        "/v1/retrieve",
+        json={"query": "what"},
+        headers={**bearer(key), "Origin": "https://evil.example"},
+    )
+
+    assert response.status_code == 200
+    assert "access-control-allow-origin" not in response.headers
+
+
+def test_failed_lookup_budget_blocks_a_brute_force_run_from_one_address() -> None:
+    keys = InMemoryApiKeyRepository()
+    documents = InMemoryDocumentRepository()
+    retriever = FakeRetriever()
+    wire(keys, documents, retriever)
+
+    statuses = set()
+    for attempt in range(35):
+        response = client.post(
+            "/v1/retrieve",
+            json={"query": "what"},
+            headers=bearer(f"ctx_live_guess{attempt}"),
+        )
+        statuses.add(response.status_code)
+
+    assert statuses == {401, 429}
+    assert retriever.calls == []
+
+
+def test_key_created_through_the_api_authorizes_the_next_request() -> None:
+    """The create path and the authorize path must agree on how the secret is stored."""
+    keys = InMemoryApiKeyRepository()
+    documents = InMemoryDocumentRepository()
+    retriever = FakeRetriever([context("doc-1")])
+    wire(keys, documents, retriever)
+    created = client.post("/api-keys", json={"name": "roundtrip"})
+    plaintext = created.json()["api_key"]
+
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(
+        id=USER_ID, email="u@example.com", role="authenticated"
+    )
+    response = client.post("/v1/retrieve", json={"query": "what"}, headers=bearer(plaintext))
+
+    assert response.status_code == 200, response.text
+    assert keys.list_keys(USER_ID)[0]["last_used_at"] is not None

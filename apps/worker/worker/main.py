@@ -37,6 +37,10 @@ def load_env_files() -> None:
             os.environ.setdefault(key.strip().lstrip("\ufeff"), value)
 
 
+DEFAULT_PRUNE_INTERVAL_SECONDS = 6 * 60 * 60
+DEFAULT_API_LOG_RETENTION_DAYS = 90
+
+
 class ArmSettings(NamedTuple):
     name: str
     provider: str
@@ -159,11 +163,27 @@ def create_processor() -> WorkerProcessor:
     )
 
 
-def run_worker(processor: WorkerProcessor, poll_interval_seconds: int = 5) -> None:
+def run_worker(
+    processor: WorkerProcessor,
+    poll_interval_seconds: int = 5,
+    prune_interval_seconds: int = DEFAULT_PRUNE_INTERVAL_SECONDS,
+    api_log_retention_days: int = DEFAULT_API_LOG_RETENTION_DAYS,
+) -> None:
+    next_prune = time.monotonic() + prune_interval_seconds
     while True:
         processed = processor.process_once()
         if not processed:
             time.sleep(poll_interval_seconds)
+
+        if time.monotonic() >= next_prune:
+            next_prune = time.monotonic() + prune_interval_seconds
+            try:
+                pruned = processor.repository.prune_api_request_logs(api_log_retention_days)
+            except Exception as exc:  # noqa: BLE001 - retention is housekeeping, not indexing
+                # Losing a week of audit rows must never stop documents from indexing.
+                print(f"api-log prune failed: {exc}")
+            else:
+                print(f"api-log pruned={pruned}")
 
 
 def main() -> None:
@@ -185,7 +205,13 @@ def main() -> None:
         print("processed=1" if processed else "processed=0")
         return
 
-    run_worker(processor, poll_interval_seconds=args.poll_interval)
+    run_worker(
+        processor,
+        poll_interval_seconds=args.poll_interval,
+        api_log_retention_days=int(
+            os.environ.get("API_LOG_RETENTION_DAYS", str(DEFAULT_API_LOG_RETENTION_DAYS))
+        ),
+    )
 
 
 if __name__ == "__main__":

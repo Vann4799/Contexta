@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from urllib.parse import quote
 
 import httpx
@@ -131,6 +131,26 @@ class SupabaseDocumentRepository:
                 "error_message": error_message[:1000],
             },
         )
+
+    def prune_api_request_logs(self, retention_days: int) -> int:
+        """Drop /v1 audit rows past the retention window.
+
+        This runs in the worker rather than the API because it is a bulk delete on the
+        same table the request hot path inserts into; doing it inline would put cleanup
+        latency in front of a paying caller.
+        """
+        cutoff = datetime.now(timezone.utc) - timedelta(days=retention_days)
+        response = self._client.delete(
+            f"{self._supabase_url}/rest/v1/api_request_logs",
+            headers={**self._headers, "Prefer": "count=exact"},
+            params={"created_at": f"lt.{cutoff.isoformat()}"},
+        )
+        response.raise_for_status()
+        content_range = response.headers.get("content-range") or ""
+        # PostgREST reports the affected count only in Content-Range when Prefer: count
+        # is sent; the DELETE body is empty.
+        _, _, total = content_range.rpartition("/")
+        return int(total) if total.isdigit() else 0
 
     def _update_document(
         self, document: ProcessingDocument, payload: dict[str, object]
