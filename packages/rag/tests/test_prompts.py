@@ -20,10 +20,11 @@ def test_prompt_uses_required_instruction_and_source_contract():
                 "Answer only from the provided sources.",
                 "If the sources do not contain enough information, say that the document context is insufficient.",
                 "Do not infer document-wide totals, counts, or rankings from partial sources. Only give those numbers when the sources explicitly contain complete totals or all relevant rows.",
-                "Cite the source numbers that support the answer.",
             ]
         )
     )
+    assert "the exact marker [Source N] at the end of that sentence" in prompt
+    assert "Do not use any other citation format" in prompt
     assert "Sources:" in prompt
     assert "[Source 1]" in prompt
     assert "Document: overview.pdf" in prompt

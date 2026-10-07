@@ -37,7 +37,8 @@ def build_rag_prompt(question: str, contexts: list[CitationContext]) -> str:
             "Answer only from the provided sources.",
             "If the sources do not contain enough information, say that the document context is insufficient.",
             "Do not infer document-wide totals, counts, or rankings from partial sources. Only give those numbers when the sources explicitly contain complete totals or all relevant rows.",
-            "Cite the source numbers that support the answer.",
+            "Cite every statement you take from a source with the exact marker [Source N] at the end of that sentence, "
+            "where N is the source number above. Do not use any other citation format, and never cite a number that is not listed.",
         ]
     )
 
