@@ -1,7 +1,8 @@
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 import logging
 import time
-from typing import Annotated
+from typing import Annotated, Iterator
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -16,6 +17,29 @@ from app.core.config import Settings, get_settings
 
 
 logger = logging.getLogger(__name__)
+
+
+@contextmanager
+def api_key_store() -> Iterator[None]:
+    """Turn a key-store failure into a 503 the caller can actually read.
+
+    An exception that escapes a route is answered by Starlette's ServerErrorMiddleware,
+    which sits outside CORSMiddleware: the browser then reports "blocked by CORS policy"
+    and the real cause is only in the server log.
+    """
+    try:
+        yield
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001 - PostgREST failure must not leak internals
+        logger.exception("api key store request failed")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "code": "api_key_store_unavailable",
+                "message": "API key storage is unavailable. Retry shortly.",
+            },
+        ) from exc
 
 
 # auto_error=False: FastAPI's built-in bearer error is a 403 with an unstructured detail,

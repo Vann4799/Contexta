@@ -555,3 +555,26 @@ def test_key_created_through_the_api_authorizes_the_next_request() -> None:
 
     assert response.status_code == 200, response.text
     assert keys.list_keys(USER_ID)[0]["last_used_at"] is not None
+
+
+class _BrokenApiKeyStore(InMemoryApiKeyRepository):
+    """Stands in for a PostgREST table that is missing or refusing requests."""
+
+    def list_keys(self, user_id: str) -> list[dict[str, object]]:
+        raise RuntimeError('relation "api_keys" does not exist')
+
+
+def test_store_failures_reach_the_caller_instead_of_looking_like_cors() -> None:
+    """An exception that escapes a route is answered by Starlette's ServerErrorMiddleware,
+    which sits outside CORSMiddleware, so the browser reports a CORS block and the real
+    cause never arrives. This cost me a wrong diagnosis on the live host."""
+    documents = InMemoryDocumentRepository()
+    wire(_BrokenApiKeyStore(), documents, FakeRetriever())
+
+    listed = client.get("/api-keys")
+    created = client.post("/api-keys", json={"name": "notebook"})
+
+    for response in (listed, created):
+        assert response.status_code == 503, response.text
+        assert response.json()["detail"]["code"] == "api_key_store_unavailable"
+    assert "relation" not in listed.text
