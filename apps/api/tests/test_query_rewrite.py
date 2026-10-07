@@ -75,6 +75,10 @@ def test_gate_takes_short_and_reference_bearing_follow_ups():
     ]
 
     assert needs_rewrite("terus hasilnya gimana?", history) == (True, "followup")
+    # Measured on the live harness: nine words but the referent is "di situ".
+    assert needs_rewrite(
+        "elemen apa di situ yang bisa naikkan motivasi intrinsik?", history
+    ) == (True, "followup")
     assert needs_rewrite("Apa keunggulan metode itu untuk aplikasi mobile?", history) == (
         True,
         "followup",

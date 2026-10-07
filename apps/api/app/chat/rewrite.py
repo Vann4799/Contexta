@@ -24,9 +24,12 @@ except ModuleNotFoundError:
 MAX_STANDALONE_WORDS = 8
 MAX_REWRITE_CHARS = 300
 logger = logging.getLogger(__name__)
+# `itu` cannot match inside `situ` because of the lookbehind, so the Indonesian
+# demonstratives have to be listed whole - the first A/B run measured a "di situ"
+# follow-up being waved through as self-contained.
 REFERENCE_PATTERN = re.compile(
-    r"(?<!\w)(?:itu|ini|terus|lalu|kemudian|dia|mereka|kalau|him|them|it|that|this|these|"
-    r"those|then|same|above|they)(?!\w)",
+    r"(?<!\w)(?:itu|ini|situ|sini|tersebut|terus|lalu|kemudian|dia|mereka|kalau|him|them|"
+    r"it|that|this|these|those|then|same|above|they)(?!\w)",
     re.IGNORECASE,
 )
 
