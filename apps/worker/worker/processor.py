@@ -127,11 +127,15 @@ class DocumentRepository(Protocol):
     ) -> None:
         ...
 
+    def prune_api_request_logs(self, retention_days: int) -> int:
+        ...
+
 
 class InMemoryDocumentRepository:
     def __init__(self, documents: list[ProcessingDocument] | None = None) -> None:
         self.documents = documents or []
         self.chunks: list[ProcessingChunk] = []
+        self.pruned_api_log_retention_days: list[int] = []
 
     def claim_next_processing_document(self) -> ProcessingDocument | None:
         for document in self.documents:
@@ -171,6 +175,10 @@ class InMemoryDocumentRepository:
             chunk for chunk in self.chunks if chunk["document_id"] != document_id
         ]
         self.chunks.extend(chunks)
+
+    def prune_api_request_logs(self, retention_days: int) -> int:
+        self.pruned_api_log_retention_days.append(retention_days)
+        return 0
 
 
 class MissingDocumentStorage:

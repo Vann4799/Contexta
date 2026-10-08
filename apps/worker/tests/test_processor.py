@@ -265,6 +265,13 @@ def test_process_once_returns_false_when_no_document_available() -> None:
     assert processed is False
 
 
+def test_in_memory_repository_records_api_log_prune_calls() -> None:
+    repository = InMemoryDocumentRepository([])
+
+    assert repository.prune_api_request_logs(90) == 0
+    assert repository.pruned_api_log_retention_days == [90]
+
+
 def test_process_once_marks_document_failed_when_extraction_has_no_text() -> None:
     class EmptyExtractor:
         def extract(self, content: bytes, file_type: str) -> ExtractedDocument:

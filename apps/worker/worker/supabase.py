@@ -8,6 +8,15 @@ import httpx
 from worker.processor import ProcessingChunk, ProcessingDocument, UserVisibleError
 from contexta_rag.supabase_storage import is_missing_object as _is_missing_object
 
+# A worker killed mid-run (OOM, deploy restart) leaves its document in `processing`;
+# the claim loop always re-picks the oldest one, so a document that crashes the
+# worker every time would starve every newer document behind it forever.
+STALE_CLAIM_TIMEOUT = timedelta(hours=1)
+
+# One POST carrying every chunk of a large document is a single ~MB request; smaller
+# batches keep each request short-lived and a failed batch cheap to retry.
+CHUNK_INSERT_BATCH_SIZE = 50
+
 
 class SupabaseDocumentRepository:
     def __init__(
@@ -43,6 +52,29 @@ class SupabaseDocumentRepository:
             return None
 
         document = documents[0]
+        started_at = document.get("processing_started_at")
+        if isinstance(started_at, str):
+            try:
+                started = datetime.fromisoformat(started_at)
+            except ValueError:
+                started = None
+            if (
+                started is not None
+                and started.tzinfo is not None
+                and datetime.now(timezone.utc) - started > STALE_CLAIM_TIMEOUT
+            ):
+                self._update_document(
+                    document,
+                    {
+                        "status": "failed",
+                        "error_message": (
+                            "Indexing was interrupted and did not finish; "
+                            "use Re-index to try again."
+                        ),
+                    },
+                )
+                return None
+
         claim_response = self._client.patch(
             f"{self._supabase_url}/rest/v1/documents",
             headers={
@@ -98,15 +130,17 @@ class SupabaseDocumentRepository:
         if not chunks:
             return
 
-        insert_response = self._client.post(
-            f"{self._supabase_url}/rest/v1/document_chunks",
-            headers={
-                **self._headers,
-                "Content-Type": "application/json",
-            },
-            json=chunks,
-        )
-        insert_response.raise_for_status()
+        for start in range(0, len(chunks), CHUNK_INSERT_BATCH_SIZE):
+            batch = chunks[start : start + CHUNK_INSERT_BATCH_SIZE]
+            insert_response = self._client.post(
+                f"{self._supabase_url}/rest/v1/document_chunks",
+                headers={
+                    **self._headers,
+                    "Content-Type": "application/json",
+                },
+                json=batch,
+            )
+            insert_response.raise_for_status()
 
     def mark_ready(
         self,

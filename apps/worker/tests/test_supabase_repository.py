@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import json
 
 import httpx
@@ -63,6 +63,67 @@ def test_claim_next_processing_document_marks_it_started() -> None:
     assert requests[1].headers["prefer"] == "return=representation"
 
 
+def _claim_document_row(processing_started_at: str) -> dict[str, object]:
+    return {
+        "id": "doc-1",
+        "user_id": "user-1",
+        "filename": "file.pdf",
+        "file_type": "pdf",
+        "storage_path": "user-1/file.pdf",
+        "status": "processing",
+        "processing_started_at": processing_started_at,
+    }
+
+
+def test_a_stale_claim_is_failed_instead_of_being_retried_forever() -> None:
+    requests: list[httpx.Request] = []
+    stale_row = _claim_document_row(
+        (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat()
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        if request.method == "GET":
+            return httpx.Response(200, json=[stale_row])
+        if request.method == "PATCH":
+            return httpx.Response(200, json=[])
+        raise AssertionError(f"Unexpected request {request.method}")
+
+    repository = SupabaseDocumentRepository(
+        supabase_url="https://example.supabase.co",
+        service_role_key="service-key",
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+
+    assert repository.claim_next_processing_document() is None
+
+    patch_payload = json.loads(requests[1].content)
+    assert patch_payload["status"] == "failed"
+    assert "Re-index" in patch_payload["error_message"]
+
+
+def test_a_recently_claimed_document_is_still_claimed() -> None:
+    requests: list[httpx.Request] = []
+    fresh_row = _claim_document_row(datetime.now(timezone.utc).isoformat())
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        if request.method == "GET":
+            return httpx.Response(200, json=[fresh_row])
+        if request.method == "PATCH":
+            return httpx.Response(200, json=[fresh_row])
+        raise AssertionError(f"Unexpected request {request.method}")
+
+    repository = SupabaseDocumentRepository(
+        supabase_url="https://example.supabase.co",
+        service_role_key="service-key",
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+
+    assert repository.claim_next_processing_document() is not None
+    assert json.loads(requests[1].content)["status"] == "processing"
+
+
 def test_replace_chunks_deletes_existing_chunks_and_inserts_new_rows() -> None:
     requests: list[httpx.Request] = []
 
@@ -92,6 +153,42 @@ def test_replace_chunks_deletes_existing_chunks_and_inserts_new_rows() -> None:
 
     assert [request.method for request in requests] == ["DELETE", "POST"]
     assert json.loads(requests[1].content)[0]["text"] == "hello"
+
+
+def test_replace_chunks_inserts_in_batches() -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(201 if request.method == "POST" else 204, json=[] if request.method == "POST" else None)
+
+    repository = SupabaseDocumentRepository(
+        supabase_url="https://example.supabase.co",
+        service_role_key="service-key",
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+
+    repository.replace_chunks(
+        {"id": "doc-1", "user_id": "user-1", "status": "processing"},
+        [
+            {
+                "document_id": "doc-1",
+                "user_id": "user-1",
+                "chunk_index": index,
+                "text": f"chunk {index}",
+                "page_number": 1,
+                "qdrant_point_id": f"point-{index}",
+            }
+            for index in range(120)
+        ],
+    )
+
+    posts = [request for request in requests if request.method == "POST"]
+    assert len(posts) == 3
+    batch_sizes = [len(json.loads(post.content)) for post in posts]
+    assert batch_sizes == [50, 50, 20]
+    assert json.loads(posts[0].content)[0]["chunk_index"] == 0
+    assert json.loads(posts[-1].content)[-1]["chunk_index"] == 119
 
 
 def test_get_document_reads_one_row_by_id() -> None:
