@@ -339,6 +339,19 @@ class SupabaseDocumentRepository:
         documents = response.json()
         if not documents:
             return None
+
+        # The worker only rewrites chunks on a successful pass, so a retry that fails
+        # again would otherwise keep serving the previous attempt's text under a
+        # chunk_count of zero. The in-memory double has always cleared them.
+        cleanup = httpx.delete(
+            f"{self._supabase_url}/rest/v1/document_chunks",
+            headers=self._headers,
+            params={
+                "document_id": f"eq.{document_id}",
+                "user_id": f"eq.{user_id}",
+            },
+        )
+        cleanup.raise_for_status()
         return DocumentResponse.model_validate(documents[0])
 
     def reindex_ready_document(

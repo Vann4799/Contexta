@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
+import httpx
 import jwt
 import pytest
 from fastapi.testclient import TestClient
@@ -8,7 +9,10 @@ from fastapi.testclient import TestClient
 from app.documents import routes as document_routes
 from app.chat.llm import DeepSeekAnswerGenerator
 from app.documents.models import DocumentCreate, DocumentResponse
-from app.documents.repository import InMemoryDocumentRepository
+from app.documents.repository import (
+    InMemoryDocumentRepository,
+    SupabaseDocumentRepository,
+)
 from app.main import app
 from app.documents.routes import (
     get_document_answer_generator,
@@ -1143,3 +1147,81 @@ def test_document_brief_hides_the_answer_model_failure_text() -> None:
     assert response.json()["detail"] == "Unable to generate AI brief."
     assert "deepseek" not in response.text.lower()
     app.dependency_overrides.clear()
+
+
+class PostgRESTRows:
+    """Stands in for httpx and answers with real PostgREST-shaped rows."""
+
+    def __init__(self, patch_rows: list[dict[str, object]]) -> None:
+        self.patch_rows = patch_rows
+        self.calls: list[tuple[str, str, dict[str, str]]] = []
+
+    def _response(self, method: str, url: str, payload: list[dict[str, object]]):
+        return httpx.Response(
+            status_code=200,
+            request=httpx.Request(method, url),
+            json=payload,
+        )
+
+    def patch(self, url: str, **kwargs):
+        self.calls.append(("PATCH", url, kwargs.get("params") or {}))
+        return self._response("PATCH", url, self.patch_rows)
+
+    def delete(self, url: str, **kwargs):
+        self.calls.append(("DELETE", url, kwargs.get("params") or {}))
+        return self._response("DELETE", url, [])
+
+    def chunk_deletions(self) -> list[dict[str, str]]:
+        return [
+            params
+            for method, url, params in self.calls
+            if method == "DELETE" and url.endswith("/document_chunks")
+        ]
+
+
+def document_row(status: str = "processing") -> dict[str, object]:
+    now = datetime.now(timezone.utc)
+    return DocumentResponse(
+        id=DOCUMENT_ID,
+        user_id=USER_ID,
+        filename="policy.pdf",
+        file_type="pdf",
+        file_size=1200,
+        storage_path=f"{USER_ID}/{DOCUMENT_ID}/policy.pdf",
+        status=status,
+        error_message=None,
+        chunk_count=0,
+        created_at=now,
+        updated_at=now,
+    ).model_dump(mode="json")
+
+
+def test_retry_clears_the_failed_attempt_chunk_rows(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The worker only rewrites chunks on a successful pass.
+
+    Without this the old text keeps answering /chunks, /intelligence and /brief
+    while the document reports a chunk_count of zero.
+    """
+    rows = PostgRESTRows(patch_rows=[document_row()])
+    monkeypatch.setattr("app.documents.repository.httpx", rows)
+    repository = SupabaseDocumentRepository("https://supabase.test", "service-role")
+
+    document = repository.retry_failed_document(USER_ID, DOCUMENT_ID)
+
+    assert document is not None
+    assert rows.chunk_deletions() == [
+        {"document_id": f"eq.{DOCUMENT_ID}", "user_id": f"eq.{USER_ID}"}
+    ]
+
+
+def test_retry_leaves_chunks_alone_when_the_document_is_not_failed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    rows = PostgRESTRows(patch_rows=[])
+    monkeypatch.setattr("app.documents.repository.httpx", rows)
+    repository = SupabaseDocumentRepository("https://supabase.test", "service-role")
+
+    assert repository.retry_failed_document(USER_ID, DOCUMENT_ID) is None
+    assert rows.chunk_deletions() == []
