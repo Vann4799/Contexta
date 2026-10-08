@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import sys
 from pathlib import Path
 import re
@@ -43,6 +44,7 @@ from app.core.config import Settings, get_settings
 
 
 router = APIRouter(prefix="/chat", tags=["chat"])
+logger = logging.getLogger(__name__)
 MAX_AUTO_SESSION_TITLE_CHARS = 80
 COUNT_QUESTION_PATTERN = re.compile(r"\b(berapa|jumlah|total|count|many)\b", re.IGNORECASE)
 COUNT_SUBJECT_PATTERN = re.compile(r"\b(postingan|posting|post|konten|entry|entri|baris|row|rows)\b", re.IGNORECASE)
@@ -364,7 +366,10 @@ def query_chat(
     try:
         answer = answer_generator.generate_answer(prompt)
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+        logger.exception("answer generation failed")
+        raise HTTPException(
+            status_code=502, detail="Unable to answer question."
+        ) from exc
 
     return build_chat_response(answer, contexts)
 
@@ -467,7 +472,10 @@ def create_chat_message(
                 try:
                     answer = answer_generator.generate_answer(prompt)
                 except Exception as exc:
-                    raise HTTPException(status_code=502, detail=str(exc)) from exc
+                    logger.exception("answer generation failed")
+                    raise HTTPException(
+                        status_code=502, detail="Unable to answer question."
+                    ) from exc
                 chat_response = build_chat_response(answer, contexts)
             else:
                 chat_response = ChatQueryResponse(

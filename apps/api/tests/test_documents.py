@@ -1022,3 +1022,44 @@ async def test_supabase_storage_delete_still_raises_on_other_client_errors(
 
     with pytest.raises(RuntimeError, match="storage delete failed: 400"):
         await storage.delete_document(f"{USER_ID}/{DOCUMENT_ID}/report.pdf")
+
+
+def test_document_brief_hides_the_answer_model_failure_text() -> None:
+    class FailingBriefGenerator:
+        def generate_answer(self, prompt: str) -> str:
+            raise RuntimeError(
+                "Client error '400 Bad Request' for url "
+                "'https://api.deepseek.com/v1/chat/completions'"
+            )
+
+    repository = InMemoryDocumentRepository()
+    app.dependency_overrides[get_document_repository] = lambda: repository
+    app.dependency_overrides[get_document_answer_generator] = FailingBriefGenerator
+    created = repository.create_document(
+        USER_ID,
+        DocumentCreate(
+            filename="creator.pdf",
+            file_type="pdf",
+            file_size=1200,
+            storage_path=f"{USER_ID}/{DOCUMENT_ID}/creator.pdf",
+        ),
+    )
+    repository.add_chunks(
+        [
+            {
+                "document_id": created.id,
+                "user_id": USER_ID,
+                "chunk_index": 0,
+                "text": "Rifki Mardiyanto uploaded X Twitter content with 3000 views.",
+                "page_number": 1,
+                "qdrant_point_id": "point-1",
+            }
+        ]
+    )
+
+    response = client.post(f"/documents/{created.id}/brief", headers=auth_headers())
+
+    assert response.status_code == 502
+    assert response.json()["detail"] == "Unable to generate AI brief."
+    assert "deepseek" not in response.text.lower()
+    app.dependency_overrides.clear()

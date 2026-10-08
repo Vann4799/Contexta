@@ -381,3 +381,60 @@ def test_first_session_message_updates_new_chat_title() -> None:
     assert sessions_response.status_code == 200
     assert sessions_response.json()[0]["title"] == "Ringkas isi dokumen creator track dalam 5 poin."
     app.dependency_overrides.clear()
+
+
+class FailingAnswerGenerator:
+    """Mirrors a DeepSeek HTTP failure: the raw text names the upstream host."""
+
+    def generate_answer(self, prompt: str) -> str:
+        raise RuntimeError(
+            "Client error '400 Bad Request' for url 'https://api.deepseek.com/v1/chat/completions'"
+        )
+
+
+def contexts_with_one_chunk() -> list[RetrievedContext]:
+    return [
+        {
+            "document_id": "doc-1",
+            "document_name": "overview.pdf",
+            "doc_type": "report",
+            "chunk_index": 0,
+            "page_number": 2,
+            "section_path": "2. Architecture",
+            "text": "Contexta answers questions using uploaded documents.",
+            "score": 0.91,
+        }
+    ]
+
+
+def test_chat_query_hides_the_answer_model_failure_text() -> None:
+    app.dependency_overrides[get_current_user] = override_user
+    app.dependency_overrides[get_retriever] = lambda: FakeRetriever(contexts_with_one_chunk())
+    app.dependency_overrides[get_answer_generator] = FailingAnswerGenerator
+
+    response = client.post("/chat/query", json={"question": "What is Contexta?"})
+
+    assert response.status_code == 502
+    assert response.json()["detail"] == "Unable to answer question."
+    assert "deepseek" not in response.text.lower()
+    app.dependency_overrides.clear()
+
+
+def test_session_message_hides_the_answer_model_failure_text() -> None:
+    repository = InMemoryChatRepository()
+    app.dependency_overrides[get_current_user] = override_user
+    app.dependency_overrides[get_chat_repository] = lambda: repository
+    app.dependency_overrides[get_document_repository] = InMemoryDocumentRepository
+    app.dependency_overrides[get_retriever] = lambda: FakeRetriever(contexts_with_one_chunk())
+    app.dependency_overrides[get_answer_generator] = FailingAnswerGenerator
+
+    session = client.post("/chat/sessions", json={"title": "qa"})
+    response = client.post(
+        f"/chat/sessions/{session.json()['id']}/messages",
+        json={"question": "What is Contexta?"},
+    )
+
+    assert response.status_code == 502
+    assert response.json()["detail"] == "Unable to answer question."
+    assert "deepseek" not in response.text.lower()
+    app.dependency_overrides.clear()

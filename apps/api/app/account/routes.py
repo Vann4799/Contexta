@@ -1,4 +1,5 @@
 from contextlib import contextmanager
+import logging
 from typing import Annotated, Iterator
 
 import httpx
@@ -12,6 +13,7 @@ from app.auth.supabase_jwt import CurrentUser
 from app.core.config import Settings, get_settings
 
 router = APIRouter(prefix="/account", tags=["account"])
+logger = logging.getLogger(__name__)
 
 
 def get_account_repository(
@@ -38,8 +40,7 @@ def account_store() -> Iterator[None]:
     except HTTPException:
         raise
     except httpx.HTTPError as exc:
-        response = getattr(exc, "response", None)
-        detail = f"{response.status_code} {response.text[:300]}" if response is not None else str(exc)
+        logger.exception("account summary request failed")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail={

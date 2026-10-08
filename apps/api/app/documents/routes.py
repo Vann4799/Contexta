@@ -351,7 +351,10 @@ def generate_document_ai_brief(
     try:
         brief = answer_generator.generate_answer(build_ai_brief_prompt(document, chunks))
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+        logger.exception("could not generate a brief for document %s", document_id)
+        raise HTTPException(
+            status_code=502, detail="Unable to generate AI brief."
+        ) from exc
 
     return DocumentAIBriefResponse(document_id=document.id, brief=brief)
 
