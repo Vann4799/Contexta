@@ -4,18 +4,19 @@ import { useMemo } from "react";
 import { Waypoints } from "lucide-react";
 import type { IndexingHealth } from "@/lib/api";
 import { useT } from "@/lib/i18n";
-import { sampleMetrics, viewTabs, VECTOR_COLLECTION, VECTOR_SHAPE, type PipelineMetric } from "@/lib/pipeline";
+import { sampleMetrics, viewTabs, type PipelineMetric, type PipelineRoot } from "@/lib/pipeline";
 import { cn } from "@/lib/utils";
 
 type IndexHeaderProps = {
   metrics: PipelineMetric[];
+  root: PipelineRoot;
   health: IndexingHealth | null;
   activeTab: string;
   isLoading: boolean;
   onTabChange: (tab: string) => void;
 };
 
-export function IndexHeader({ metrics, health, activeTab, isLoading, onTabChange }: IndexHeaderProps) {
+export function IndexHeader({ metrics, root, health, activeTab, isLoading, onTabChange }: IndexHeaderProps) {
   const t = useT();
   const copy = t.pipeline;
   const tabs = useMemo(() => viewTabs(copy), [copy]);
@@ -42,8 +43,10 @@ export function IndexHeader({ metrics, health, activeTab, isLoading, onTabChange
               {attention ? copy.badgeAttention : copy.badgeSynced}
             </span>
           </div>
-          <h1 className="mt-1 truncate text-[22px] font-semibold leading-tight tracking-tight">BAAI/bge-m3</h1>
-          <p className="mt-0.5 truncate font-mono text-[12px] text-ink-muted">{copy.collectionLine(VECTOR_COLLECTION, VECTOR_SHAPE)}</p>
+          <h1 className="mt-1 truncate text-[22px] font-semibold leading-tight tracking-tight">{root.models || copy.indexUnknown}</h1>
+          <p className="mt-0.5 truncate font-mono text-[12px] text-ink-muted">
+            {root.collection && root.shape ? copy.collectionLine(root.collection, root.shape) : copy.collectionUnknown}
+          </p>
         </div>
       </div>
 

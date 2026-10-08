@@ -1,4 +1,4 @@
-import type { DocumentItem, IndexingHealth } from "@/lib/api";
+import type { DocumentItem, IndexingHealth, VectorHealth } from "@/lib/api";
 import type { Dictionary } from "@/locales/en";
 import { formatBytes } from "@/lib/utils";
 
@@ -40,11 +40,28 @@ export function chunkFan(documentId: string, chunkCount: number, locale = "en"):
   return nodes;
 }
 
-/** Every chunk becomes exactly one point in the collection. */
-export const VECTOR_SHAPE = "384d";
+/**
+ * The index identity printed on /pipeline comes from `/health/vector`, never from a
+ * constant here: the old hard-coded `contexta_chunks - 384d` outlived two reindexes
+ * and kept describing a collection production no longer uses.
+ */
+export type PipelineIndexInfo = { collection: string; models: string; shape: string; arms: number };
 
-/** Collection the worker writes to. Reported here until the API exposes it on /health/vector. */
-export const VECTOR_COLLECTION = "contexta_chunks";
+export function describeIndex(vector: VectorHealth | null): PipelineIndexInfo {
+  const collection = vector?.status === "ok" ? vector.collection || "" : "";
+  if (!collection) {
+    return { collection: "", models: "", shape: "", arms: 0 };
+  }
+
+  const spaces = vector?.vector_spaces ?? [];
+
+  return {
+    collection,
+    models: spaces.map((space) => space.model.split("/").pop() || space.model).join(" + "),
+    shape: spaces.map((space) => `${space.name ? `${space.name} ` : ""}${space.dimensions}d`).join(" + "),
+    arms: spaces.length
+  };
+}
 
 export type PipelineCluster = {
   id: PipelineClusterId;
@@ -60,6 +77,12 @@ export type PipelineRoot = {
   name: string;
   engine: string;
   collection: string;
+  /** Short model labels of the active arms, joined - empty when the API reports none. */
+  models: string;
+  /** Vector slot sizes, e.g. "minilm 384d + openai 1536d". */
+  shape: string;
+  /** Number of vector slots - one point per chunk per slot. */
+  arms: number;
   primary: string;
   clusters: string;
   files: string;
@@ -145,6 +168,7 @@ function truncate(value: string, length: number) {
 export function buildPipelineSnapshot(
   documents: DocumentItem[],
   health: IndexingHealth | null,
+  vector: VectorHealth | null,
   rangeHours: number,
   copy: PipelineCopy,
   locale: string,
@@ -158,6 +182,7 @@ export function buildPipelineSnapshot(
   const totalChunks = documents.reduce((sum, document) => sum + document.chunk_count, 0);
   const totalStorage = documents.reduce((sum, document) => sum + document.file_size, 0);
   const queueDepth = health?.queued_documents ?? queuedDocuments.length;
+  const index = describeIndex(vector);
 
   const byRecent = (a: DocumentItem, b: DocumentItem) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
 
@@ -250,7 +275,10 @@ export function buildPipelineSnapshot(
     root: {
       name: copy.rootName,
       engine: "Qdrant",
-      collection: VECTOR_COLLECTION,
+      collection: index.collection,
+      models: index.models,
+      shape: index.shape,
+      arms: index.arms,
       primary: copy.chunkCount(totalChunks),
       clusters: copy.activeClusters(clusters.length),
       files: countFormat(documents.length, locale)

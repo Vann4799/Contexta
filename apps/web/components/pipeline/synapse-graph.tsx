@@ -4,7 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import Link from "next/link";
 import { AlertTriangle, ChevronRight, FileInput, Layers, Minus, Plus, RotateCcw, Waypoints, type LucideIcon } from "lucide-react";
 import type { PipelineCluster, PipelineClusterId, PipelineRoot } from "@/lib/pipeline";
-import { chunkFan, OVERFLOW_LEAF_ID, VECTOR_SHAPE } from "@/lib/pipeline";
+import { chunkFan, OVERFLOW_LEAF_ID } from "@/lib/pipeline";
 import { useLocale, useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -358,6 +358,7 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
                         <LeafNode
                           item={item}
                           open={openDocs.has(item.id)}
+                          arms={root.arms}
                           onToggle={() => toggleDocument(item.id)}
                         />
                       </li>
@@ -404,7 +405,7 @@ function RootCard({ root }: { root: PipelineRoot }) {
       </div>
       <div className="mt-5 text-[14px] font-semibold">{root.name}</div>
       <div className="nums mt-0.5 font-mono text-[13px] text-white/90">{root.primary}</div>
-      <div className="mt-0.5 truncate font-mono text-[11px] text-white/55">{root.collection}</div>
+      {root.collection ? <div className="mt-0.5 truncate font-mono text-[11px] text-white/55">{root.collection}</div> : null}
       <div className="my-4 h-px bg-night-line" />
       <dl className="grid grid-cols-2 gap-2">
         <div>
@@ -463,10 +464,11 @@ function ClusterCard({ cluster, active, ref }: ClusterCardProps) {
 type LeafNodeProps = {
   item: PipelineCluster["items"][number];
   open: boolean;
+  arms: number;
   onToggle: () => void;
 };
 
-function LeafNode({ item, open, onToggle }: LeafNodeProps) {
+function LeafNode({ item, open, onToggle, arms }: LeafNodeProps) {
   const t = useT();
   const locale = useLocale();
   const copy = t.pipeline;
@@ -541,10 +543,10 @@ function LeafNode({ item, open, onToggle }: LeafNodeProps) {
                   <span className="ml-1 text-[10px] uppercase tracking-[0.1em] text-ink-faint">{copy.fan.chunk}</span>
                 </span>
               )}
-              {node.collapsed ? null : (
+              {node.collapsed || arms === 0 ? null : (
                 <span className="inline-flex h-5 shrink-0 items-center rounded-control bg-night-raised px-1.5 font-mono text-[10px] text-white/75" data-vector={node.key}>
                   <span className="mr-1 h-1 w-1 rounded-full bg-accent" aria-hidden="true" />
-                  {copy.fan.point(VECTOR_SHAPE)}
+                  {copy.fan.point(arms)}
                 </span>
               )}
             </div>

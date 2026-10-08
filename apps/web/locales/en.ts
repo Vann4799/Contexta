@@ -452,6 +452,7 @@ export const en = {
     runtime: {
       apiBaseUrl: "API base URL",
       vectorCollection: "Vector collection",
+      vectorCollectionUnknown: "Not reported",
       supportedUploads: "Supported uploads",
       supportedUploadsValue: "PDF and DOCX up to 50 MB",
       answerGeneration: "Answer generation"
@@ -562,9 +563,11 @@ export const en = {
     }
   },
   pipeline: {
-    embeddingEyebrow: "Hybrid dense + BM25",
+    embeddingEyebrow: "Hybrid dense retrieval",
     badgeSynced: "SYNCED",
     badgeAttention: "ATTENTION",
+    indexUnknown: "Model not reported",
+    collectionUnknown: "Collection not reported",
     collectionLine: (collection: string, shape: string) => `Collection: ${collection} - ${shape}`,
     viewsLabel: "Pipeline views",
     tabs: {
@@ -646,7 +649,7 @@ export const en = {
       openDocument: "Open the document to read every chunk",
       more: "more",
       chunk: "chunk",
-      point: (shape: string) => `${shape} point`
+      point: (arms: number) => `${arms} point${arms === 1 ? "" : "s"}`
     },
     timeline: {
       ranges: {

@@ -450,6 +450,7 @@ export const id: Dictionary = {
     runtime: {
       apiBaseUrl: "URL dasar API",
       vectorCollection: "Koleksi vektor",
+      vectorCollectionUnknown: "Tidak dilaporkan",
       supportedUploads: "Format unggahan",
       supportedUploadsValue: "PDF dan DOCX hingga 50 MB",
       answerGeneration: "Pembuatan jawaban"
@@ -560,9 +561,11 @@ export const id: Dictionary = {
     }
   },
   pipeline: {
-    embeddingEyebrow: "Dense + BM25 hibrida",
+    embeddingEyebrow: "Retrieval dense hibrida",
     badgeSynced: "SINKRON",
     badgeAttention: "WASPADA",
+    indexUnknown: "Model tidak dilaporkan",
+    collectionUnknown: "Koleksi tidak dilaporkan",
     collectionLine: (collection: string, shape: string) => `Koleksi: ${collection} - ${shape}`,
     viewsLabel: "Tampilan pipeline",
     tabs: {
@@ -644,7 +647,7 @@ export const id: Dictionary = {
       openDocument: "Buka dokumen untuk membaca semua chunk",
       more: "lain",
       chunk: "chunk",
-      point: (shape: string) => `titik ${shape}`
+      point: (arms: number) => `${arms} titik vektor`
     },
     timeline: {
       ranges: {

@@ -87,6 +87,19 @@ export type ServiceHealth = {
   service: string;
 };
 
+/** One vector slot of the active Qdrant collection, as Qdrant itself reports it. */
+export type VectorSpaceInfo = {
+  name: string;
+  dimensions: number;
+  model: string;
+};
+
+export type VectorHealth = ServiceHealth & {
+  collection?: string | null;
+  points_count?: number | null;
+  vector_spaces?: VectorSpaceInfo[];
+};
+
 export type ChatCitation = {
   source_number: number;
   document_id: string;
@@ -296,7 +309,7 @@ export async function getVectorHealth() {
   });
 
   // An unreachable vector store is an honest 503 with a body, not a transport failure.
-  return (await response.json()) as ServiceHealth;
+  return (await response.json()) as VectorHealth;
 }
 
 export async function getDocument(accessToken: string, documentId: string) {

@@ -26,6 +26,11 @@ def reset_vector_space_cache() -> None:
     _verified.clear()
 
 
+def stored_vector_sizes(collection_info: dict[str, Any]) -> dict[str, int]:
+    """Map each vector slot of a `GET /collections/{name}` body to its size."""
+    return _stored_sizes(_dig(collection_info, "result", "config", "params", "vectors"))
+
+
 def assert_vector_spaces_match(
     client: "httpx.Client",
     qdrant_url: str,
@@ -50,8 +55,7 @@ def assert_vector_spaces_match(
         return False
     info_response.raise_for_status()
 
-    collection_info = info_response.json()
-    stored_sizes = _stored_sizes(_dig(collection_info, "result", "config", "params", "vectors"))
+    stored_sizes = stored_vector_sizes(info_response.json())
     if not stored_sizes:
         # An unrecognisable collection shape must not be reported as a mismatch.
         return True

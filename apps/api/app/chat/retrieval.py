@@ -191,6 +191,33 @@ def _score(point: dict[str, object]) -> float:
     return float(point["score"])
 
 
+def configured_vector_spaces(settings: Settings) -> tuple[VectorSpace, ...]:
+    """The vector slots this environment reads, without building any provider.
+
+    `/health/vector` needs the same env mapping the retriever uses, but must not
+    construct embedding clients to answer a health ping.
+    """
+    spaces = [
+        VectorSpace(
+            name=settings.embedding_vector_name,
+            dimensions=settings.embedding_dimensions,
+            model_label=embedding_model_label(settings.embedding_provider, settings.embedding_model_name),
+        )
+    ]
+    if settings.secondary_embedding_provider:
+        spaces.append(
+            VectorSpace(
+                name=settings.secondary_embedding_vector_name,
+                dimensions=settings.secondary_embedding_dimensions,
+                model_label=embedding_model_label(
+                    settings.secondary_embedding_provider,
+                    settings.secondary_embedding_model_name,
+                ),
+            )
+        )
+    return tuple(spaces)
+
+
 def retriever_from_settings(settings: Settings) -> QdrantRetriever:
     """Build the production retriever, including any configured second arm.
 

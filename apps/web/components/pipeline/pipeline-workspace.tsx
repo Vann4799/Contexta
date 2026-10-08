@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { getIndexingHealth, listDocuments, type DocumentItem, type IndexingHealth } from "@/lib/api";
+import { getIndexingHealth, getVectorHealth, listDocuments, type DocumentItem, type IndexingHealth, type VectorHealth } from "@/lib/api";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { useLocale, useT } from "@/lib/i18n";
 import type { Dictionary } from "@/locales/en";
@@ -20,6 +20,7 @@ export function PipelineWorkspace() {
   const serverError = useServerError();
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [health, setHealth] = useState<IndexingHealth | null>(null);
+  const [vector, setVector] = useState<VectorHealth | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("all");
@@ -50,6 +51,11 @@ export function PipelineWorkspace() {
       } catch {
         setHealth(null);
       }
+      try {
+        setVector(await getVectorHealth());
+      } catch {
+        setVector(null);
+      }
     } catch (loadError) {
       setError(loadError instanceof Error && loadError.message ? loadError.message : "failed");
     } finally {
@@ -76,8 +82,8 @@ export function PipelineWorkspace() {
   }, [load, pendingCount]);
 
   const snapshot = useMemo(
-    () => buildPipelineSnapshot(documents, health, range.hours, copy, locale, serverError),
-    [copy, documents, health, locale, range.hours, serverError]
+    () => buildPipelineSnapshot(documents, health, vector, range.hours, copy, locale, serverError),
+    [copy, documents, health, locale, range.hours, serverError, vector]
   );
 
   const visibleClusters = useMemo(
@@ -92,6 +98,7 @@ export function PipelineWorkspace() {
         health={health}
         isLoading={isLoading}
         metrics={snapshot.metrics}
+        root={snapshot.root}
         onTabChange={setActiveTab}
       />
 

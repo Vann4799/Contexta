@@ -9,6 +9,7 @@ from app.documents.repository import InMemoryDocumentRepository
 from app.main import app
 from app.services.indexing_health import build_indexing_health
 from app.services.qdrant_health import check_qdrant_health
+from contexta_rag.vector_space import VectorSpace
 
 
 client = TestClient(app)
@@ -22,19 +23,59 @@ def test_health_returns_api_status() -> None:
 
 
 def test_vector_health_returns_ok_status(monkeypatch) -> None:
-    async def check_qdrant_health(qdrant_url: str, api_key: str = "") -> dict[str, str]:
-        return {"status": "ok", "service": "qdrant"}
+    async def check_qdrant_health(
+        qdrant_url: str,
+        api_key: str = "",
+        collection: str = "",
+        spaces: tuple = (),
+    ) -> dict[str, object]:
+        return {
+            "status": "ok",
+            "service": "qdrant",
+            "collection": collection,
+            "vector_spaces": [
+                {"name": space.name, "dimensions": space.dimensions, "model": space.model_label}
+                for space in spaces
+            ],
+        }
 
     monkeypatch.setattr(main, "check_qdrant_health", check_qdrant_health)
+    monkeypatch.setattr(
+        main,
+        "get_settings",
+        lambda: Settings(
+            qdrant_collection="contexta_chunks_v9",
+            embedding_provider="remote",
+            embedding_model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+            embedding_dimensions=384,
+            embedding_vector_name="minilm",
+            secondary_embedding_provider="openrouter",
+            secondary_embedding_model_name="openai/text-embedding-3-small",
+            secondary_embedding_dimensions=1536,
+            secondary_embedding_vector_name="openai",
+        ),
+    )
 
     response = client.get("/health/vector")
+    body = response.json()
 
     assert response.status_code == 200
-    assert response.json() == {"status": "ok", "service": "qdrant"}
+    assert body["status"] == "ok"
+    assert body["service"] == "qdrant"
+    assert body["collection"] == "contexta_chunks_v9"
+    assert body["vector_spaces"] == [
+        {"name": "minilm", "dimensions": 384, "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"},
+        {"name": "openai", "dimensions": 1536, "model": "openai/text-embedding-3-small"},
+    ]
 
 
 def test_vector_health_returns_unavailable_status(monkeypatch) -> None:
-    async def check_qdrant_health(qdrant_url: str, api_key: str = "") -> dict[str, str]:
+    async def check_qdrant_health(
+        qdrant_url: str,
+        api_key: str = "",
+        collection: str = "",
+        spaces: tuple = (),
+    ) -> dict[str, object]:
         return {"status": "unavailable", "service": "qdrant"}
 
     monkeypatch.setattr(main, "check_qdrant_health", check_qdrant_health)
@@ -169,5 +210,88 @@ async def test_qdrant_health_sends_api_key_header(monkeypatch) -> None:
 
     response = await check_qdrant_health("http://qdrant.example", "qdrant-key")
 
-    assert response == {"status": "ok", "service": "qdrant"}
+    assert response["status"] == "ok"
+    assert response["service"] == "qdrant"
     assert requests[0].headers["api-key"] == "qdrant-key"
+
+
+async def test_qdrant_health_reports_the_active_collection_as_qdrant_sees_it(monkeypatch) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/healthz":
+            return httpx.Response(200, json={"status": "ok"})
+        return httpx.Response(
+            200,
+            json={
+                "result": {
+                    "points_count": 198,
+                    "config": {"params": {"vectors": {"minilm": {"size": 384}, "openai": {"size": 1536}}}},
+                }
+            },
+        )
+
+    async_client_class = httpx.AsyncClient
+    monkeypatch.setattr(
+        "app.services.qdrant_health.httpx.AsyncClient",
+        lambda *args, **kwargs: async_client_class(transport=httpx.MockTransport(handler), *args, **kwargs),
+    )
+
+    response = await check_qdrant_health(
+        "http://qdrant.example",
+        "qdrant-key",
+        collection="contexta_chunks_v3",
+        spaces=(VectorSpace(name="minilm", dimensions=384, model_label="a"),),
+    )
+
+    assert response["collection"] == "contexta_chunks_v3"
+    assert response["points_count"] == 198
+    assert [slot["dimensions"] for slot in response["vector_spaces"]] == [384]
+
+
+async def test_qdrant_health_reports_dimensions_stored_by_another_slot(monkeypatch) -> None:
+    """A drifted QDRANT_COLLECTION must show up here, not only as a query failure."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/healthz":
+            return httpx.Response(200, json={"status": "ok"})
+        return httpx.Response(
+            200,
+            json={"result": {"points_count": 12, "config": {"params": {"vectors": {"minilm": {"size": 1024}}}}}},
+        )
+
+    async_client_class = httpx.AsyncClient
+    monkeypatch.setattr(
+        "app.services.qdrant_health.httpx.AsyncClient",
+        lambda *args, **kwargs: async_client_class(transport=httpx.MockTransport(handler), *args, **kwargs),
+    )
+
+    response = await check_qdrant_health(
+        "http://qdrant.example",
+        collection="contexta_chunks_old",
+        spaces=(VectorSpace(name="minilm", dimensions=384, model_label="a"),),
+    )
+
+    assert response["vector_spaces"] == [{"name": "minilm", "dimensions": 1024, "model": "a"}]
+
+
+async def test_qdrant_health_keeps_reporting_a_missing_collection(monkeypatch) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/healthz":
+            return httpx.Response(200, json={"status": "ok"})
+        return httpx.Response(404, json={"status": "not_found"})
+
+    async_client_class = httpx.AsyncClient
+    monkeypatch.setattr(
+        "app.services.qdrant_health.httpx.AsyncClient",
+        lambda *args, **kwargs: async_client_class(transport=httpx.MockTransport(handler), *args, **kwargs),
+    )
+
+    response = await check_qdrant_health(
+        "http://qdrant.example",
+        collection="contexta_chunks_v3",
+        spaces=(VectorSpace(name="", dimensions=384, model_label="a"),),
+    )
+
+    assert response["status"] == "ok"
+    assert response["collection"] == "contexta_chunks_v3"
+    assert response["points_count"] is None
+    assert response["vector_spaces"] == [{"name": "", "dimensions": 384, "model": "a"}]

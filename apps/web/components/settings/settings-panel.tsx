@@ -67,6 +67,7 @@ export function SettingsPanel() {
   const copy = t.settings;
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8001";
   const [statusRows, setStatusRows] = useState<StatusRow[]>(initialState);
+  const [vectorCollection, setVectorCollection] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const runChecks = useCallback(async () => {
@@ -78,6 +79,8 @@ export function SettingsPanel() {
       getVectorHealth().catch(() => null),
       getIndexingHealth().catch(() => null)
     ]);
+
+    setVectorCollection(vector && vector.status === "ok" ? vector.collection || null : null);
 
     setStatusRows([
       {
@@ -118,7 +121,7 @@ export function SettingsPanel() {
 
   const runtimeItems = [
     { label: copy.runtime.apiBaseUrl, value: apiBaseUrl, icon: Server },
-    { label: copy.runtime.vectorCollection, value: "contexta_chunks", icon: Database },
+    { label: copy.runtime.vectorCollection, value: vectorCollection ?? copy.runtime.vectorCollectionUnknown, icon: Database },
     { label: copy.runtime.supportedUploads, value: copy.runtime.supportedUploadsValue, icon: FileUp },
     { label: copy.runtime.answerGeneration, value: "DeepSeek API", icon: Bot }
   ];

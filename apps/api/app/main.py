@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.account.routes import router as account_router
 from app.apikeys.routes import router as api_keys_router
+from app.chat.retrieval import configured_vector_spaces
 from app.chat.routes import router as chat_router
 from app.convert.routes import router as convert_router
 from app.core.config import get_settings
@@ -50,9 +51,14 @@ async def health() -> dict[str, str]:
 
 
 @app.get("/health/vector")
-async def vector_health(response: Response) -> dict[str, str]:
+async def vector_health(response: Response) -> dict[str, object]:
     settings = get_settings()
-    health_status = await check_qdrant_health(settings.qdrant_url, settings.qdrant_api_key)
+    health_status = await check_qdrant_health(
+        settings.qdrant_url,
+        settings.qdrant_api_key,
+        collection=settings.qdrant_collection,
+        spaces=configured_vector_spaces(settings),
+    )
 
     if health_status["status"] == "unavailable":
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
