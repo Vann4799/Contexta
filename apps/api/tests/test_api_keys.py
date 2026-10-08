@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
+from time import perf_counter
+from types import SimpleNamespace
 from typing import Any
 
 import httpx
@@ -10,6 +13,7 @@ from fastapi.testclient import TestClient
 
 from app.apikeys.dependencies import (
     FAILED_LOOKUP_LIMIT,
+    ApiKeyPrincipal,
     _failed_lookups,
     get_api_key_repository,
     seconds_to_next_day,
@@ -23,7 +27,7 @@ from app.core.config import Settings, get_settings
 from app.documents.models import DocumentCreate, DocumentResponse
 from app.documents.repository import InMemoryDocumentRepository
 from app.documents.routes import get_document_repository
-from app.main import app
+from app.main import CLIENT_CLOSED_REQUEST, app, finalize_v1_audit_log
 
 
 client = TestClient(app)
@@ -472,6 +476,24 @@ def test_documents_listing_follows_the_key_subset() -> None:
     assert body["data"][0]["indexed_at"] == "2026-10-07T03:04:05+00:00"
 
 
+def test_documents_listing_audits_the_documents_it_served() -> None:
+    """A /v1/documents row is the document, so it names itself id, not document_id.
+
+    Harvesting only document_id logged every listing as serving no documents, which made
+    the owner's usage panel silently under-report the keys that call it.
+    """
+    keys = InMemoryApiKeyRepository()
+    documents = InMemoryDocumentRepository()
+    first = make_document(documents, USER_ID, "first.pdf")
+    second = make_document(documents, USER_ID, "second.pdf")
+    wire(keys, documents, FakeRetriever())
+    key = make_key(keys, USER_ID)
+
+    assert client.get("/v1/documents", headers=bearer(key)).status_code == 200
+
+    assert keys._logs[-1]["document_ids_hit"] == sorted([first.id, second.id])
+
+
 def test_keys_me_reports_the_live_quota() -> None:
     keys = InMemoryApiKeyRepository()
     documents = InMemoryDocumentRepository()
@@ -577,6 +599,47 @@ def test_audit_log_records_outcomes_without_storing_content() -> None:
     assert "salary secrets" not in str(keys._logs)
     assert all(log["user_id"] == USER_ID for log in keys._logs[:2])
     assert keys._logs[2]["user_id"] is None
+
+
+@pytest.mark.asyncio
+async def test_a_disconnected_caller_is_audited_as_abandoned() -> None:
+    """``except Exception`` never sees asyncio.CancelledError.
+
+    A caller that hangs up mid-request left its audit row at the authorize-time status with
+    a NULL latency, indistinguishable from a request that was actually served.
+    """
+    keys = InMemoryApiKeyRepository()
+    authorization = keys.authorize(make_key(keys, USER_ID), minute_limit=60, day_limit=1000)
+    principal = ApiKeyPrincipal(
+        key_id=str(authorization.key_id),
+        user_id=USER_ID,
+        document_ids=[],
+        scopes=["retrieve"],
+        remaining_minute=authorization.remaining_minute,
+        remaining_day=authorization.remaining_day,
+        minute_limit=60,
+        day_limit=1000,
+        log_id=authorization.log_id,
+        repository=keys,
+    )
+    request = SimpleNamespace(
+        url=SimpleNamespace(path="/v1/retrieve"),
+        state=SimpleNamespace(
+            api_key_principal=principal,
+            started_at=perf_counter(),
+            api_key_documents_hit=[],
+        )
+    )
+
+    async def abandoned(_request: object) -> None:
+        raise asyncio.CancelledError
+
+    with pytest.raises(asyncio.CancelledError):
+        await finalize_v1_audit_log(request, abandoned)
+
+    row = next(log for log in keys._logs if log["id"] == authorization.log_id)
+    assert row["status_code"] == CLIENT_CLOSED_REQUEST
+    assert row["latency_ms"] is not None
 
 
 def test_owner_can_create_list_and_revoke_a_key() -> None:

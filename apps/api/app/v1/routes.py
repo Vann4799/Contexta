@@ -247,14 +247,17 @@ def _respond(
         content=jsonable_encoder(body),
         headers=quota_headers(principal),
     )
-    hit_ids = sorted(
-        {
-            str(item["document_id"])
-            for item in body.get("data", [])
-            if isinstance(item, dict) and "document_id" in item
-        }
-    )
-    request.state.api_key_documents_hit = hit_ids
+    hits: set[str] = set()
+    for item in body.get("data", []):
+        if not isinstance(item, dict):
+            continue
+        # /search chunks name their source document_id, while a /documents row *is* the
+        # document and serializes as id. Reading only the first left GET /v1/documents
+        # reporting no documents hit.
+        for field in ("document_id", "id"):
+            if field in item:
+                hits.add(str(item[field]))
+    request.state.api_key_documents_hit = sorted(hits)
     return response
 
 

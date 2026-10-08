@@ -51,9 +51,6 @@ class ApiKeyRepository(Protocol):
     def usage(self, user_id: str, key_id: str, days: int) -> dict[str, object]:
         ...
 
-    def total_requests(self, user_id: str) -> int:
-        ...
-
     def prune_logs(self, retention_days: int) -> int:
         ...
 
@@ -286,9 +283,6 @@ class InMemoryApiKeyRepository:
             "by_day": list(by_day.values()),
         }
 
-    def total_requests(self, user_id: str) -> int:
-        return sum(1 for log in self._logs if log["user_id"] == user_id)
-
     def prune_logs(self, retention_days: int) -> int:
         floor = self._now() - timedelta(days=retention_days)
         before = len(self._logs)
@@ -451,19 +445,6 @@ class SupabaseApiKeyRepository:
         )
         response.raise_for_status()
         return dict(response.json())
-
-    def total_requests(self, user_id: str) -> int:
-        response = httpx.get(
-            f"{self._supabase_url}/rest/v1/api_request_logs",
-            headers={**self._headers, "Prefer": "count=exact"},
-            params={
-                "user_id": f"eq.{user_id}",
-                "select": "id",
-                "limit": "1",
-            },
-        )
-        response.raise_for_status()
-        return _count_from_content_range(response.headers.get("content-range"))
 
     def prune_logs(self, retention_days: int) -> int:
         floor = _now() - timedelta(days=retention_days)
