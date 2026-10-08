@@ -49,6 +49,7 @@ class FakeVectorStore:
     def __init__(self) -> None:
         self.upserted: list[ProcessingChunk] = []
         self.pruned: list[tuple[str, int]] = []
+        self.deleted: list[str] = []
         self.embeddings: dict[str, list[list[float]]] = {}
 
     def upsert_chunks(
@@ -64,6 +65,9 @@ class FakeVectorStore:
 
     def prune_stale_chunks(self, document_id: str, chunk_count: int) -> None:
         self.pruned.append((document_id, chunk_count))
+
+    def delete_document_vectors(self, document_id: str) -> None:
+        self.deleted.append(document_id)
 
 
 def test_process_once_marks_processing_document_ready() -> None:
@@ -293,13 +297,17 @@ def test_process_once_marks_document_failed_when_extraction_has_no_text() -> Non
     assert repository.documents[0]["error_message"] == "No extractable text found"
 
 
-def build_processor(repository: InMemoryDocumentRepository, extractor: Any) -> WorkerProcessor:
+def build_processor(
+    repository: InMemoryDocumentRepository,
+    extractor: Any,
+    vector_store: FakeVectorStore | None = None,
+) -> WorkerProcessor:
     return WorkerProcessor(
         repository=repository,
         storage=FakeStorage({"user-1/doc-1.pdf": b"document bytes"}),
         extractor=extractor,
         embedding_arms=[EmbeddingArm(name="", provider=FakeEmbeddingProvider())],
-        vector_store=FakeVectorStore(),
+        vector_store=vector_store or FakeVectorStore(),
     )
 
 
@@ -347,3 +355,34 @@ def test_worker_written_failure_message_reaches_the_document() -> None:
     assert repository.documents[0]["error_message"] == (
         "Stored file is no longer available"
     )
+
+
+def test_document_deleted_mid_index_leaves_no_searchable_vectors() -> None:
+    """Qdrant has no foreign key back to `documents`, so this is the only guard."""
+
+    class DeletedWhileIndexing(InMemoryDocumentRepository):
+        def get_document(self, document_id: str) -> Any:
+            return None
+
+    repository = DeletedWhileIndexing(documents=processing_repository().documents)
+    vector_store = FakeVectorStore()
+
+    build_processor(repository, FakeExtractor(), vector_store).process_once()
+
+    assert vector_store.deleted == ["doc-1"]
+    assert vector_store.upserted == []
+    assert repository.chunks == []
+
+
+def test_failed_chunk_insert_drops_the_vectors_it_just_wrote() -> None:
+    class ChunkInsertRefused(InMemoryDocumentRepository):
+        def replace_chunks(self, document: Any, chunks: list[Any]) -> None:
+            raise RuntimeError("insert rejected")
+
+    repository = ChunkInsertRefused(documents=processing_repository().documents)
+    vector_store = FakeVectorStore()
+
+    build_processor(repository, FakeExtractor(), vector_store).process_once()
+
+    assert vector_store.deleted == ["doc-1"]
+    assert repository.documents[0]["status"] == "failed"

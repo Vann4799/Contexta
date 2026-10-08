@@ -126,6 +126,22 @@ class QdrantVectorStore:
         )
         response.raise_for_status()
 
+    def delete_document_vectors(self, document_id: str) -> None:
+        """Drop every point of a document, used when its row no longer exists."""
+        response = self._client.post(
+            f"{self._qdrant_url}/collections/{self._collection_name}/points/delete",
+            headers=self._headers,
+            params={"wait": "true"},
+            json={
+                "filter": {
+                    "must": [{"key": "document_id", "match": {"value": document_id}}]
+                }
+            },
+        )
+        if response.status_code == 404:
+            return
+        response.raise_for_status()
+
     def _ensure_collection(self) -> None:
         if self._collection_checked:
             return

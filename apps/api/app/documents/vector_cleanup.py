@@ -40,6 +40,9 @@ class QdrantDocumentVectorCleanup:
         response = self._client.post(
             f"{self._qdrant_url}/collections/{self._collection_name}/points/delete",
             headers=self._headers,
+            # Without wait the delete is only queued, so the row can be deleted while
+            # the points are still searchable.
+            params={"wait": "true"},
             json={
                 "filter": {
                     "must": [

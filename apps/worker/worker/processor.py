@@ -97,6 +97,9 @@ class VectorStore(Protocol):
     def prune_stale_chunks(self, document_id: str, chunk_count: int) -> None:
         ...
 
+    def delete_document_vectors(self, document_id: str) -> None:
+        ...
+
 
 class DocumentRepository(Protocol):
     def claim_next_processing_document(self) -> ProcessingDocument | None:
@@ -197,6 +200,9 @@ class MissingVectorStore:
     def prune_stale_chunks(self, document_id: str, chunk_count: int) -> None:
         raise UserVisibleError("Vector store is not configured")
 
+    def delete_document_vectors(self, document_id: str) -> None:
+        raise UserVisibleError("Vector store is not configured")
+
 
 class WorkerProcessor:
     def __init__(
@@ -253,6 +259,14 @@ class WorkerProcessor:
 
         embeddings = self._embed_arms(chunks)
 
+        # Qdrant holds no foreign key back to `documents`, so points written for a row
+        # the owner deleted mid-run would resurrect text they already threw away and
+        # nothing downstream would ever drop them.
+        if self.repository.get_document(document["id"]) is None:
+            self.vector_store.delete_document_vectors(document["id"])
+            logger.info("document %s was deleted while indexing; dropped its vectors", document["id"])
+            return 0
+
         point_ids = self.vector_store.upsert_chunks(document, chunks, embeddings)
         if len(point_ids) != len(chunks):
             raise UserVisibleError("Vector point count did not match chunk count")
@@ -263,7 +277,14 @@ class WorkerProcessor:
         for chunk, point_id in zip(chunks, point_ids):
             chunks_with_points.append({**chunk, "qdrant_point_id": point_id})
 
-        self.repository.replace_chunks(document, chunks_with_points)
+        try:
+            self.repository.replace_chunks(document, chunks_with_points)
+        except Exception:
+            # The delete route can still win the race between the check above and this
+            # insert; the points then belong to a row that no longer exists.
+            self.vector_store.delete_document_vectors(document["id"])
+            raise
+
         self.repository.mark_ready(
             document,
             len(chunks_with_points),

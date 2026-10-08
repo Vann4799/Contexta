@@ -28,6 +28,7 @@ class FakeVectorStore:
     def __init__(self) -> None:
         self.upserted_chunks = 0
         self.pruned: list[tuple[str, int]] = []
+        self.deleted: list[str] = []
 
     def upsert_chunks(
         self,
@@ -40,6 +41,9 @@ class FakeVectorStore:
 
     def prune_stale_chunks(self, document_id: str, chunk_count: int) -> None:
         self.pruned.append((document_id, chunk_count))
+
+    def delete_document_vectors(self, document_id: str) -> None:
+        self.deleted.append(document_id)
 
 
 def ready_document(document_id: str, **extra: object) -> dict:
