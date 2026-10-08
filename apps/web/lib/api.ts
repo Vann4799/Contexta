@@ -90,7 +90,8 @@ export type ServiceHealth = {
 /** One vector slot of the active Qdrant collection, as Qdrant itself reports it. */
 export type VectorSpaceInfo = {
   name: string;
-  dimensions: number;
+  /** Null until Qdrant's own collection config confirmed the slot. */
+  dimensions: number | null;
   model: string;
 };
 

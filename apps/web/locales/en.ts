@@ -574,6 +574,7 @@ export const en = {
     badgeAttention: "ATTENTION",
     indexUnknown: "Model not reported",
     collectionUnknown: "Collection not reported",
+    dimensionsNotReported: "dims not reported",
     collectionLine: (collection: string, shape: string) => `Collection: ${collection} - ${shape}`,
     viewsLabel: "Pipeline views",
     tabs: {

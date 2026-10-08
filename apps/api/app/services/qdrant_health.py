@@ -28,7 +28,9 @@ async def check_qdrant_health(
     The dimensions come from Qdrant's own collection config rather than from the
     embedding settings, because a stale `QDRANT_COLLECTION` is otherwise invisible
     until a query fails - and a frontend that hard-codes the collection name
-    keeps printing the old one after every reindex.
+    keeps printing the old one after every reindex. Dimensions are only ever a
+    number Qdrant itself reported: until the collection read succeeds they are
+    `None`, so a degraded path can never pass config values off as confirmed shape.
     """
     base_url = qdrant_url.rstrip("/")
     headers = {"api-key": api_key} if api_key else None
@@ -38,7 +40,7 @@ async def check_qdrant_health(
         "collection": collection or None,
         "points_count": None,
         "vector_spaces": [
-            {"name": space.name, "dimensions": space.dimensions, "model": space.model_label}
+            {"name": space.name, "dimensions": None, "model": space.model_label}
             for space in spaces
         ],
     }
@@ -68,7 +70,7 @@ async def check_qdrant_health(
         status_payload["vector_spaces"] = [
             {
                 "name": space.name,
-                "dimensions": stored_sizes.get(space.name, space.dimensions),
+                "dimensions": stored_sizes.get(space.name),
                 "model": space.model_label,
             }
             for space in spaces

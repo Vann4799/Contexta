@@ -333,4 +333,54 @@ async def test_qdrant_health_keeps_reporting_a_missing_collection(monkeypatch) -
     assert response["status"] == "ok"
     assert response["collection"] == "contexta_chunks_v3"
     assert response["points_count"] is None
-    assert response["vector_spaces"] == [{"name": "", "dimensions": 384, "model": "a"}]
+    assert response["vector_spaces"] == [{"name": "", "dimensions": None, "model": "a"}]
+
+
+async def test_qdrant_health_without_collection_does_not_confirm_config_dimensions(monkeypatch) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"status": "ok"})
+
+    async_client_class = httpx.AsyncClient
+    monkeypatch.setattr(
+        "app.services.qdrant_health.httpx.AsyncClient",
+        lambda *args, **kwargs: async_client_class(transport=httpx.MockTransport(handler), *args, **kwargs),
+    )
+
+    response = await check_qdrant_health(
+        "http://qdrant.example",
+        spaces=(VectorSpace(name="minilm", dimensions=384, model_label="a"),),
+    )
+
+    assert response["status"] == "ok"
+    assert response["collection"] is None
+    assert response["vector_spaces"] == [{"name": "minilm", "dimensions": None, "model": "a"}]
+
+
+async def test_qdrant_health_does_not_confirm_dimensions_of_a_slot_qdrant_does_not_have(monkeypatch) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/healthz":
+            return httpx.Response(200, json={"status": "ok"})
+        return httpx.Response(
+            200,
+            json={"result": {"points_count": 7, "config": {"params": {"vectors": {"minilm": {"size": 384}}}}}},
+        )
+
+    async_client_class = httpx.AsyncClient
+    monkeypatch.setattr(
+        "app.services.qdrant_health.httpx.AsyncClient",
+        lambda *args, **kwargs: async_client_class(transport=httpx.MockTransport(handler), *args, **kwargs),
+    )
+
+    response = await check_qdrant_health(
+        "http://qdrant.example",
+        collection="contexta_chunks_v3",
+        spaces=(
+            VectorSpace(name="minilm", dimensions=384, model_label="a"),
+            VectorSpace(name="openai", dimensions=1536, model_label="b"),
+        ),
+    )
+
+    assert response["vector_spaces"] == [
+        {"name": "minilm", "dimensions": 384, "model": "a"},
+        {"name": "openai", "dimensions": None, "model": "b"},
+    ]

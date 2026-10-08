@@ -572,6 +572,7 @@ export const id: Dictionary = {
     badgeAttention: "WASPADA",
     indexUnknown: "Model tidak dilaporkan",
     collectionUnknown: "Koleksi tidak dilaporkan",
+    dimensionsNotReported: "dimensi tidak dilaporkan",
     collectionLine: (collection: string, shape: string) => `Koleksi: ${collection} - ${shape}`,
     viewsLabel: "Tampilan pipeline",
     tabs: {

@@ -47,7 +47,7 @@ export function chunkFan(documentId: string, chunkCount: number, locale = "en"):
  */
 export type PipelineIndexInfo = { collection: string; models: string; shape: string; arms: number };
 
-export function describeIndex(vector: VectorHealth | null): PipelineIndexInfo {
+export function describeIndex(vector: VectorHealth | null, notReportedLabel = "?"): PipelineIndexInfo {
   const collection = vector?.status === "ok" ? vector.collection || "" : "";
   if (!collection) {
     return { collection: "", models: "", shape: "", arms: 0 };
@@ -58,7 +58,9 @@ export function describeIndex(vector: VectorHealth | null): PipelineIndexInfo {
   return {
     collection,
     models: spaces.map((space) => space.model.split("/").pop() || space.model).join(" + "),
-    shape: spaces.map((space) => `${space.name ? `${space.name} ` : ""}${space.dimensions}d`).join(" + "),
+    shape: spaces
+      .map((space) => `${space.name ? `${space.name} ` : ""}${space.dimensions == null ? notReportedLabel : `${space.dimensions}d`}`)
+      .join(" + "),
     arms: spaces.length
   };
 }
@@ -182,7 +184,7 @@ export function buildPipelineSnapshot(
   const totalChunks = documents.reduce((sum, document) => sum + document.chunk_count, 0);
   const totalStorage = documents.reduce((sum, document) => sum + document.file_size, 0);
   const queueDepth = health?.queued_documents ?? queuedDocuments.length;
-  const index = describeIndex(vector);
+  const index = describeIndex(vector, copy.dimensionsNotReported);
 
   const byRecent = (a: DocumentItem, b: DocumentItem) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
 
