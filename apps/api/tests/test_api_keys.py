@@ -14,7 +14,7 @@ from app.apikeys.dependencies import (
     get_api_key_repository,
     seconds_to_next_day,
 )
-from app.apikeys.repository import InMemoryApiKeyRepository
+from app.apikeys.repository import InMemoryApiKeyRepository, SupabaseApiKeyRepository
 from app.apikeys.secrets import API_KEY_PREFIX, generate_api_key, hash_api_key
 from app.auth.dependencies import get_current_user
 from app.auth.supabase_jwt import CurrentUser
@@ -609,6 +609,10 @@ def test_owner_can_create_list_and_revoke_a_key() -> None:
     assert revoked.status_code == 200
     assert revoked.json()["revoked_at"] is not None
 
+    # Revoking twice is not a failure: the key is revoked either way, and the confirm
+    # dialog's button can be clicked again before the row disappears from the list.
+    assert client.post(f"/api-keys/{listed.json()[0]['id']}/revoke").status_code == 200
+
     assert client.post("/api-keys/missing/revoke").status_code == 404
 
 
@@ -794,3 +798,84 @@ class _AmbiguousColumnStore(InMemoryApiKeyRepository):
             400, request=request, content=b'{"code":"42702","message":"column reference \\"outcome\\" is ambiguous"}'
         )
         raise httpx.HTTPStatusError("400", request=request, response=response)
+
+
+KEY_ID = "0b1c2d3e-4f50-4a1b-9c8d-7e6f5a4b3c2d"
+
+
+class _PostgRESTKeys:
+    """Stands in for httpx against api_keys, answering PATCH and GET.
+
+    A guarded PATCH that matches nothing comes back as 200 with an empty array, and that
+    is the same body for "already revoked" and for "not your key" -- so the fake has to
+    leave both cases to the follow-up GET or the fallback that separates them goes
+    untested.
+    """
+
+    def __init__(self, get_rows: list[dict[str, object]]) -> None:
+        self.get_rows = get_rows
+        self.calls: list[tuple[str, dict[str, Any]]] = []
+
+    def _response(self, method: str, payload: list[dict[str, object]]) -> httpx.Response:
+        return httpx.Response(
+            status_code=200,
+            request=httpx.Request(method, "https://supabase.test/rest/v1/api_keys"),
+            json=payload,
+        )
+
+    def patch(self, url: str, **kwargs: Any) -> httpx.Response:
+        self.calls.append(("PATCH", kwargs.get("params") or {}))
+        return self._response("PATCH", [])
+
+    def get(self, url: str, **kwargs: Any) -> httpx.Response:
+        self.calls.append(("GET", kwargs.get("params") or {}))
+        return self._response("GET", self.get_rows)
+
+
+def revoked_key_row() -> dict[str, object]:
+    return {
+        "id": KEY_ID,
+        "user_id": USER_ID,
+        "name": "notebook",
+        "key_prefix": "ctx_live_abcd",
+        "last_four": "9xkQ",
+        "document_ids": [],
+        "scopes": ["read"],
+        "minute_limit": 60,
+        "day_limit": 1000,
+        "created_at": "2026-10-08T00:00:00+00:00",
+        "expires_at": None,
+        "last_used_at": None,
+        "revoked_at": "2026-10-08T01:00:00+00:00",
+    }
+
+
+@pytest.mark.parametrize(
+    "get_rows,revokable",
+    [([revoked_key_row()], True), ([], False)],
+    ids=["already revoked", "no such key"],
+)
+def test_an_empty_revoke_patch_is_answered_by_reading_the_row_back(
+    monkeypatch: pytest.MonkeyPatch,
+    get_rows: list[dict[str, object]],
+    revokable: bool,
+) -> None:
+    """The InMemory double reports 200 for a second revoke; the real store must agree.
+
+    Without the read-back, POST /api-keys/{id}/revoke 404s in production on a click the
+    test suite already called a success.
+    """
+    rest = _PostgRESTKeys(get_rows=get_rows)
+    monkeypatch.setattr("app.apikeys.repository.httpx", rest)
+    repository = SupabaseApiKeyRepository("https://supabase.test", "service-role")
+
+    row = repository.revoke_key(USER_ID, KEY_ID)
+
+    assert (row is not None) is revokable
+    if row is not None:
+        assert row["id"] == KEY_ID
+        assert row["revoked_at"] is not None
+    patch_params = next(params for method, params in rest.calls if method == "PATCH")
+    assert patch_params["revoked_at"] == "is.null"
+    get_params = next(params for method, params in rest.calls if method == "GET")
+    assert get_params == {"id": f"eq.{KEY_ID}", "user_id": f"eq.{USER_ID}", "limit": "1"}

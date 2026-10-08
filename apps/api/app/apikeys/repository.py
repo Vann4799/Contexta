@@ -397,7 +397,12 @@ class SupabaseApiKeyRepository:
         )
         response.raise_for_status()
         revoked = response.json()
-        return _row(revoked[0]) if revoked else None
+        if revoked:
+            return _row(revoked[0])
+        # The guard matched nothing, which means either "already revoked" or "not this
+        # user's key to revoke" -- PostgREST cannot tell those apart. Reading the row back
+        # does: it comes back with revoked_at set (200) or not at all (404).
+        return self.get_key(user_id, key_id)
 
     def authorize(
         self,
