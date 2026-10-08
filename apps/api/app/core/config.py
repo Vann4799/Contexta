@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     deepseek_api_key: str = ""
     deepseek_model: str = "deepseek-v4-pro"
     deepseek_max_tokens: int = 3500
+    deepseek_thinking: bool = True
     deepseek_rewrite_model: str = "deepseek-chat"
     embedding_provider: str = "deterministic"
     embedding_model_name: str = "BAAI/bge-m3"

@@ -110,6 +110,7 @@ def get_document_answer_generator(
         api_key=settings.deepseek_api_key,
         model=settings.deepseek_model,
         max_tokens=settings.deepseek_max_tokens,
+        thinking=settings.deepseek_thinking,
     )
 
 
