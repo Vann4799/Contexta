@@ -323,14 +323,13 @@ def get_document_chunks(
     if not document:
         raise HTTPException(status_code=404, detail="document not found")
 
-    chunks = repository.list_document_chunks(current_user.id, document_id)
-    start = (page - 1) * page_size
+    chunks, total = repository.chunk_page(current_user.id, document_id, page, page_size)
     return DocumentChunksPage(
         document_id=document.id,
-        total=len(chunks),
+        total=total,
         page=page,
         page_size=page_size,
-        items=[chunk_row(chunk) for chunk in chunks[start : start + page_size]],
+        items=[chunk_row(chunk) for chunk in chunks],
     )
 
 

@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from app.documents import routes as document_routes
 from app.chat.llm import DeepSeekAnswerGenerator
-from app.documents.models import DocumentCreate, DocumentResponse
+from app.documents.models import DocumentChunkResponse, DocumentCreate, DocumentResponse
 from app.documents.repository import (
     InMemoryDocumentRepository,
     SupabaseDocumentRepository,
@@ -1225,3 +1225,114 @@ def test_retry_leaves_chunks_alone_when_the_document_is_not_failed(
 
     assert repository.retry_failed_document(USER_ID, DOCUMENT_ID) is None
     assert rows.chunk_deletions() == []
+
+
+class PagedPostgREST:
+    """Answers document_chunks with one page and reports the whole-document count
+    in Content-Range, the way PostgREST does for Prefer: count."""
+
+    def __init__(self, total: int, page_rows: list[dict[str, object]]) -> None:
+        self.total = total
+        self.page_rows = page_rows
+        self.chunk_requests: list[tuple[dict[str, str], dict[str, str]]] = []
+
+    def get(self, url: str, **kwargs):
+        params = kwargs.get("params") or {}
+        headers = kwargs.get("headers") or {}
+        if url.endswith("/document_chunks"):
+            self.chunk_requests.append((params, headers))
+            first = int(params.get("offset", 0))
+            if first >= self.total:
+                # Measured live: PostgREST refuses an unsatisfiable offset with 416.
+                return httpx.Response(
+                    status_code=416,
+                    request=httpx.Request("GET", url),
+                    headers={"content-range": f"*/{self.total}"},
+                    json={
+                        "code": "PGRST103",
+                        "message": "Requested range not satisfiable",
+                        "details": f"An offset of {first} was requested, "
+                        f"but there are only {self.total} rows.",
+                        "hint": None,
+                    },
+                )
+            rows, total = self.page_rows, self.total
+        else:
+            first, rows, total = 0, [document_row("ready")], 1
+        return httpx.Response(
+            status_code=206 if url.endswith("/document_chunks") else 200,
+            request=httpx.Request("GET", url),
+            json=rows,
+            headers={"content-range": f"{first}-{first + len(rows) - 1}/{total}"},
+        )
+
+
+def chunk_row(index: int) -> dict[str, object]:
+    return DocumentChunkResponse(
+        document_id=DOCUMENT_ID,
+        user_id=USER_ID,
+        chunk_index=index,
+        text=f"chunk {index}",
+        page_number=index + 1,
+        qdrant_point_id=f"point-{index}",
+    ).model_dump(mode="json")
+
+
+def test_chunk_page_asks_postgrest_for_only_the_requested_page(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    rest = PagedPostgREST(total=198, page_rows=[chunk_row(40), chunk_row(41)])
+    monkeypatch.setattr("app.documents.repository.httpx", rest)
+    repository = SupabaseDocumentRepository("https://supabase.test", "service-role")
+
+    chunks, total = repository.chunk_page(USER_ID, DOCUMENT_ID, page=3, page_size=20)
+
+    params, headers = rest.chunk_requests[0]
+    assert params["offset"] == "40"
+    assert params["limit"] == "20"
+    assert headers["Prefer"] == "count=exact"
+    assert [chunk.chunk_index for chunk in chunks] == [40, 41]
+    assert total == 198
+
+
+def test_chunks_page_reports_the_document_total_from_one_page_read(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A reader on page 2 must not pay for the whole document to get 20 rows."""
+    rest = PagedPostgREST(total=198, page_rows=[chunk_row(20)])
+    monkeypatch.setattr("app.documents.repository.httpx", rest)
+    repository = SupabaseDocumentRepository("https://supabase.test", "service-role")
+    app.dependency_overrides[get_document_repository] = lambda: repository
+
+    response = client.get(
+        f"/documents/{DOCUMENT_ID}/chunks?page=2", headers=auth_headers()
+    )
+    body = response.json()
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert body["total"] == 198
+    assert body["page_size"] == 20
+    assert [item["chunk_index"] for item in body["items"]] == [20]
+    assert len(rest.chunk_requests) == 1
+
+
+def test_a_page_past_the_end_is_empty_not_a_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """PostgREST calls an unsatisfiable offset 416; the endpoint's contract is an
+    empty page with the document's real total."""
+    rest = PagedPostgREST(total=25, page_rows=[])
+    monkeypatch.setattr("app.documents.repository.httpx", rest)
+    repository = SupabaseDocumentRepository("https://supabase.test", "service-role")
+    app.dependency_overrides[get_document_repository] = lambda: repository
+
+    response = client.get(
+        f"/documents/{DOCUMENT_ID}/chunks?page=99", headers=auth_headers()
+    )
+    body = response.json()
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert body["items"] == []
+    assert body["total"] == 25

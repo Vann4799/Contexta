@@ -8,6 +8,22 @@ from app.core.ids import is_uuid
 from app.documents.models import DocumentCreate, DocumentResponse
 from app.documents.models import DocumentChunkResponse
 
+CHUNK_COLUMNS = (
+    "document_id,user_id,chunk_index,text,page_number,"
+    "section_path,is_table,char_count,token_count,qdrant_point_id"
+)
+
+
+def _total_from_content_range(header: str | None) -> int:
+    # With Prefer: count PostgREST reports "<first>-<last>/<total>" for the whole
+    # filtered set, not just the page it returned.
+    if not header or "/" not in header:
+        return 0
+    try:
+        return int(header.rsplit("/", 1)[1])
+    except ValueError:
+        return 0
+
 
 class DocumentRepository(Protocol):
     def list_documents(self, user_id: str) -> list[DocumentResponse]:
@@ -28,6 +44,15 @@ class DocumentRepository(Protocol):
         user_id: str,
         document_id: str,
     ) -> list[DocumentChunkResponse]:
+        ...
+
+    def chunk_page(
+        self,
+        user_id: str,
+        document_id: str,
+        page: int,
+        page_size: int,
+    ) -> tuple[list[DocumentChunkResponse], int]:
         ...
 
     def delete_document(self, user_id: str, document_id: str) -> None:
@@ -105,6 +130,17 @@ class InMemoryDocumentRepository:
             for chunk in sorted(self._chunks, key=lambda item: item.chunk_index)
             if chunk.user_id == user_id and chunk.document_id == document_id
         ]
+
+    def chunk_page(
+        self,
+        user_id: str,
+        document_id: str,
+        page: int,
+        page_size: int,
+    ) -> tuple[list[DocumentChunkResponse], int]:
+        chunks = self.list_document_chunks(user_id, document_id)
+        start = (page - 1) * page_size
+        return chunks[start : start + page_size], len(chunks)
 
     def add_chunks(self, chunks: list[dict[str, object]]) -> None:
         self._chunks.extend(DocumentChunkResponse.model_validate(chunk) for chunk in chunks)
@@ -283,10 +319,7 @@ class SupabaseDocumentRepository:
                 "document_id": f"eq.{document_id}",
                 "user_id": f"eq.{user_id}",
                 "order": "chunk_index.asc",
-                "select": (
-                    "document_id,user_id,chunk_index,text,page_number,"
-                    "section_path,is_table,char_count,token_count,qdrant_point_id"
-                ),
+                "select": CHUNK_COLUMNS,
             },
         )
         response.raise_for_status()
@@ -294,6 +327,42 @@ class SupabaseDocumentRepository:
             DocumentChunkResponse.model_validate(chunk)
             for chunk in response.json()
         ]
+
+    def chunk_page(
+        self,
+        user_id: str,
+        document_id: str,
+        page: int,
+        page_size: int,
+    ) -> tuple[list[DocumentChunkResponse], int]:
+        if not is_uuid(document_id):
+            return [], 0
+        response = httpx.get(
+            f"{self._supabase_url}/rest/v1/document_chunks",
+            headers={**self._headers, "Prefer": "count=exact"},
+            params={
+                "document_id": f"eq.{document_id}",
+                "user_id": f"eq.{user_id}",
+                "order": "chunk_index.asc",
+                "offset": str((page - 1) * page_size),
+                "limit": str(page_size),
+                "select": CHUNK_COLUMNS,
+            },
+        )
+        total = _total_from_content_range(response.headers.get("content-range"))
+        if response.status_code == 416:
+            # Measured live: PostgREST answers an offset past the last row with
+            # 416 PGRST103 instead of an empty page, and Content-Range still
+            # reports the real count as "*/<total>".
+            return [], total
+        response.raise_for_status()
+        return (
+            [
+                DocumentChunkResponse.model_validate(chunk)
+                for chunk in response.json()
+            ],
+            total,
+        )
 
     def delete_document(self, user_id: str, document_id: str) -> None:
         if not is_uuid(document_id):
