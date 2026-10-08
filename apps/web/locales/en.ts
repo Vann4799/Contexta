@@ -833,7 +833,7 @@ export const en = {
         },
         numbers: {
           problem: "The answer needs exact numbers",
-          answer: "Ask explicitly, like 'count the total rows for name X' or 'the post with the most Likes'. Contexta uses a deterministic counting path for common table patterns."
+          answer: "Ask explicitly, like 'count the total rows for name X' or 'the post with the most Likes'. Answers come from the model reading the retrieved chunks, so for a number that must be exact, ask for the rows to be listed and verify them against the source."
         },
         convert: {
           problem: "Converting a PDF to Markdown fails",
@@ -849,12 +849,6 @@ export const en = {
       countPosts: "Count the total posts for the name ISA.",
       topLiked: "Which post has the most Likes?",
       insights: "List insights from this document that could support a business decision."
-    },
-    runtime: {
-      title: "Local runtime",
-      web: "Web",
-      api: "API",
-      vectorDb: "Vector DB"
     }
   }
 };

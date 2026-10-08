@@ -830,7 +830,7 @@ export const id: Dictionary = {
         },
         numbers: {
           problem: "Jawaban perlu angka akurat",
-          answer: "Gunakan pertanyaan eksplisit seperti 'hitung total baris untuk nama X' atau 'postingan dengan Like tertinggi'. Contexta memakai jalur hitung deterministik untuk pola tabel umum."
+          answer: "Gunakan pertanyaan eksplisit seperti 'hitung total baris untuk nama X' atau 'postingan dengan Like tertinggi'. Jawaban berasal dari model yang membaca chunk yang diambil, jadi untuk angka yang harus akurat, minta daftar barisnya dan cek ulang ke sumbernya."
         },
         convert: {
           problem: "Convert PDF ke Markdown gagal",
@@ -846,12 +846,6 @@ export const id: Dictionary = {
       countPosts: "Hitung total postingan untuk nama ISA.",
       topLiked: "Postingan mana yang punya like paling tinggi?",
       insights: "Buatkan daftar insight yang bisa dipakai untuk keputusan bisnis."
-    },
-    runtime: {
-      title: "Runtime lokal",
-      web: "Web",
-      api: "API",
-      vectorDb: "Vector DB"
     }
   }
 };

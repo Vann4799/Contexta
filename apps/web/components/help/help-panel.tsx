@@ -104,23 +104,6 @@ export function HelpPanel() {
             </div>
           </article>
 
-          <article className="rounded-card border border-paper-line bg-paper-card p-5">
-            <h3 className="text-[17px] font-semibold text-ink">{t.runtime.title}</h3>
-            <div className="mt-4 space-y-2 text-[13px]">
-              <div className="flex items-center justify-between rounded-control bg-paper-chip px-3 py-2">
-                <span className="text-ink-muted">{t.runtime.web}</span>
-                <span className="font-mono text-[11.5px] text-ink">localhost:3000</span>
-              </div>
-              <div className="flex items-center justify-between rounded-control bg-paper-chip px-3 py-2">
-                <span className="text-ink-muted">{t.runtime.api}</span>
-                <span className="font-mono text-[11.5px] text-ink">127.0.0.1:8001</span>
-              </div>
-              <div className="flex items-center justify-between rounded-control bg-paper-chip px-3 py-2">
-                <span className="text-ink-muted">{t.runtime.vectorDb}</span>
-                <span className="font-mono text-[11.5px] text-ink">Qdrant Docker</span>
-              </div>
-            </div>
-          </article>
         </aside>
       </section>
     </div>
