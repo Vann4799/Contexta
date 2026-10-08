@@ -703,6 +703,86 @@ def test_retry_ready_document_returns_409() -> None:
     assert response.status_code == 409
 
 
+def test_reindex_ready_document_queues_another_worker_pass() -> None:
+    repository = InMemoryDocumentRepository()
+    app.dependency_overrides[get_document_repository] = lambda: repository
+    document = seed_ready_document(repository)
+
+    response = client.post(f"/documents/{document.id}/reindex", headers=auth_headers())
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "processing"
+    assert body["error_message"] is None
+    assert body["chunk_count"] == 0
+
+
+def test_reindex_keeps_the_chunks_the_current_index_answers_from() -> None:
+    """Only the worker replaces chunks; wiping them here would blank the document mid-pass."""
+    repository = InMemoryDocumentRepository()
+    app.dependency_overrides[get_document_repository] = lambda: repository
+    document = seed_ready_document(repository)
+    repository.add_chunks(
+        [
+            {
+                "document_id": document.id,
+                "user_id": USER_ID,
+                "chunk_index": index,
+                "text": f"indexed chunk {index} body",
+                "page_number": 1,
+                "qdrant_point_id": f"point-{index}",
+            }
+            for index in range(2)
+        ]
+    )
+
+    response = client.post(f"/documents/{document.id}/reindex", headers=auth_headers())
+
+    assert response.status_code == 200
+    assert [chunk.text for chunk in repository.list_document_chunks(USER_ID, document.id)] == [
+        "indexed chunk 0 body",
+        "indexed chunk 1 body",
+    ]
+
+
+def test_reindex_rejects_a_document_that_is_not_ready() -> None:
+    repository = InMemoryDocumentRepository()
+    app.dependency_overrides[get_document_repository] = lambda: repository
+    document = seed_ready_document(repository)
+    repository.mark_failed(document.id, "Extraction failed")
+
+    response = client.post(f"/documents/{document.id}/reindex", headers=auth_headers())
+
+    assert response.status_code == 409
+
+
+def test_reindex_unknown_document_returns_404() -> None:
+    response = client.post(f"/documents/{uuid4()}/reindex", headers=auth_headers())
+
+    assert response.status_code == 404
+
+
+def test_reindex_returns_clean_502_when_queueing_fails() -> None:
+    class FailingRepository(InMemoryDocumentRepository):
+        def reindex_ready_document(
+            self,
+            user_id: str,
+            document_id: str,
+        ) -> DocumentResponse | None:
+            raise RuntimeError("supabase connection reset")
+
+    repository = FailingRepository()
+    app.dependency_overrides[get_document_repository] = lambda: repository
+    document = seed_ready_document(repository)
+
+    response = client.post(f"/documents/{document.id}/reindex", headers=auth_headers())
+
+    assert response.status_code == 502
+    assert response.json() == {"detail": "Unable to re-index this document."}
+    assert "supabase connection reset" not in response.text
+    assert repository.get_document(USER_ID, document.id).status == "ready"
+
+
 def seed_ready_document(repository: InMemoryDocumentRepository) -> DocumentResponse:
     created = repository.create_document(
         USER_ID,

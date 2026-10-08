@@ -85,17 +85,34 @@ class ApiKeyPrincipal:
     def allows(self, document_id: str) -> bool:
         return not self.document_ids or document_id in self.document_ids
 
-    def finish(self, latency_ms: int, document_ids_hit: list[str]) -> None:
-        """Attach timing and the documents actually served to the audit row.
 
-        The response has already been decided by the time this runs, so a failed audit
-        update must not turn a served request into an error. It is logged and dropped;
-        the request itself stays counted because the authorize RPC already wrote it.
-        """
-        try:
-            self.repository.record_outcome(self.log_id, latency_ms, document_ids_hit)
-        except Exception:  # noqa: BLE001 - audit detail is best-effort by design
-            logger.exception("could not finish api request log %s", self.log_id)
+def finalize_api_request_log(request: Request, status_code: int) -> None:
+    """Write the audit outcome once - and only once - the response status exists.
+
+    ``authorize`` inserts the row while the request is still being admitted, so its
+    ``status_code`` is the status of that decision. A key that authorized and then hit a
+    404 or a 422 would otherwise stay logged as a success, and the owner's usage panel
+    would report failures as served requests.
+    """
+    principal: ApiKeyPrincipal | None = getattr(request.state, "api_key_principal", None)
+    if principal is None or principal.log_id is None:
+        return
+
+    started_at = getattr(request.state, "started_at", None)
+    latency_ms = int((time.perf_counter() - started_at) * 1000) if started_at is not None else 0
+    document_ids_hit: list[str] = getattr(request.state, "api_key_documents_hit", [])
+
+    try:
+        principal.repository.record_outcome(
+            principal.log_id,
+            latency_ms,
+            document_ids_hit,
+            status_code,
+        )
+    except Exception:  # noqa: BLE001 - audit detail is best-effort by design
+        # The client already has its answer; a failed audit write must not become an error,
+        # and the request stays counted because the authorize RPC wrote it.
+        logger.exception("could not finish api request log %s", principal.log_id)
 
 
 class _FailedLookupBudget:
@@ -190,7 +207,7 @@ def get_api_key_principal(
         )
 
     assert authorization.key_id is not None and authorization.user_id is not None
-    return ApiKeyPrincipal(
+    principal = ApiKeyPrincipal(
         key_id=authorization.key_id,
         user_id=authorization.user_id,
         document_ids=list(authorization.document_ids),
@@ -202,6 +219,9 @@ def get_api_key_principal(
         log_id=authorization.log_id,
         repository=repository,
     )
+    # The finalizer runs after the route returns, where only the request is in scope.
+    request.state.api_key_principal = principal
+    return principal
 
 
 def quota_headers(principal: ApiKeyPrincipal) -> dict[str, str]:

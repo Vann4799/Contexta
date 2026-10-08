@@ -421,6 +421,59 @@ def test_quota_headers_are_on_every_allowed_response() -> None:
     assert response.headers["x-ratelimit-remaining-day"] == "69"
 
 
+def test_a_browser_can_read_the_quota_headers_cross_origin() -> None:
+    """Sending them is not enough: an unexposed response header is invisible to JS."""
+    keys = InMemoryApiKeyRepository()
+    documents = InMemoryDocumentRepository()
+    retriever = FakeRetriever([context("doc-1")])
+    wire(keys, documents, retriever, api_key_minute_limit=7, api_key_day_limit=70)
+    key = make_key(keys, USER_ID)
+
+    response = client.post(
+        "/v1/retrieve",
+        json={"query": "what"},
+        headers={**bearer(key), "Origin": "http://localhost:3000"},
+    )
+
+    assert response.status_code == 200, response.text
+    exposed = response.headers.get("access-control-expose-headers", "").lower()
+    for name in (
+        "x-ratelimit-limit-minute",
+        "x-ratelimit-remaining-minute",
+        "x-ratelimit-limit-day",
+        "x-ratelimit-remaining-day",
+        "retry-after",
+    ):
+        assert name in exposed, name
+
+
+def test_the_audit_row_records_the_status_the_client_got() -> None:
+    """authorize() writes the row before the route body runs.
+
+    Without a write-back every admitted request logs 200, so an integrator that keeps
+    404ing looks like a healthy customer in their own usage panel.
+    """
+    keys = InMemoryApiKeyRepository()
+    documents = InMemoryDocumentRepository()
+    mine = make_document(documents, USER_ID, "mine.pdf")
+    retriever = FakeRetriever([context(mine.id)])
+    wire(keys, documents, retriever)
+    key = make_key(keys, USER_ID)
+
+    missing = client.get("/v1/documents/does-not-exist/export", headers=bearer(key))
+    served = client.post("/v1/retrieve", json={"query": "what"}, headers=bearer(key))
+
+    assert missing.status_code == 404, missing.text
+    assert served.status_code == 200, served.text
+    first, second = keys._logs[-2:]
+    assert first["outcome"] == "allowed"
+    assert first["status_code"] == 404
+    assert first["document_ids_hit"] == []
+    assert second["status_code"] == 200
+    assert second["document_ids_hit"] == [mine.id]
+    assert second["latency_ms"] is not None
+
+
 def test_audit_log_records_outcomes_without_storing_content() -> None:
     keys = InMemoryApiKeyRepository()
     documents = InMemoryDocumentRepository()

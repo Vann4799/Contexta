@@ -172,6 +172,7 @@ export const id: Dictionary = {
       colActions: "Aksi",
       docTypeFor: (name: string) => `Tipe dokumen untuk ${name}`,
       retry: "Coba lagi",
+      reindex: "Re-indeks",
       delete: "Hapus",
       emptyList: "Belum ada dokumen yang diunggah.",
       showing: (visible: number, total: number) => `Menampilkan ${visible} dari ${total} dokumen.`,
@@ -181,6 +182,7 @@ export const id: Dictionary = {
         classified: (name: string, type: string) => `${name} diklasifikasi sebagai ${type}.`,
         deleted: (name: string) => `${name} dihapus.`,
         retried: (name: string) => `${name} masuk antrean percobaan ulang.`,
+        reindexed: (name: string) => `${name} masuk antrean re-indeks.`,
         exported: (name: string) => `Mengekspor ${name}.`
       },
       health: {
@@ -203,6 +205,8 @@ export const id: Dictionary = {
         deleteFailed: "Tidak bisa menghapus dokumen.",
         signInRetry: "Masuk dulu untuk mencoba ulang dokumen.",
         retryFailed: "Tidak bisa mencoba ulang dokumen.",
+        signInReindex: "Masuk dulu untuk me-re-indeks dokumen.",
+        reindexFailed: "Tidak bisa me-re-indeks dokumen.",
         signInExport: "Masuk dulu untuk mengekspor workspace Anda.",
         exportFailed: "Tidak bisa mengekspor workspace.",
         wrongFormat: "Hanya berkas PDF dan DOCX yang didukung.",
@@ -504,6 +508,8 @@ export const id: Dictionary = {
     loadingShort: "Memuat...",
     revoke: "Cabut",
     revoking: "Mencabut...",
+    revokeConfirm: (name: string) =>
+      `Cabut "${name}"? Klien mana pun yang memakai key ini langsung berhenti berfungsi dan key-nya tidak bisa dipulihkan.`,
     usageSummary: (total: number, days: number, allowed: number, rejected: number) =>
       `${total} permintaan dalam ${days} hari terakhir · ${allowed} diizinkan · ${rejected} ditolak`,
     dayAllowed: (count: number) => `${count} ok`,
@@ -687,6 +693,7 @@ export const id: Dictionary = {
       "Vector store is not configured": "Penyimpanan vektor belum dikonfigurasi di server.",
       "document not found": "Dokumen tersebut sudah tidak ada.",
       "only failed documents can be retried": "Hanya dokumen berstatus gagal yang bisa diulang.",
+      "only ready documents can be re-indexed": "Hanya dokumen yang sudah terindeks yang bisa di-re-indeks.",
       "document metadata cannot be edited while indexing is running":
         "Metadata tidak bisa diubah saat dokumen masih diindeks.",
       "document has no processed chunks": "Dokumen ini belum punya chunk untuk dibaca.",
@@ -714,6 +721,7 @@ export const id: Dictionary = {
       "Unable to delete this document.": "Dokumen ini tidak bisa dihapus.",
       "Unable to retry document.": "Gagal mengulang dokumen.",
       "Unable to retry this document.": "Dokumen ini tidak bisa diulang.",
+      "Unable to re-index this document.": "Dokumen ini tidak bisa di-re-indeks.",
       "Unable to remove the indexed chunks for this document.": "Chunk terindeks dokumen ini tidak bisa dihapus.",
       "Unable to remove the stored file for this document.": "Berkas tersimpan dokumen ini tidak bisa dihapus.",
       "Unable to clear the previous indexing attempt for this document.":
@@ -825,7 +833,7 @@ export const id: Dictionary = {
         },
         convert: {
           problem: "Convert PDF ke Markdown gagal",
-          answer: "Coba PDF yang tidak rusak dan tidak terenkripsi. Tool convert memakai MarkItDown di API."
+          answer: "Coba PDF yang tidak rusak dan tidak terenkripsi. Convert memakai extractor yang sama dengan yang membangun indeks dokumen, jadi markdown inilah teks yang dijawab Contexta."
         }
       }
     },

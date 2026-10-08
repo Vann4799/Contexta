@@ -470,6 +470,21 @@ export async function retryDocument(accessToken: string, documentId: string) {
   return (await response.json()) as DocumentItem;
 }
 
+export async function reindexDocument(accessToken: string, documentId: string) {
+  const response = await fetchApi(`/documents/${documentId}/reindex`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to re-index this document."));
+  }
+
+  return (await response.json()) as DocumentItem;
+}
+
 export type DocumentExportFormat = "md" | "jsonl";
 
 export interface ExportedFile {

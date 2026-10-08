@@ -39,6 +39,13 @@ class DocumentRepository(Protocol):
     ) -> DocumentResponse | None:
         ...
 
+    def reindex_ready_document(
+        self,
+        user_id: str,
+        document_id: str,
+    ) -> DocumentResponse | None:
+        ...
+
     def update_document_metadata(
         self,
         user_id: str,
@@ -148,6 +155,30 @@ class InMemoryDocumentRepository:
                     if not (chunk.user_id == user_id and chunk.document_id == document_id)
                 ]
                 return retried
+        return None
+
+    def reindex_ready_document(
+        self,
+        user_id: str,
+        document_id: str,
+    ) -> DocumentResponse | None:
+        now = datetime.now(timezone.utc)
+        for index, document in enumerate(self._documents):
+            if (
+                document.user_id == user_id
+                and document.id == document_id
+                and document.status == "ready"
+            ):
+                reindexed = document.model_copy(
+                    update={
+                        "status": "processing",
+                        "error_message": None,
+                        "chunk_count": 0,
+                        "updated_at": now,
+                    }
+                )
+                self._documents[index] = reindexed
+                return reindexed
         return None
 
     def update_document_metadata(
@@ -285,6 +316,37 @@ class SupabaseDocumentRepository:
                 "id": f"eq.{document_id}",
                 "user_id": f"eq.{user_id}",
                 "status": "eq.failed",
+            },
+            json={
+                "status": "processing",
+                "error_message": None,
+                "chunk_count": 0,
+                "processing_started_at": None,
+            },
+        )
+        response.raise_for_status()
+        documents = response.json()
+        if not documents:
+            return None
+        return DocumentResponse.model_validate(documents[0])
+
+    def reindex_ready_document(
+        self,
+        user_id: str,
+        document_id: str,
+    ) -> DocumentResponse | None:
+        headers = {
+            **self._headers,
+            "Content-Type": "application/json",
+            "Prefer": "return=representation",
+        }
+        response = httpx.patch(
+            f"{self._supabase_url}/rest/v1/documents",
+            headers=headers,
+            params={
+                "id": f"eq.{document_id}",
+                "user_id": f"eq.{user_id}",
+                "status": "eq.ready",
             },
             json={
                 "status": "processing",

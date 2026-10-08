@@ -147,8 +147,13 @@ export function DeveloperPanel() {
     }
   };
 
-  const handleRevoke = async (keyId: string) => {
+  const handleRevoke = async (keyId: string, keyName: string) => {
     setError(null);
+
+    if (!window.confirm(copy.revokeConfirm(keyName))) {
+      return;
+    }
+
     setRevokingId(keyId);
     try {
       const accessToken = await getAccessToken();
@@ -347,7 +352,7 @@ export function DeveloperPanel() {
                       {key.revoked_at ? null : (
                         <Button
                           disabled={revokingId === key.id}
-                          onClick={() => void handleRevoke(key.id)}
+                          onClick={() => void handleRevoke(key.id, key.name)}
                           variant="secondary"
                           className="h-9 px-3"
                         >

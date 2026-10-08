@@ -34,8 +34,9 @@ X-RateLimit-Remaining-Day: 4999
 ```
 
 Over quota returns `429` with a `Retry-After` in seconds until the minute window resets.
-Every request — including rejected ones — is written to your audit log and appears on the
-Developer page. Logs are kept for 90 days.
+These header names are CORS-exposed, so a browser-side integrator can read them too.
+Every request — including rejected ones — is written to your audit log with the status it
+actually received, and appears on the Developer page. Logs are kept for 90 days.
 
 ## `POST /v1/retrieve`
 

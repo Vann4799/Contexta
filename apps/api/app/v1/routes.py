@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import time
 from datetime import datetime
 from typing import Annotated
 
@@ -194,7 +193,7 @@ def export_document(
             **quota_headers(principal),
         },
     )
-    principal.finish(int((time.perf_counter() - request.state.started_at) * 1000), [document_id])
+    request.state.api_key_documents_hit = [document_id]
     return response
 
 
@@ -234,7 +233,6 @@ def _respond(
     principal: ApiKeyPrincipal,
     body: dict[str, object],
 ) -> JSONResponse:
-    latency_ms = int((time.perf_counter() - request.state.started_at) * 1000)
     response = JSONResponse(
         status_code=200,
         # model_dump() leaves real datetime objects in the body (indexed_at), and
@@ -250,7 +248,7 @@ def _respond(
             if isinstance(item, dict) and "document_id" in item
         }
     )
-    principal.finish(latency_ms, hit_ids)
+    request.state.api_key_documents_hit = hit_ids
     return response
 
 

@@ -435,6 +435,35 @@ def retry_document_processing(
     return retried_document
 
 
+@router.post("/{document_id}/reindex", response_model=DocumentResponse)
+def reindex_document(
+    document_id: str,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    repository: Annotated[DocumentRepository, Depends(get_document_repository)],
+) -> DocumentResponse:
+    document = repository.get_document(current_user.id, document_id)
+    if not document:
+        raise HTTPException(status_code=404, detail="document not found")
+    if document.status != "ready":
+        raise HTTPException(
+            status_code=409,
+            detail="only ready documents can be re-indexed",
+        )
+
+    # No vector wipe: chunk point ids are derived from document_id + chunk_index, so the
+    # worker's upsert overwrites them and its prune drops the leftovers. The old vectors
+    # keep answering until the new pass lands.
+    try:
+        reindexed_document = repository.reindex_ready_document(current_user.id, document_id)
+    except Exception as exc:
+        logger.exception("could not queue document %s for re-index", document_id)
+        raise HTTPException(status_code=502, detail="Unable to re-index this document.") from exc
+
+    if not reindexed_document:
+        raise HTTPException(status_code=404, detail="document not found")
+    return reindexed_document
+
+
 @router.patch("/{document_id}/metadata", response_model=DocumentResponse)
 def update_document_metadata(
     document_id: str,

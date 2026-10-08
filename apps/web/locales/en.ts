@@ -172,6 +172,7 @@ export const en = {
       colActions: "Actions",
       docTypeFor: (name: string) => `Document type for ${name}`,
       retry: "Retry",
+      reindex: "Re-index",
       delete: "Delete",
       emptyList: "No documents uploaded yet.",
       showing: (visible: number, total: number) =>
@@ -182,6 +183,7 @@ export const en = {
         classified: (name: string, type: string) => `${name} classified as ${type}.`,
         deleted: (name: string) => `${name} deleted.`,
         retried: (name: string) => `${name} queued for retry.`,
+        reindexed: (name: string) => `${name} queued for re-indexing.`,
         exported: (name: string) => `Exported ${name}.`
       },
       health: {
@@ -204,6 +206,8 @@ export const en = {
         deleteFailed: "Unable to delete document.",
         signInRetry: "Sign in to retry documents.",
         retryFailed: "Unable to retry document.",
+        signInReindex: "Sign in to re-index documents.",
+        reindexFailed: "Unable to re-index document.",
         signInExport: "Sign in to export your workspace.",
         exportFailed: "Unable to export workspace.",
         wrongFormat: "Only PDF and DOCX files are supported.",
@@ -506,6 +510,8 @@ export const en = {
     loadingShort: "Loading...",
     revoke: "Revoke",
     revoking: "Revoking...",
+    revokeConfirm: (name: string) =>
+      `Revoke "${name}"? Any client using this key stops working immediately and the key cannot be restored.`,
     usageSummary: (total: number, days: number, allowed: number, rejected: number) =>
       `${total} request${total === 1 ? "" : "s"} in the last ${days} days · ${allowed} allowed · ${rejected} rejected`,
     dayAllowed: (count: number) => `${count} ok`,
@@ -690,6 +696,7 @@ export const en = {
       "Vector store is not configured": "The vector store is not configured on the server.",
       "document not found": "That document no longer exists.",
       "only failed documents can be retried": "Only a failed document can be retried.",
+      "only ready documents can be re-indexed": "Only a document that finished indexing can be re-indexed.",
       "document metadata cannot be edited while indexing is running":
         "Metadata cannot be edited while the document is still indexing.",
       "document has no processed chunks": "This document has no chunks to read yet.",
@@ -717,6 +724,7 @@ export const en = {
       "Unable to delete this document.": "Unable to delete this document.",
       "Unable to retry document.": "Unable to retry the document.",
       "Unable to retry this document.": "Unable to retry this document.",
+      "Unable to re-index this document.": "Unable to re-index this document.",
       "Unable to remove the indexed chunks for this document.": "The indexed chunks for this document could not be removed.",
       "Unable to remove the stored file for this document.": "The stored file for this document could not be removed.",
       "Unable to clear the previous indexing attempt for this document.":
@@ -828,7 +836,7 @@ export const en = {
         },
         convert: {
           problem: "Converting a PDF to Markdown fails",
-          answer: "Try a PDF that is neither corrupted nor encrypted. The convert tool uses MarkItDown inside the API."
+          answer: "Try a PDF that is neither corrupted nor encrypted. Convert runs the same extractor that built the document's index, so the Markdown is the text Contexta answers from."
         }
       }
     },

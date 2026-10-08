@@ -5,6 +5,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.account.routes import router as account_router
+from app.apikeys.dependencies import finalize_api_request_log
 from app.apikeys.routes import router as api_keys_router
 from app.chat.retrieval import configured_vector_spaces
 from app.chat.routes import router as chat_router
@@ -25,7 +26,17 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["Content-Disposition"],
+    # A cross-origin client only sees what is exposed here. /v1 reports its quota on every
+    # allowed response and Retry-After on every 429; without these names a browser-side
+    # integrator cannot back off before it hits the limit.
+    expose_headers=[
+        "Content-Disposition",
+        "X-RateLimit-Limit-Minute",
+        "X-RateLimit-Remaining-Minute",
+        "X-RateLimit-Limit-Day",
+        "X-RateLimit-Remaining-Day",
+        "Retry-After",
+    ],
 )
 app.include_router(account_router)
 app.include_router(documents_router)
@@ -43,6 +54,27 @@ async def stamp_request_start(request: Request, call_next):
     # round trip, so the clock starts before any dependency runs.
     request.state.started_at = perf_counter()
     return await call_next(request)
+
+
+@app.middleware("http")
+async def finalize_v1_audit_log(request: Request, call_next):
+    """Record the status the caller actually received, not just the admission decision.
+
+    The authorize RPC writes the audit row before the route body runs, so on its own it can
+    only ever report the authorization outcome. This is the first point after routing where
+    the final status exists.
+    """
+    if not request.url.path.startswith("/v1/"):
+        return await call_next(request)
+
+    try:
+        response = await call_next(request)
+    except Exception:
+        finalize_api_request_log(request, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        raise
+
+    finalize_api_request_log(request, response.status_code)
+    return response
 
 
 @app.get("/health")

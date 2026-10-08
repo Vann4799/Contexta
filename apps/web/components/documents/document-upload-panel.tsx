@@ -7,6 +7,7 @@ import {
   deleteDocument,
   exportWorkspace,
   getIndexingHealth,
+  reindexDocument,
   retryDocument,
   uploadDocument,
   updateDocumentMetadata,
@@ -28,7 +29,7 @@ import { cn } from "@/lib/utils";
 type UploadCopy = Dictionary["documents"]["upload"];
 
 type UploadNotice =
-  | { key: "uploaded" | "deleted" | "retried" | "exported"; name: string }
+  | { key: "uploaded" | "deleted" | "retried" | "reindexed" | "exported"; name: string }
   | { key: "classified"; name: string; docType: DocumentType };
 
 const allowedExtensions = new Set(["pdf", "docx"]);
@@ -292,6 +293,28 @@ export function DocumentUploadPanel() {
     }
   };
 
+  const handleReindex = async (document: DocumentItem) => {
+    setError(null);
+    setNotice(null);
+    setMutatingDocumentId(document.id);
+
+    try {
+      const accessToken = await getAccessToken();
+      if (!accessToken) {
+        setError("signInReindex");
+        return;
+      }
+
+      const reindexedDocument = await reindexDocument(accessToken, document.id);
+      setDocuments((currentDocuments) => currentDocuments.map((currentDocument) => (currentDocument.id === document.id ? reindexedDocument : currentDocument)));
+      setNotice({ key: "reindexed", name: document.filename });
+    } catch (reindexError) {
+      setError(uploadErrorMessage(reindexError, "reindexFailed"));
+    } finally {
+      setMutatingDocumentId(null);
+    }
+  };
+
   const handleExportWorkspace = async () => {
     setError(null);
     setNotice(null);
@@ -488,11 +511,11 @@ export function DocumentUploadPanel() {
         <div className="mt-4 overflow-x-auto">
           <div className="min-w-[720px]">
             <div className="grid grid-cols-12 gap-3 border-b border-paper-line pb-2">
-              <div className="eyebrow col-span-5">{copy.colFile}</div>
+              <div className="eyebrow col-span-4">{copy.colFile}</div>
               <div className="eyebrow col-span-1">{copy.colSize}</div>
-              <div className="eyebrow col-span-3">{copy.colType}</div>
+              <div className="eyebrow col-span-2">{copy.colType}</div>
               <div className="eyebrow col-span-2">{copy.colStatus}</div>
-              <div className="eyebrow col-span-1 text-right">{copy.colActions}</div>
+              <div className="eyebrow col-span-3 text-right">{copy.colActions}</div>
             </div>
             <div>
               {visibleDocuments.length > 0 ? (
@@ -501,7 +524,7 @@ export function DocumentUploadPanel() {
                     key={document.id}
                     className="grid grid-cols-12 items-center gap-3 border-b border-paper-line/60 py-3 last:border-0"
                   >
-                    <div className="col-span-5 flex min-w-0 items-center gap-3">
+                    <div className="col-span-4 flex min-w-0 items-center gap-3">
                       <div className="grid h-9 w-9 shrink-0 place-items-center rounded-control bg-night">
                         <span className="font-mono text-[9.5px] font-bold tracking-[0.06em] text-accent">
                           {document.file_type.toUpperCase()}
@@ -522,7 +545,7 @@ export function DocumentUploadPanel() {
                       </div>
                     </div>
                     <div className="nums col-span-1 text-[12.5px] text-ink-muted">{formatBytes(document.file_size)}</div>
-                    <div className="col-span-3">
+                    <div className="col-span-2">
                       <select
                         aria-label={copy.docTypeFor(document.filename)}
                         className="focus-ring h-8 w-full max-w-[190px] rounded-control border border-paper-line bg-paper-soft px-2 text-[12.5px] outline-none disabled:cursor-not-allowed disabled:opacity-50"
@@ -546,7 +569,7 @@ export function DocumentUploadPanel() {
                     <div className="col-span-2">
                       <StatusPill status={statusForPill(document.status)} />
                     </div>
-                    <div className="col-span-1 flex justify-end gap-1">
+                    <div className="col-span-3 flex justify-end gap-1">
                       {document.status === "failed" ? (
                         <Button
                           className="h-8 px-2.5 text-[12.5px]"
@@ -555,6 +578,16 @@ export function DocumentUploadPanel() {
                           variant="secondary"
                         >
                           {copy.retry}
+                        </Button>
+                      ) : null}
+                      {document.status === "ready" ? (
+                        <Button
+                          className="h-8 px-2.5 text-[12.5px]"
+                          disabled={mutatingDocumentId === document.id}
+                          onClick={() => void handleReindex(document)}
+                          variant="ghost"
+                        >
+                          {copy.reindex}
                         </Button>
                       ) : null}
                       <Button

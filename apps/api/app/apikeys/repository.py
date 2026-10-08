@@ -43,6 +43,7 @@ class ApiKeyRepository(Protocol):
         log_id: int | None,
         latency_ms: int,
         document_ids_hit: list[str],
+        status_code: int,
     ) -> None:
         ...
 
@@ -243,6 +244,7 @@ class InMemoryApiKeyRepository:
         log_id: int | None,
         latency_ms: int,
         document_ids_hit: list[str],
+        status_code: int,
     ) -> None:
         for index, log in enumerate(self._logs):
             if log["id"] == log_id:
@@ -250,6 +252,7 @@ class InMemoryApiKeyRepository:
                     **log,
                     "latency_ms": latency_ms,
                     "document_ids_hit": list(document_ids_hit),
+                    "status_code": status_code,
                 }
                 return
 
@@ -412,6 +415,7 @@ class SupabaseApiKeyRepository:
         log_id: int | None,
         latency_ms: int,
         document_ids_hit: list[str],
+        status_code: int,
     ) -> None:
         if log_id is None:
             return
@@ -419,7 +423,11 @@ class SupabaseApiKeyRepository:
             f"{self._supabase_url}/rest/v1/api_request_logs",
             headers={**self._headers, "Content-Type": "application/json"},
             params={"id": f"eq.{log_id}"},
-            json={"latency_ms": latency_ms, "document_ids_hit": document_ids_hit},
+            json={
+                "latency_ms": latency_ms,
+                "document_ids_hit": document_ids_hit,
+                "status_code": status_code,
+            },
         )
         response.raise_for_status()
 
