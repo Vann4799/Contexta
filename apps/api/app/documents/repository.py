@@ -4,6 +4,7 @@ from uuid import uuid4
 
 import httpx
 
+from app.core.ids import is_uuid
 from app.documents.models import DocumentCreate, DocumentResponse
 from app.documents.models import DocumentChunkResponse
 
@@ -249,6 +250,10 @@ class SupabaseDocumentRepository:
         return DocumentResponse.model_validate(created)
 
     def get_document(self, user_id: str, document_id: str) -> DocumentResponse | None:
+        if not is_uuid(document_id):
+            # `documents.id` is a uuid column, so this id cannot name a row; asking
+            # PostgREST anyway gets a 400 back and the client would see a 500.
+            return None
         response = httpx.get(
             f"{self._supabase_url}/rest/v1/documents",
             headers=self._headers,
@@ -269,6 +274,8 @@ class SupabaseDocumentRepository:
         user_id: str,
         document_id: str,
     ) -> list[DocumentChunkResponse]:
+        if not is_uuid(document_id):
+            return []
         response = httpx.get(
             f"{self._supabase_url}/rest/v1/document_chunks",
             headers=self._headers,
@@ -289,6 +296,8 @@ class SupabaseDocumentRepository:
         ]
 
     def delete_document(self, user_id: str, document_id: str) -> None:
+        if not is_uuid(document_id):
+            return
         response = httpx.delete(
             f"{self._supabase_url}/rest/v1/documents",
             headers=self._headers,
@@ -304,6 +313,8 @@ class SupabaseDocumentRepository:
         user_id: str,
         document_id: str,
     ) -> DocumentResponse | None:
+        if not is_uuid(document_id):
+            return None
         headers = {
             **self._headers,
             "Content-Type": "application/json",
@@ -335,6 +346,8 @@ class SupabaseDocumentRepository:
         user_id: str,
         document_id: str,
     ) -> DocumentResponse | None:
+        if not is_uuid(document_id):
+            return None
         headers = {
             **self._headers,
             "Content-Type": "application/json",
@@ -369,6 +382,9 @@ class SupabaseDocumentRepository:
     ) -> DocumentResponse | None:
         if not changes:
             return self.get_document(user_id, document_id)
+
+        if not is_uuid(document_id):
+            return None
 
         response = httpx.patch(
             f"{self._supabase_url}/rest/v1/documents",

@@ -7,6 +7,7 @@ from uuid import uuid4
 import httpx
 
 from app.chat.models import ChatCitation, ChatMessageResponse, ChatSessionResponse
+from app.core.ids import is_uuid
 
 
 class ChatRepository(Protocol):
@@ -165,6 +166,10 @@ class SupabaseChatRepository:
         return ChatSessionResponse.model_validate(created)
 
     def get_session(self, user_id: str, session_id: str) -> ChatSessionResponse | None:
+        # chat_sessions.id is a Postgres uuid; a malformed id is not a lookup that
+        # misses, it is a filter PostgREST refuses to build (400/22P02 -> 500).
+        if not is_uuid(session_id):
+            return None
         response = httpx.get(
             f"{self._supabase_url}/rest/v1/chat_sessions",
             headers=self._headers,
@@ -181,6 +186,8 @@ class SupabaseChatRepository:
         return ChatSessionResponse.model_validate(sessions[0])
 
     def list_messages(self, user_id: str, session_id: str) -> list[ChatMessageResponse]:
+        if not is_uuid(session_id):
+            return []
         response = httpx.get(
             f"{self._supabase_url}/rest/v1/chat_messages",
             headers=self._headers,

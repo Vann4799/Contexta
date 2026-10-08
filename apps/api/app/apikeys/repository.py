@@ -5,6 +5,7 @@ import httpx
 
 from app.apikeys.models import ApiKeyOutcome, KeyAuthorization
 from app.apikeys.secrets import hash_api_key
+from app.core.ids import is_uuid
 
 
 class ApiKeyRepository(Protocol):
@@ -360,6 +361,10 @@ class SupabaseApiKeyRepository:
         return [_row(key) for key in response.json()]
 
     def get_key(self, user_id: str, key_id: str) -> ApiKeyRow | None:
+        # api_keys.id is a Postgres uuid; a malformed id is a filter PostgREST refuses
+        # to build (400/22P02), not a lookup that misses.
+        if not is_uuid(key_id):
+            return None
         response = httpx.get(
             f"{self._supabase_url}/rest/v1/api_keys",
             headers=self._headers,
@@ -374,6 +379,8 @@ class SupabaseApiKeyRepository:
         return _row(keys[0]) if keys else None
 
     def revoke_key(self, user_id: str, key_id: str) -> ApiKeyRow | None:
+        if not is_uuid(key_id):
+            return None
         response = httpx.patch(
             f"{self._supabase_url}/rest/v1/api_keys",
             headers={
