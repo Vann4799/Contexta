@@ -4,33 +4,28 @@ Contexta is a RAG document chatbot for PDF and DOCX files.
 
 ## Status
 
-Contexta is currently an MVP for a single-user document intelligence workspace. It supports:
+Contexta is a multi-user document intelligence workspace. It supports:
 
-- Supabase email auth.
-- PDF and DOCX uploads.
-- background indexing into Qdrant.
-- grounded chat with citations.
-- document intelligence pages.
-- PDF to Markdown conversion with the same extractor that builds the index.
+- Supabase email auth (JWKS-based token verification).
+- PDF and DOCX uploads with background indexing into Qdrant.
+- Hybrid retrieval across named vector spaces (dual embedding arms, RRF fusion).
+- Grounded chat with query rewriting and clickable section citations.
+- Document intelligence pages, PDF to Markdown conversion, corpus export.
+- Developer API keys with minute/day quotas (`/v1` endpoints) and an MCP server.
+- English/Indonesian UI.
 
 ## Apps
 
 - `apps/web`: Next.js frontend.
-- `apps/api`: FastAPI API service.
-- `apps/worker`: background document processor.
-- `packages/rag`: shared Python RAG utilities.
+- `apps/api`: FastAPI API service (serves `/v1`, `/mcp` proxying, health endpoints).
+- `apps/worker`: background document processor (chunking, embeddings, Qdrant upsert, log pruning).
+- `apps/embeddings`: optional sidecar that serves local embedding models to the worker.
+- `apps/mcp`: MCP server forwarding tool calls to the API's `/v1` endpoints.
+- `packages/rag`: shared Python RAG utilities (chunker, storage helpers, retrieval).
 
 ## Deployment
 
-See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) before publishing or deploying. The first public release should use:
-
-- Vercel or another Node host for `apps/web`.
-- a Docker host for `apps/api`.
-- one separate worker service for `apps/worker`.
-- Supabase hosted Auth/Database/Storage.
-- Qdrant Cloud or a private Qdrant service.
-
-For a VPS-based Docker deployment, use [docs/VPS_DEPLOYMENT.md](docs/VPS_DEPLOYMENT.md).
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the Render + Vercel blueprint setup, or [docs/VPS_DEPLOYMENT.md](docs/VPS_DEPLOYMENT.md) for a Docker Compose deployment on a VPS.
 
 Never commit real `.env` files or API keys.
 
@@ -48,7 +43,7 @@ Qdrant health:
 curl http://localhost:6333/healthz
 ```
 
-## Phase 1 Commands
+## Tests
 
 Run shared RAG tests:
 
@@ -74,32 +69,42 @@ python -m pytest
 Pop-Location
 ```
 
-Run web dev server:
+Run MCP tests:
 
 ```powershell
-Push-Location apps/web
-npm install
-npm run dev
+Push-Location apps/mcp
+python -m pytest
 Pop-Location
 ```
 
-## Verification
+Run embeddings tests:
 
-Phase 1 is considered healthy when:
+```powershell
+Push-Location apps/embeddings
+python -m pytest
+Pop-Location
+```
 
-- Qdrant responds at `http://localhost:6333/healthz`.
-- `packages/rag` tests pass.
-- `apps/api` tests pass.
-- `apps/worker` tests pass.
-- `apps/web` lint and build pass.
+Run web dev server and type checks:
+
+```powershell
+Push-Location apps/web
+pnpm install
+pnpm run dev
+pnpm exec tsc --noEmit
+Pop-Location
+```
+
+The stack is healthy when all Python test suites pass and the web type check is clean.
 
 ## Supabase Setup
 
-Phase 2 adds Supabase Auth and metadata schema. Apply the SQL in:
+Apply the SQL in `infra/supabase/migrations/` in order:
 
-```text
-infra/supabase/migrations/0001_initial_schema.sql
-```
+1. `0001_initial_schema.sql`
+2. `0002_document_metadata.sql`
+3. `0003_api_keys.sql`
+4. `0004_account_summary.sql`
 
 The frontend expects:
 
@@ -116,33 +121,37 @@ The API expects:
 SUPABASE_URL
 SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY
-SUPABASE_JWT_SECRET
-SUPABASE_JWKS_URL
+SUPABASE_JWKS_URL            # optional; derived from SUPABASE_URL when unset
 SUPABASE_STORAGE_BUCKET
 QDRANT_URL
 QDRANT_API_KEY
 QDRANT_COLLECTION
 DEEPSEEK_API_KEY
 API_CORS_ORIGINS
+EMBEDDING_*                  # primary retrieval arm (see docs/DEPLOYMENT.md)
+SECONDARY_EMBEDDING_*        # optional second retrieval arm
 ```
 
-## Phase 2 Verification
+The worker expects:
 
-Phase 2 is healthy when:
+```text
+SUPABASE_URL
+SUPABASE_SERVICE_ROLE_KEY
+SUPABASE_STORAGE_BUCKET
+QDRANT_URL
+QDRANT_API_KEY
+QDRANT_COLLECTION
+EMBEDDING_*                  # primary arm
+SECONDARY_EMBEDDING_*        # optional second arm
+MAX_CHUNK_WORDS / CHUNK_OVERLAP_WORDS / MIN_CHUNK_WORDS   # optional tuning
+API_LOG_RETENTION_DAYS       # optional; default 90
+```
 
-- Supabase migration contract tests pass.
-- API auth and document metadata tests pass.
-- Existing worker and RAG tests still pass.
-- Web lint and build pass.
+## Verification
 
-Manual Supabase verification requires real project credentials in `.env` files and applying `infra/supabase/migrations/0001_initial_schema.sql` in the Supabase SQL editor.
+A manual end-to-end check after deploying:
 
-## Phase 3 Verification
-
-Phase 3 is healthy when:
-
-- API upload tests pass.
-- Web lint and build pass.
-- A signed-in user can upload a PDF or DOCX from `/documents`.
-- Supabase Storage receives the file under `contexta-documents/<user_id>/...`.
-- Supabase `documents` receives a metadata row with status `processing`.
+- Qdrant responds on its health endpoint and `/health/vector` reports the live collection and arms.
+- A signed-in user can upload a PDF or DOCX from `/documents`; the row lands in Supabase Storage under `contexta-documents/<user_id>/...` and the document reaches status `ready`.
+- Chat answers with section citations and rate-limit headers the UI can read.
+- `/v1` endpoints authorize with a developer API key, and the MCP server at `/mcp` forwards tool calls to them.
