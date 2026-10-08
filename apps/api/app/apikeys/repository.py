@@ -6,6 +6,7 @@ import httpx
 from app.apikeys.models import ApiKeyOutcome, KeyAuthorization
 from app.apikeys.secrets import hash_api_key
 from app.core.ids import is_uuid
+from app.core.postgrest import first_row
 
 
 class ApiKeyRepository(Protocol):
@@ -340,7 +341,7 @@ class SupabaseApiKeyRepository:
         )
         response.raise_for_status()
         created = response.json()
-        return _row(created[0] if isinstance(created, list) else created)
+        return _row(first_row(created, "api key"))
 
     def list_keys(self, user_id: str) -> list[ApiKeyRow]:
         response = httpx.get(

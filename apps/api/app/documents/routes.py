@@ -395,15 +395,6 @@ async def delete_document(
         ) from exc
 
     try:
-        await storage.delete_document(document.storage_path)
-    except Exception as exc:
-        logger.exception("could not delete stored file for document %s", document_id)
-        raise HTTPException(
-            status_code=502,
-            detail="Unable to remove the stored file for this document.",
-        ) from exc
-
-    try:
         repository.delete_document(current_user.id, document_id)
     except Exception as exc:
         logger.exception("could not delete document row %s", document_id)
@@ -411,6 +402,14 @@ async def delete_document(
             status_code=502,
             detail="Unable to delete this document.",
         ) from exc
+
+    # The row is the source of truth: once it is gone the delete has succeeded for
+    # the user, and a leftover storage object is invisible — failing the request
+    # with a 502 here would make the user retry an already-completed delete.
+    try:
+        await storage.delete_document(document.storage_path)
+    except Exception:
+        logger.exception("could not delete stored file for document %s", document_id)
 
 
 @router.post("/{document_id}/retry", response_model=DocumentResponse)
@@ -579,4 +578,17 @@ async def upload_document(
         content,
         file.content_type or "application/octet-stream",
     )
-    return repository.create_document(current_user.id, document)
+    try:
+        return repository.create_document(current_user.id, document)
+    except Exception as exc:
+        logger.exception("could not register uploaded document %s", storage_path)
+        # Without this the storage object outlives a failed insert and is
+        # unreachable through the API forever.
+        try:
+            await storage.delete_document(storage_path)
+        except Exception:
+            logger.exception("could not roll back stored file %s", storage_path)
+        raise HTTPException(
+            status_code=502,
+            detail="Unable to register the uploaded document.",
+        ) from exc

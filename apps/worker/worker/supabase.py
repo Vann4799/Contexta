@@ -6,17 +6,7 @@ from urllib.parse import quote
 import httpx
 
 from worker.processor import ProcessingChunk, ProcessingDocument, UserVisibleError
-
-
-# Supabase Storage reports a missing key as HTTP 400 with the real status in the
-# body ({"statusCode":"404","error":"not_found","code":"NoSuchKey"}), not as 404.
-def _is_missing_object(response: httpx.Response) -> bool:
-    if response.status_code == 404:
-        return True
-    if response.status_code != 400:
-        return False
-    body = response.text
-    return "not_found" in body or "NoSuchKey" in body
+from contexta_rag.supabase_storage import is_missing_object as _is_missing_object
 
 
 class SupabaseDocumentRepository:

@@ -8,6 +8,7 @@ import httpx
 
 from app.chat.models import ChatCitation, ChatMessageResponse, ChatSessionResponse
 from app.core.ids import is_uuid
+from app.core.postgrest import first_row
 
 
 class ChatRepository(Protocol):
@@ -170,10 +171,7 @@ class SupabaseChatRepository:
             json={"user_id": user_id, "title": title},
         )
         response.raise_for_status()
-        created = response.json()
-        if isinstance(created, list):
-            created = created[0]
-        return ChatSessionResponse.model_validate(created)
+        return ChatSessionResponse.model_validate(first_row(response.json(), "chat session"))
 
     def get_session(self, user_id: str, session_id: str) -> ChatSessionResponse | None:
         # chat_sessions.id is a Postgres uuid; a malformed id is not a lookup that
@@ -239,10 +237,7 @@ class SupabaseChatRepository:
             json=payload,
         )
         response.raise_for_status()
-        created = response.json()
-        if isinstance(created, list):
-            created = created[0]
-        return ChatMessageResponse.model_validate(created)
+        return ChatMessageResponse.model_validate(first_row(response.json(), "chat message"))
 
     def delete_message(self, user_id: str, message_id: str) -> None:
         response = httpx.delete(

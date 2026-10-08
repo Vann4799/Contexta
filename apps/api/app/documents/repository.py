@@ -5,6 +5,7 @@ from uuid import uuid4
 import httpx
 
 from app.core.ids import is_uuid
+from app.core.postgrest import first_row
 from app.documents.models import DocumentCreate, DocumentResponse
 from app.documents.models import DocumentChunkResponse
 
@@ -280,10 +281,7 @@ class SupabaseDocumentRepository:
             json=payload,
         )
         response.raise_for_status()
-        created = response.json()
-        if isinstance(created, list):
-            created = created[0]
-        return DocumentResponse.model_validate(created)
+        return DocumentResponse.model_validate(first_row(response.json(), "document"))
 
     def get_document(self, user_id: str, document_id: str) -> DocumentResponse | None:
         if not is_uuid(document_id):

@@ -3,6 +3,8 @@ from urllib.parse import quote
 
 import httpx
 
+from contexta_rag.supabase_storage import is_missing_object as _is_missing_object
+
 
 class DocumentStorage(Protocol):
     async def upload_document(

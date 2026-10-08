@@ -528,6 +528,27 @@ def test_upload_oversized_pdf_returns_422_before_storage(
     assert storage.objects == {}
 
 
+class FailingCreateRepository(InMemoryDocumentRepository):
+    def create_document(self, user_id: str, document: DocumentCreate) -> DocumentResponse:
+        raise RuntimeError("postgrest down")
+
+
+def test_upload_rolls_back_the_stored_file_when_the_row_insert_fails() -> None:
+    storage = InMemoryDocumentStorage()
+    app.dependency_overrides[get_document_storage] = lambda: storage
+    app.dependency_overrides[get_document_repository] = lambda: FailingCreateRepository()
+
+    response = client.post(
+        "/documents/upload",
+        files={"file": ("policy.pdf", b"%PDF-1.7 policy", "application/pdf")},
+        headers=auth_headers(),
+    )
+
+    assert response.status_code == 502
+    assert "register" in response.json()["detail"]
+    assert storage.objects == {}
+
+
 def test_delete_document_removes_owned_document_and_storage_object() -> None:
     repository = InMemoryDocumentRepository()
     storage = InMemoryDocumentStorage()
@@ -638,7 +659,7 @@ def test_delete_document_names_the_chunk_step_when_vector_cleanup_fails() -> Non
     assert created.storage_path in storage.objects
 
 
-def test_delete_document_names_the_file_step_when_storage_delete_fails() -> None:
+def test_delete_document_still_succeeds_when_storage_cleanup_fails() -> None:
     repository = InMemoryDocumentRepository()
     storage = FailingStorage()
     app.dependency_overrides[get_document_repository] = lambda: repository
@@ -648,9 +669,8 @@ def test_delete_document_names_the_file_step_when_storage_delete_fails() -> None
 
     response = client.delete(f"/documents/{created.id}", headers=auth_headers())
 
-    assert response.status_code == 502
-    assert "stored file" in response.json()["detail"]
-    assert repository.get_document(USER_ID, created.id) is not None
+    assert response.status_code == 204
+    assert repository.get_document(USER_ID, created.id) is None
 
 
 def test_delete_document_succeeds_without_vectors_or_stored_file() -> None:
