@@ -438,3 +438,58 @@ def test_session_message_hides_the_answer_model_failure_text() -> None:
     assert response.json()["detail"] == "Unable to answer question."
     assert "deepseek" not in response.text.lower()
     app.dependency_overrides.clear()
+
+
+class FailingRetriever:
+    """Mirrors Qdrant 404ing a missing collection or an embedding arm raising."""
+
+    def retrieve(self, **kwargs: object) -> list[RetrievedContext]:
+        raise RuntimeError(
+            "Not Found for url "
+            "'https://qdrant.example.internal/collections/contexta_chunks/points/search'"
+        )
+
+
+def test_chat_query_turns_a_retrieval_outage_into_502() -> None:
+    app.dependency_overrides[get_current_user] = override_user
+    app.dependency_overrides[get_retriever] = lambda: FailingRetriever()
+    app.dependency_overrides[get_answer_generator] = FakeAnswerGenerator
+
+    response = client.post("/chat/query", json={"question": "What is Contexta?"})
+
+    assert response.status_code == 502
+    assert response.json()["detail"] == "Unable to answer question."
+    assert "qdrant" not in response.text.lower()
+    app.dependency_overrides.clear()
+
+
+def test_failed_answer_does_not_leave_an_orphan_question_in_history() -> None:
+    """A retry would otherwise store the same turn twice, and the rewrite gate reads it."""
+    repository = InMemoryChatRepository()
+    app.dependency_overrides[get_current_user] = override_user
+    app.dependency_overrides[get_chat_repository] = lambda: repository
+    app.dependency_overrides[get_document_repository] = InMemoryDocumentRepository
+    app.dependency_overrides[get_answer_generator] = FakeAnswerGenerator
+
+    session_id = client.post("/chat/sessions", json={"title": "qa"}).json()["id"]
+
+    app.dependency_overrides[get_retriever] = lambda: FailingRetriever()
+    first = client.post(
+        f"/chat/sessions/{session_id}/messages",
+        json={"question": "What is Contexta?"},
+    )
+    assert first.status_code == 502
+    assert repository.list_messages("user-chat-123", session_id) == []
+
+    app.dependency_overrides[get_retriever] = lambda: FakeRetriever(
+        contexts_with_one_chunk()
+    )
+    second = client.post(
+        f"/chat/sessions/{session_id}/messages",
+        json={"question": "What is Contexta?"},
+    )
+
+    assert second.status_code == 200
+    stored = repository.list_messages("user-chat-123", session_id)
+    assert [message.role for message in stored] == ["user", "assistant"]
+    app.dependency_overrides.clear()

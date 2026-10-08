@@ -9,11 +9,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 
 try:
-    from contexta_rag.prompts import build_rag_prompt
+    from contexta_rag.prompts import ConversationTurn, build_rag_prompt
 except ModuleNotFoundError:
     rag_package_path = Path(__file__).resolve().parents[4] / "packages" / "rag"
     sys.path.append(str(rag_package_path))
-    from contexta_rag.prompts import build_rag_prompt
+    from contexta_rag.prompts import ConversationTurn, build_rag_prompt
 
 from app.auth.dependencies import get_current_user
 from app.auth.supabase_jwt import CurrentUser
@@ -27,6 +27,7 @@ from app.chat.models import (
     ChatSessionMessageResponse,
     ChatMessageResponse,
     ChatSessionResponse,
+    RetrievedContext,
 )
 from app.chat.repository import (
     ChatRepository,
@@ -326,6 +327,84 @@ def build_exact_count_response(
     )
 
 
+def _retrieve_contexts(
+    retriever: QdrantRetriever,
+    *,
+    user_id: str,
+    question: str,
+    document_ids: list[str] | None,
+) -> list[RetrievedContext]:
+    """Turn a retrieval outage into a 502 the caller can read.
+
+    Qdrant answering 404 for a missing collection, an embedding provider raising, or a
+    vector-space mismatch used to escape the route. ServerErrorMiddleware then replies
+    without CORS headers, because it sits outside CORSMiddleware, and the browser
+    reported "blocked by CORS policy" for what was an index outage.
+    """
+    try:
+        return retriever.retrieve(
+            user_id=user_id,
+            question=question,
+            document_ids=document_ids,
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001 - dependency failure, not a route bug
+        logger.exception("retrieval failed for user %s", user_id)
+        raise HTTPException(status_code=502, detail="Unable to answer question.") from exc
+
+
+def _answer_session_question(
+    *,
+    question: str,
+    retrieval_query: str,
+    history: list[ConversationTurn],
+    user_id: str,
+    document_ids: list[str] | None,
+    document_repository: DocumentRepository,
+    retriever: QdrantRetriever,
+    answer_generator: AnswerGenerator,
+) -> ChatQueryResponse:
+    highest_metric_response = build_highest_metric_response(
+        question,
+        user_id,
+        document_ids,
+        document_repository,
+    )
+    if highest_metric_response:
+        return highest_metric_response
+
+    exact_count_response = build_exact_count_response(
+        question,
+        user_id,
+        document_ids,
+        document_repository,
+    )
+    if exact_count_response:
+        return exact_count_response
+
+    contexts = _retrieve_contexts(
+        retriever,
+        user_id=user_id,
+        question=retrieval_query,
+        document_ids=document_ids,
+    )
+    if not contexts:
+        return ChatQueryResponse(
+            answer="The document context is insufficient to answer that question.",
+            citations=[],
+        )
+
+    prompt = build_rag_prompt(question, contexts, history)
+    try:
+        answer = answer_generator.generate_answer(prompt)
+    except Exception as exc:
+        logger.exception("answer generation failed")
+        raise HTTPException(status_code=502, detail="Unable to answer question.") from exc
+
+    return build_chat_response(answer, contexts)
+
+
 @router.post("/query", response_model=ChatQueryResponse)
 def query_chat(
     payload: ChatQueryRequest,
@@ -352,7 +431,8 @@ def query_chat(
     if exact_count_response:
         return exact_count_response
 
-    contexts = retriever.retrieve(
+    contexts = _retrieve_contexts(
+        retriever,
         user_id=current_user.id,
         question=payload.question,
         document_ids=payload.document_ids,
@@ -439,50 +519,28 @@ def create_chat_message(
             build_auto_session_title(payload.question),
         )
 
-    repository.create_message(
+    user_message = repository.create_message(
         current_user.id,
         session_id,
         "user",
         payload.question,
     )
-    highest_metric_response = build_highest_metric_response(
-        payload.question,
-        current_user.id,
-        payload.document_ids,
-        document_repository,
-    )
-    if highest_metric_response:
-        chat_response = highest_metric_response
-    else:
-        exact_count_response = build_exact_count_response(
-            payload.question,
-            current_user.id,
-            payload.document_ids,
-            document_repository,
+    try:
+        chat_response = _answer_session_question(
+            question=payload.question,
+            retrieval_query=retrieval_query,
+            history=history,
+            user_id=current_user.id,
+            document_ids=payload.document_ids,
+            document_repository=document_repository,
+            retriever=retriever,
+            answer_generator=answer_generator,
         )
-        if exact_count_response:
-            chat_response = exact_count_response
-        else:
-            contexts = retriever.retrieve(
-                user_id=current_user.id,
-                question=retrieval_query,
-                document_ids=payload.document_ids,
-            )
-            if contexts:
-                prompt = build_rag_prompt(payload.question, contexts, history)
-                try:
-                    answer = answer_generator.generate_answer(prompt)
-                except Exception as exc:
-                    logger.exception("answer generation failed")
-                    raise HTTPException(
-                        status_code=502, detail="Unable to answer question."
-                    ) from exc
-                chat_response = build_chat_response(answer, contexts)
-            else:
-                chat_response = ChatQueryResponse(
-                    answer="The document context is insufficient to answer that question.",
-                    citations=[],
-                )
+    except Exception:
+        # The question is already stored and no answer will follow it, so a retry
+        # would show the same turn twice and feed that duplicate to the rewrite gate.
+        repository.delete_message(current_user.id, user_message.id)
+        raise
 
     repository.create_message(
         current_user.id,

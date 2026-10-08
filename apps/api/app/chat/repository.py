@@ -34,6 +34,9 @@ class ChatRepository(Protocol):
     ) -> ChatMessageResponse:
         ...
 
+    def delete_message(self, user_id: str, message_id: str) -> None:
+        ...
+
     def update_session_activity(
         self,
         user_id: str,
@@ -106,6 +109,13 @@ class InMemoryChatRepository:
         )
         self._messages.append(message)
         return message
+
+    def delete_message(self, user_id: str, message_id: str) -> None:
+        self._messages = [
+            message
+            for message in self._messages
+            if not (message.user_id == user_id and message.id == message_id)
+        ]
 
     def update_session_activity(
         self,
@@ -233,6 +243,14 @@ class SupabaseChatRepository:
         if isinstance(created, list):
             created = created[0]
         return ChatMessageResponse.model_validate(created)
+
+    def delete_message(self, user_id: str, message_id: str) -> None:
+        response = httpx.delete(
+            f"{self._supabase_url}/rest/v1/chat_messages",
+            headers=self._headers,
+            params={"id": f"eq.{message_id}", "user_id": f"eq.{user_id}"},
+        )
+        response.raise_for_status()
 
     def update_session_activity(
         self,
