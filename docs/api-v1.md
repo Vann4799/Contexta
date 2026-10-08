@@ -170,7 +170,7 @@ the answering to whatever is on the other end.
 | `insufficient_scope` | 403 | Key lacks the `retrieve` scope |
 | `quota_minute_exceeded` | 429 | 60/minute window used up, see `Retry-After` |
 | `quota_day_exceeded` | 429 | Daily allowance used up |
-| `too_many_failed_keys` | 429 | Too many unknown keys from one address |
+| `too_many_failed_keys` | 429 | The same rejected key was retried too many times in a minute |
 | `invalid_request` | 422 | Body or query failed validation |
 | `document_not_found` | 404 | No such document, or this key may not read it |
 | `document_not_exportable` | 409 | Indexing has not finished, or the document has no indexed chunks |

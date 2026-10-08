@@ -13,6 +13,7 @@ from app.apikeys.repository import (
     SupabaseApiKeyRepository,
     api_key_repository,
 )
+from app.apikeys.secrets import hash_api_key
 from app.core.config import Settings, get_settings
 
 
@@ -58,11 +59,16 @@ def api_key_store() -> Iterator[None]:
 # and this surface promises a 401 with a machine-readable code.
 bearer_credentials = HTTPBearer(auto_error=False)
 
-# An unknown key is a failed lookup, and an attacker with one IP can try many hashes
-# against the same endpoint. This is not the quota -- the quota is authoritative in
-# Postgres, per key. This only slows down guessing, so it is deliberately per IP,
-# in-process, and approximate: with several workers each has its own counter, and a
-# restart clears them.
+# An unknown key is a failed lookup, and one misconfigured client can retry the same bad
+# key thousands of times, each retry costing a PostgREST round trip. This is not the quota
+# -- the quota is authoritative in Postgres, per key. This only absorbs that retry storm,
+# so it is keyed on the presented credential, in-process, and approximate: with several
+# workers each has its own counter, and a restart clears them.
+#
+# It used to be per client address. uvicorn runs without --proxy-headers behind Caddy, so
+# request.client.host is the proxy on every request and one caller's bad key could lock
+# every other tenant out of /v1. Guessing is not what this defends against: a key carries
+# ~160 bits, so no throttle is needed to make it infeasible.
 FAILED_LOOKUP_LIMIT = 30
 FAILED_LOOKUP_WINDOW_SECONDS = 60.0
 
@@ -116,9 +122,10 @@ def finalize_api_request_log(request: Request, status_code: int) -> None:
 
 
 class _FailedLookupBudget:
-    def __init__(self, limit: int, window_seconds: float) -> None:
+    def __init__(self, limit: int, window_seconds: float, tracked_limit: int = 10_000) -> None:
         self._limit = limit
         self._window = window_seconds
+        self._tracked_limit = tracked_limit
         self._attempts: dict[str, list[float]] = {}
 
     def blocked(self, key: str) -> bool:
@@ -129,6 +136,17 @@ class _FailedLookupBudget:
 
     def record(self, key: str) -> None:
         self._attempts.setdefault(key, []).append(time.monotonic())
+        if len(self._attempts) > self._tracked_limit:
+            self._forget_expired()
+
+    def _forget_expired(self) -> None:
+        cutoff = time.monotonic() - self._window
+        live: dict[str, list[float]] = {}
+        for name, attempts in self._attempts.items():
+            recent = [moment for moment in attempts if moment >= cutoff]
+            if recent:
+                live[name] = recent
+        self._attempts = live
 
     def reset(self) -> None:
         self._attempts.clear()
@@ -167,12 +185,12 @@ def get_api_key_principal(
             "Provide a Contexta API key in the Authorization header.",
         )
 
-    client_ip = request.client.host if request.client else "unknown"
-    if _failed_lookups.blocked(client_ip):
+    credential_bucket = hash_api_key(credentials.credentials)
+    if _failed_lookups.blocked(credential_bucket):
         raise _reject(
             429,
             "too_many_failed_keys",
-            "Too many unrecognized keys from this address.",
+            "Too many rejected attempts with this key.",
             headers={"Retry-After": str(int(FAILED_LOOKUP_WINDOW_SECONDS))},
         )
 
@@ -196,7 +214,7 @@ def get_api_key_principal(
 
     if authorization.outcome != "allowed":
         if authorization.outcome == "invalid":
-            _failed_lookups.record(client_ip)
+            _failed_lookups.record(credential_bucket)
         raise _authorization_error(authorization)
 
     if "retrieve" not in authorization.scopes:

@@ -8,7 +8,11 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from app.apikeys.dependencies import _failed_lookups, get_api_key_repository
+from app.apikeys.dependencies import (
+    FAILED_LOOKUP_LIMIT,
+    _failed_lookups,
+    get_api_key_repository,
+)
 from app.apikeys.repository import InMemoryApiKeyRepository
 from app.apikeys.secrets import API_KEY_PREFIX, generate_api_key, hash_api_key
 from app.auth.dependencies import get_current_user
@@ -656,23 +660,29 @@ def test_v1_is_not_open_to_browser_origins() -> None:
     assert "access-control-allow-origin" not in response.headers
 
 
-def test_failed_lookup_budget_blocks_a_brute_force_run_from_one_address() -> None:
+def test_failed_lookup_budget_absorbs_a_retry_storm_without_locking_out_others() -> None:
     keys = InMemoryApiKeyRepository()
     documents = InMemoryDocumentRepository()
     retriever = FakeRetriever()
     wire(keys, documents, retriever)
+    good = make_key(keys, USER_ID)
 
-    statuses = set()
-    for attempt in range(35):
-        response = client.post(
-            "/v1/retrieve",
-            json={"query": "what"},
-            headers=bearer(f"ctx_live_guess{attempt}"),
-        )
-        statuses.add(response.status_code)
+    def attempt(secret: str) -> int:
+        return client.post(
+            "/v1/retrieve", json={"query": "what"}, headers=bearer(secret)
+        ).status_code
 
-    assert statuses == {401, 429}
-    assert retriever.calls == []
+    for _ in range(FAILED_LOOKUP_LIMIT):
+        assert attempt(f"{API_KEY_PREFIX}guess") == 401
+    assert attempt(f"{API_KEY_PREFIX}guess") == 429
+
+    # The address is Caddy's, not the caller's, so a per-address bucket here would have
+    # turned one storm into an outage for every other tenant.
+    distinct = {attempt(f"{API_KEY_PREFIX}guess{index}") for index in range(35)}
+    assert distinct == {401}
+    assert attempt(good) == 200
+    # Every rejected attempt stopped at authorization; none of them read the corpus.
+    assert len(retriever.calls) == 1
 
 
 def test_key_created_through_the_api_authorizes_the_next_request() -> None:
