@@ -172,6 +172,12 @@ def export_document(
     # a restricted key must not be able to confirm the existence of other documents.
     if document is None or not principal.allows(document_id):
         raise _reject(404, "document_not_found", "document not found")
+    if document.status != "ready":
+        raise _reject(
+            409,
+            "document_not_exportable",
+            "document indexing is not finished yet",
+        )
 
     chunks = repository.list_document_chunks(principal.user_id, document_id)
     if not chunks:

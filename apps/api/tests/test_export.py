@@ -5,6 +5,7 @@ import json
 import zipfile
 from datetime import datetime, timezone
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.auth.dependencies import get_current_user
@@ -305,6 +306,23 @@ def test_a_document_without_indexed_chunks_is_not_exportable() -> None:
 
     assert response.status_code == 409
     assert "no indexed chunks" in response.json()["detail"]
+    setup_module(None)
+
+
+@pytest.mark.parametrize("status", ["processing", "failed"])
+def test_a_document_that_is_not_ready_is_not_exportable(status: str) -> None:
+    """Re-indexing resets the status but keeps the previous attempt's chunk rows."""
+    documents = InMemoryDocumentRepository()
+    chats = InMemoryChatRepository()
+    document = ready_document(documents, USER_ID, "a.pdf", 1)
+    add_chunk(documents, document, 0, "Isi dari upaya indeks sebelumnya.")
+    documents.update_document_metadata(USER_ID, document.id, {"status": status})
+    override_repositories(documents, chats)
+
+    response = client.get(f"/documents/{document.id}/export")
+
+    assert response.status_code == 409
+    assert "indexing is not finished" in response.json()["detail"]
     setup_module(None)
 
 

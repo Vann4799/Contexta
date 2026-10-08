@@ -101,6 +101,15 @@ def make_document(repository: InMemoryDocumentRepository, user_id: str, filename
     )
 
 
+def mark_ready(repository: InMemoryDocumentRepository, document: DocumentResponse) -> None:
+    """create_document starts in 'processing'; the export endpoints refuse that."""
+    repository.update_document_metadata(
+        document.user_id,
+        document.id,
+        {"status": "ready"},
+    )
+
+
 def make_key(
     repository: InMemoryApiKeyRepository,
     user_id: str,
@@ -344,6 +353,8 @@ def test_export_path_404s_for_documents_the_key_may_not_read() -> None:
     retriever = FakeRetriever()
     wire(keys, documents, retriever)
     key = make_key(keys, USER_ID, document_ids=[inside.id])
+    mark_ready(documents, inside)
+    mark_ready(documents, outside)
 
     allowed = client.get(f"/v1/documents/{inside.id}/export?format=md", headers=bearer(key))
     scoped_out = client.get(f"/v1/documents/{outside.id}/export?format=md", headers=bearer(key))
@@ -362,6 +373,40 @@ def test_export_path_404s_for_documents_the_key_may_not_read() -> None:
     # A document the key may read but that has no chunks is a different, honest answer.
     assert unindexed.status_code == 409
     assert unindexed.json()["detail"]["code"] == "document_not_exportable"
+
+
+def test_export_refuses_a_document_whose_indexing_is_not_finished() -> None:
+    """A re-index sets the status back to processing and keeps the old chunk rows readable."""
+    keys = InMemoryApiKeyRepository()
+    documents = InMemoryDocumentRepository()
+    document = make_document(documents, USER_ID, "thesis.pdf")
+    mark_ready(documents, document)
+    documents.add_chunks(
+        [
+            {
+                "document_id": document.id,
+                "user_id": USER_ID,
+                "chunk_index": 0,
+                "text": "bab satu",
+                "page_number": 1,
+                "section_path": None,
+                "qdrant_point_id": f"point-{document.id}",
+            }
+        ]
+    )
+    wire(keys, documents, FakeRetriever())
+    key = make_key(keys, USER_ID)
+
+    ready = client.get(f"/v1/documents/{document.id}/export?format=md", headers=bearer(key))
+    documents.reindex_ready_document(USER_ID, document.id)
+    mid_reindex = client.get(
+        f"/v1/documents/{document.id}/export?format=jsonl", headers=bearer(key)
+    )
+
+    assert ready.status_code == 200
+    assert mid_reindex.status_code == 409
+    assert mid_reindex.json()["detail"]["code"] == "document_not_exportable"
+    assert mid_reindex.json()["detail"]["message"] == "document indexing is not finished yet"
 
 
 def test_documents_listing_follows_the_key_subset() -> None:

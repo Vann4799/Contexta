@@ -102,7 +102,9 @@ Storage paths and user ids are never included.
 The full indexed text of one document, as Markdown or JSONL. Not JSON, so there is no
 `data`/`meta` envelope; the filename comes from `Content-Disposition`.
 
-Only documents with completed indexing respond; `processing` documents return `409`.
+Only documents with completed indexing respond. A `processing` or `failed` document returns
+`409`, even when it still carries chunk rows from an earlier attempt — those are the text of
+a document that is half-rebuilt, not the one you asked for.
 
 ## `GET /v1/keys/me`
 
@@ -171,7 +173,7 @@ the answering to whatever is on the other end.
 | `too_many_failed_keys` | 429 | Too many unknown keys from one address |
 | `invalid_request` | 422 | Body or query failed validation |
 | `document_not_found` | 404 | No such document, or this key may not read it |
-| `document_not_exportable` | 409 | Document exists but has no indexed chunks |
+| `document_not_exportable` | 409 | Indexing has not finished, or the document has no indexed chunks |
 | `api_key_store_unavailable` | 503 | Authorization storage is down; retry |
 
 ## Limits of this surface

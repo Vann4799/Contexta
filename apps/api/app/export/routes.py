@@ -119,6 +119,11 @@ def export_document(
     document = repository.get_document(current_user.id, document_id)
     if document is None:
         raise HTTPException(status_code=404, detail="document not found")
+    if document.status != "ready":
+        raise HTTPException(
+            status_code=409,
+            detail="document indexing is not finished yet",
+        )
 
     chunks = _chunks_of(repository, current_user.id, document_id)
     stem = document.filename.rsplit(".", 1)[0] or document.filename
