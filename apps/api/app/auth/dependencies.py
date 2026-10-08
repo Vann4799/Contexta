@@ -18,4 +18,5 @@ def get_current_user(
         credentials.credentials,
         jwt_secret=settings.supabase_jwt_secret,
         jwks_url=settings.resolved_supabase_jwks_url,
+        issuer=settings.resolved_auth_issuer,
     )

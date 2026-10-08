@@ -20,6 +20,7 @@ def decode_supabase_jwt(
     token: str,
     jwt_secret: str = "",
     jwks_url: str = "",
+    issuer: str = "",
 ) -> CurrentUser:
     try:
         if jwks_url:
@@ -30,6 +31,7 @@ def decode_supabase_jwt(
                 algorithms=["ES256", "RS256"],
                 audience="authenticated",
                 options={"require": ["exp"]},
+                issuer=issuer or None,
             )
             return _current_user_from_payload(payload)
 
@@ -39,6 +41,7 @@ def decode_supabase_jwt(
             algorithms=["HS256"],
             audience="authenticated",
             options={"require": ["exp"]},
+            issuer=issuer or None,
         )
         return _current_user_from_payload(payload)
     # A JWKS fetch failure is an outage of the auth infrastructure, not proof of a

@@ -57,13 +57,17 @@ class Settings(BaseSettings):
         return init_settings, env_settings, dotenv_settings, file_secret_settings
 
     def validate_security(self) -> None:
+        # The JWKS URL auto-derived from SUPABASE_URL must not count here: any
+        # production that sets SUPABASE_URL would otherwise pass with the shipped
+        # default secret, and the guard could never catch the case it exists for.
         if (
             self.environment not in {"development", "test"}
             and self.supabase_jwt_secret == "test-secret"
-            and not self.resolved_supabase_jwks_url
+            and not self.supabase_jwks_url
         ):
             raise ValueError(
-                "supabase_jwt_secret must be changed or supabase_jwks_url must be set outside development or test"
+                "supabase_jwt_secret must be changed or supabase_jwks_url must be explicitly set "
+                "outside development or test"
             )
 
     @property
@@ -72,6 +76,17 @@ class Settings(BaseSettings):
             return self.supabase_jwks_url
         if self.supabase_url:
             return f"{self.supabase_url.rstrip('/')}/auth/v1/.well-known/jwks.json"
+        return ""
+
+    @property
+    def resolved_auth_issuer(self) -> str:
+        """The auth server origin Supabase stamps into access-token `iss` claims."""
+        suffix = "/.well-known/jwks.json"
+        jwks_url = self.resolved_supabase_jwks_url
+        if jwks_url.endswith(suffix):
+            return jwks_url[: -len(suffix)]
+        if self.supabase_url:
+            return f"{self.supabase_url.rstrip('/')}/auth/v1"
         return ""
 
     @property

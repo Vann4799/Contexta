@@ -141,6 +141,92 @@ def test_valid_es256_jwt_with_jwks_returns_current_user(monkeypatch: pytest.Monk
     )
 
 
+def test_es256_token_with_a_matching_issuer_returns_current_user(monkeypatch: pytest.MonkeyPatch) -> None:
+    get_jwks_client.cache_clear()
+    private_key = ec.generate_private_key(ec.SECP256R1())
+    token = jwt.encode(
+        {
+            "sub": "iss-user-123",
+            "aud": "authenticated",
+            "iss": "https://project.supabase.co/auth/v1",
+            "exp": future_timestamp(),
+        },
+        private_key,
+        algorithm="ES256",
+        headers={"kid": "current-key"},
+    )
+
+    class FakeSigningKey:
+        key = private_key.public_key()
+
+    class FakePyJWKClient:
+        def __init__(self, url: str) -> None:
+            pass
+
+        def get_signing_key_from_jwt(self, jwt_token: str) -> FakeSigningKey:
+            return FakeSigningKey()
+
+    monkeypatch.setattr(jwt, "PyJWKClient", FakePyJWKClient)
+
+    user = decode_supabase_jwt(
+        token,
+        jwks_url="https://project.supabase.co/auth/v1/.well-known/jwks.json",
+        issuer="https://project.supabase.co/auth/v1",
+    )
+
+    assert user.id == "iss-user-123"
+
+
+def test_es256_token_with_a_foreign_issuer_raises_401(monkeypatch: pytest.MonkeyPatch) -> None:
+    get_jwks_client.cache_clear()
+    private_key = ec.generate_private_key(ec.SECP256R1())
+    token = jwt.encode(
+        {
+            "sub": "imposter-123",
+            "aud": "authenticated",
+            "iss": "https://other-project.supabase.co/auth/v1",
+            "exp": future_timestamp(),
+        },
+        private_key,
+        algorithm="ES256",
+        headers={"kid": "current-key"},
+    )
+
+    class FakeSigningKey:
+        key = private_key.public_key()
+
+    class FakePyJWKClient:
+        def __init__(self, url: str) -> None:
+            pass
+
+        def get_signing_key_from_jwt(self, jwt_token: str) -> FakeSigningKey:
+            return FakeSigningKey()
+
+    monkeypatch.setattr(jwt, "PyJWKClient", FakePyJWKClient)
+
+    with pytest.raises(HTTPException) as exc_info:
+        decode_supabase_jwt(
+            token,
+            jwks_url="https://project.supabase.co/auth/v1/.well-known/jwks.json",
+            issuer="https://project.supabase.co/auth/v1",
+        )
+
+    assert exc_info.value.status_code == 401
+
+
+def test_a_token_without_iss_raises_401_when_issuer_is_required() -> None:
+    token = jwt.encode(
+        {"sub": "user-123", "aud": "authenticated", "exp": future_timestamp()},
+        "test-secret",
+        algorithm="HS256",
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        decode_supabase_jwt(token, "test-secret", issuer="https://project.supabase.co/auth/v1")
+
+    assert exc_info.value.status_code == 401
+
+
 def test_jwks_client_is_cached_per_url(monkeypatch: pytest.MonkeyPatch) -> None:
     created_urls: list[str] = []
 
@@ -259,6 +345,34 @@ def test_validate_security_allows_jwks_url_in_production() -> None:
         supabase_jwt_secret="test-secret",
         supabase_jwks_url="https://project.supabase.co/auth/v1/.well-known/jwks.json",
     ).validate_security()
+
+
+def test_validate_security_ignores_a_jwks_url_derived_from_supabase_url() -> None:
+    settings = Settings(
+        environment="production",
+        supabase_jwt_secret="test-secret",
+        supabase_url="https://project.supabase.co",
+    )
+
+    with pytest.raises(ValueError):
+        settings.validate_security()
+
+
+def test_validate_security_allows_a_changed_secret_with_a_derived_jwks_url() -> None:
+    Settings(
+        environment="production",
+        supabase_jwt_secret="changed-secret",
+        supabase_url="https://project.supabase.co",
+    ).validate_security()
+
+
+def test_resolved_auth_issuer_strips_the_jwks_suffix() -> None:
+    from_jwks = Settings(supabase_jwks_url="https://project.supabase.co/auth/v1/.well-known/jwks.json")
+    from_url = Settings(supabase_url="https://project.supabase.co")
+
+    assert from_jwks.resolved_auth_issuer == "https://project.supabase.co/auth/v1"
+    assert from_url.resolved_auth_issuer == "https://project.supabase.co/auth/v1"
+    assert Settings().resolved_auth_issuer == ""
 
 
 def test_settings_derives_jwks_url_from_supabase_url() -> None:
