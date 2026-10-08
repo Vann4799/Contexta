@@ -37,7 +37,10 @@ Over quota returns `429` with a `Retry-After` in seconds for the window you actu
 current minute for `quota_minute_exceeded`, the next UTC midnight for `quota_day_exceeded`.
 These header names are CORS-exposed, so a browser-side integrator can read them too.
 Every request — including rejected ones — is written to your audit log with the status it
-actually received, and appears on the Developer page. Logs are kept for 90 days.
+actually received, and appears on the Developer page. A request you abandon before the answer
+arrives is logged as `499`, and every logged request lists the documents it served — a
+`/v1/documents` listing counts the documents it returned, not only search hits. Logs are kept
+for 90 days.
 
 ## `POST /v1/retrieve`
 
