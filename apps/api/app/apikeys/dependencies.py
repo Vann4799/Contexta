@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
 import logging
 import time
 from typing import Annotated, Iterator
@@ -268,7 +269,13 @@ def _authorization_error(authorization: KeyAuthorization) -> HTTPException:
     }
     headers: dict[str, str] = {}
     if authorization.status_code == 429:
-        headers["Retry-After"] = str(seconds_to_next_minute())
+        # Telling a caller that has used its daily allowance to come back in 40 seconds
+        # sends it back for a second 429, and a retry loop built on this header never ends.
+        headers["Retry-After"] = str(
+            seconds_to_next_day()
+            if authorization.outcome == "quota_day"
+            else seconds_to_next_minute()
+        )
 
     return _reject(
         authorization.status_code,
@@ -281,6 +288,19 @@ def _authorization_error(authorization: KeyAuthorization) -> HTTPException:
 def seconds_to_next_minute(now: float | None = None) -> int:
     moment = now if now is not None else time.time()
     return max(1, int(60 - (moment % 60)))
+
+
+def seconds_to_next_day(now: datetime | None = None) -> int:
+    """Seconds until the daily window the authorize RPC floors with date_trunc('day', now()).
+
+    The boundary is UTC on the assumption that the PostgREST session runs in UTC; the
+    quota arithmetic itself has the same dependency, so both are wrong together if it is.
+    """
+    moment = now if now is not None else datetime.now(timezone.utc)
+    following_midnight = (moment + timedelta(days=1)).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    return max(1, int((following_midnight - moment).total_seconds()))
 
 
 def _reject(

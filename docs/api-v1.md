@@ -33,7 +33,8 @@ X-RateLimit-Limit-Day: 5000
 X-RateLimit-Remaining-Day: 4999
 ```
 
-Over quota returns `429` with a `Retry-After` in seconds until the minute window resets.
+Over quota returns `429` with a `Retry-After` in seconds for the window you actually hit: the
+current minute for `quota_minute_exceeded`, the next UTC midnight for `quota_day_exceeded`.
 These header names are CORS-exposed, so a browser-side integrator can read them too.
 Every request — including rejected ones — is written to your audit log with the status it
 actually received, and appears on the Developer page. Logs are kept for 90 days.

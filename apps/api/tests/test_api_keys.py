@@ -12,6 +12,7 @@ from app.apikeys.dependencies import (
     FAILED_LOOKUP_LIMIT,
     _failed_lookups,
     get_api_key_repository,
+    seconds_to_next_day,
 )
 from app.apikeys.repository import InMemoryApiKeyRepository
 from app.apikeys.secrets import API_KEY_PREFIX, generate_api_key, hash_api_key
@@ -253,6 +254,7 @@ def test_minute_quota_rejects_with_retry_after() -> None:
     assert statuses == [200, 200, 429, 429]
     blocked = client.post("/v1/retrieve", json={"query": "what"}, headers=bearer(key))
     assert blocked.headers["retry-after"].isdigit()
+    assert int(blocked.headers["retry-after"]) <= 60
     assert blocked.json()["detail"]["code"] == "quota_minute_exceeded"
 
 
@@ -274,6 +276,38 @@ def test_day_quota_is_separate_from_the_minute_window() -> None:
     over = client.post("/v1/retrieve", json={"query": "what"}, headers=bearer(key))
     assert over.status_code == 429
     assert over.json()["detail"]["code"] == "quota_day_exceeded"
+
+
+def test_seconds_to_next_day_counts_to_the_utc_day_boundary() -> None:
+    assert (
+        seconds_to_next_day(datetime(2026, 10, 7, 9, 2, tzinfo=timezone.utc))
+        == 14 * 3600 + 58 * 60
+    )
+    assert seconds_to_next_day(datetime(2026, 10, 7, 23, 59, 30, tzinfo=timezone.utc)) == 30
+    assert seconds_to_next_day(datetime(2026, 10, 7, 0, 0, tzinfo=timezone.utc)) == 86400
+
+
+def test_day_quota_retry_after_waits_for_the_day_boundary(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A daily allowance exhausted at 09:00 does not clear in 40 seconds."""
+    keys = InMemoryApiKeyRepository()
+    documents = InMemoryDocumentRepository()
+    retriever = FakeRetriever([context("doc-1")])
+    wire(keys, documents, retriever, api_key_minute_limit=10, api_key_day_limit=1)
+    key = make_key(keys, USER_ID)
+
+    assert (
+        client.post("/v1/retrieve", json={"query": "what"}, headers=bearer(key)).status_code
+        == 200
+    )
+    monkeypatch.setattr("app.apikeys.dependencies.seconds_to_next_day", lambda: 43210)
+
+    over = client.post("/v1/retrieve", json={"query": "what"}, headers=bearer(key))
+
+    assert over.status_code == 429
+    assert over.json()["detail"]["code"] == "quota_day_exceeded"
+    assert over.headers["retry-after"] == "43210"
 
 
 def test_unknown_body_field_cannot_silently_widen_the_filter() -> None:
