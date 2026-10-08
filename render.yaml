@@ -12,6 +12,11 @@ services:
         value: 8001
       - key: ENVIRONMENT
         value: production
+      - key: EMBEDDING_REMOTE_URL
+        fromService:
+          name: contexta-embeddings
+          type: web
+          property: hostport
 
   - type: worker
     name: contexta-worker
@@ -26,6 +31,24 @@ services:
         value: production
       - key: WORKER_POLL_INTERVAL
         value: 5
+      - key: EMBEDDING_REMOTE_URL
+        fromService:
+          name: contexta-embeddings
+          type: web
+          property: hostport
+
+  - type: web
+    name: contexta-embeddings
+    runtime: docker
+    dockerContext: .
+    dockerfilePath: ./apps/embeddings/Dockerfile
+    healthCheckPath: /health
+    plan: starter
+    envVars:
+      - key: PORT
+        value: 8070
+      - key: EMBEDDING_MODEL_NAME
+        value: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
 
 envVarGroups:
   - name: contexta-production
@@ -47,16 +70,36 @@ envVarGroups:
       - key: QDRANT_API_KEY
         sync: false
       - key: QDRANT_COLLECTION
-        value: contexta_chunks
+        value: contexta_chunks_v3
       - key: DEEPSEEK_API_KEY
         sync: false
       - key: DEEPSEEK_MODEL
         value: deepseek-v4-pro
       - key: DEEPSEEK_MAX_TOKENS
         value: 3500
+      - key: DEEPSEEK_REWRITE_MODEL
+        value: deepseek-chat
       - key: EMBEDDING_PROVIDER
-        value: deterministic
+        value: remote
+      - key: EMBEDDING_MODEL_NAME
+        value: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
       - key: EMBEDDING_DIMENSIONS
         value: 384
+      - key: EMBEDDING_VECTOR_NAME
+        value: minilm
+      - key: SECONDARY_EMBEDDING_PROVIDER
+        value: openrouter
+      - key: SECONDARY_EMBEDDING_BASE_URL
+        value: https://openrouter.ai/api/v1
+      - key: SECONDARY_EMBEDDING_MODEL_NAME
+        value: openai/text-embedding-3-small
+      - key: SECONDARY_EMBEDDING_DIMENSIONS
+        value: 1536
+      - key: SECONDARY_EMBEDDING_VECTOR_NAME
+        value: openai
+      - key: SECONDARY_EMBEDDING_API_KEY
+        sync: false
+      - key: RETRIEVAL_ARM_WINDOW
+        value: 10
       - key: API_CORS_ORIGINS
         sync: false

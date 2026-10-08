@@ -7,6 +7,7 @@ This guide is for a first public MVP release. Keep Supabase service role keys, D
 - Web: Vercel, deployed from `apps/web`.
 - API: Render Docker web service using `apps/api/Dockerfile`.
 - Worker: Render Docker background worker using `apps/worker/Dockerfile`.
+- Embeddings: Render Docker web service using `apps/embeddings/Dockerfile`; it serves the primary MiniLM arm that both the API and the worker call over HTTP.
 - Database/Auth/Storage: hosted Supabase.
 - Vector database: Qdrant Cloud or a private Qdrant container.
 
@@ -36,6 +37,7 @@ NEXT_PUBLIC_AUTH_CALLBACK_URL=https://<vercel-web-domain>/auth/callback
 
 - `contexta-api`: Docker web service, health checked at `/health`.
 - `contexta-worker`: Docker background worker, one instance only.
+- `contexta-embeddings`: Docker web service hosting the primary embedding model, health checked at `/health`. `EMBEDDING_REMOTE_URL` for the API and worker is wired to it automatically via `fromService`.
 - `contexta-production`: shared env group with secrets marked `sync: false`.
 
 Steps:
@@ -82,15 +84,32 @@ SUPABASE_JWKS_URL=https://<project-ref>.supabase.co/auth/v1/.well-known/jwks.jso
 SUPABASE_STORAGE_BUCKET=contexta-documents
 QDRANT_URL=https://<qdrant-host>
 QDRANT_API_KEY=<qdrant api key, blank only for private unauthenticated Qdrant>
-QDRANT_COLLECTION=contexta_chunks
+QDRANT_COLLECTION=contexta_chunks_v3
 DEEPSEEK_API_KEY=<deepseek key>
 DEEPSEEK_MODEL=deepseek-v4-pro
 DEEPSEEK_MAX_TOKENS=3500
 DEEPSEEK_REWRITE_MODEL=deepseek-chat
-EMBEDDING_PROVIDER=deterministic
+EMBEDDING_PROVIDER=remote
+EMBEDDING_MODEL_NAME=sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
 EMBEDDING_DIMENSIONS=384
+EMBEDDING_VECTOR_NAME=minilm
+EMBEDDING_REMOTE_URL=<wired from the contexta-embeddings service by render.yaml>
+SECONDARY_EMBEDDING_PROVIDER=openrouter
+SECONDARY_EMBEDDING_BASE_URL=https://openrouter.ai/api/v1
+SECONDARY_EMBEDDING_MODEL_NAME=openai/text-embedding-3-small
+SECONDARY_EMBEDDING_DIMENSIONS=1536
+SECONDARY_EMBEDDING_VECTOR_NAME=openai
+SECONDARY_EMBEDDING_API_KEY=<openrouter key>
+RETRIEVAL_ARM_WINDOW=10
 API_CORS_ORIGINS=https://<vercel-web-domain>
 ```
+
+Outside development or test the API refuses to boot while `SUPABASE_JWT_SECRET` still holds the
+shipped default, unless `SUPABASE_JWKS_URL` is explicitly set. A JWKS URL derived from
+`SUPABASE_URL` does not satisfy that guard — the operator must fill at least one of the two auth
+values marked `sync: false` above. Access tokens are additionally verified against the issuer the
+JWKS URL implies (`https://<project-ref>.supabase.co/auth/v1`), so a token from a different
+Supabase project is rejected even when the signing key verifies.
 
 `DEEPSEEK_REWRITE_MODEL` resolves a follow-up question into a standalone search query before
 retrieval. It is not yet written to `.env.production`, and it does not need to be: the code default
