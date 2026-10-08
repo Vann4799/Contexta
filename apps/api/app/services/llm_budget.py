@@ -6,7 +6,7 @@ from fastapi import HTTPException
 
 from app.apikeys.dependencies import seconds_to_next_day
 from app.auth.supabase_jwt import CurrentUser
-from app.chat.llm import AnswerGenerator, QueryRewriter
+from app.chat.llm import AnswerGenerator, AnswerResult, QueryRewriter
 from app.core.config import Settings
 
 # The daily model allowance is counted in-process: a durable number would need a table and
@@ -82,7 +82,7 @@ class BudgetedAnswerGenerator:
         self._user_id = user_id
         self._limit = limit
 
-    def generate_answer(self, prompt: str) -> str:
+    def generate_answer(self, prompt: str) -> AnswerResult:
         self._budget.charge(self._user_id, self._limit)
         return self._inner.generate_answer(prompt)
 

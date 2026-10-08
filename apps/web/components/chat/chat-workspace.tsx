@@ -23,7 +23,9 @@ import { Button } from "@/components/ui/button";
 import { AIInputWithLoading } from "@/components/ui/ai-input-with-loading";
 import { ShiningText } from "@/components/ui/shining-text";
 
-type VisibleMessage = Pick<ChatMessage, "role" | "content" | "citations">;
+type VisibleMessage = Pick<ChatMessage, "role" | "content" | "citations"> & {
+  truncated?: boolean;
+};
 
 function initialsFromUser(email?: string, fullName?: string) {
   const source = fullName?.trim() || email?.split("@")[0] || "Contexta";
@@ -151,7 +153,9 @@ export function ChatWorkspace() {
         throw new Error("signInToLoadHistory");
       }
 
-      const loadedMessages = await listChatMessages(token, sessionId);
+      const loadedMessages = (await listChatMessages(token, sessionId)).map((message) =>
+        message.metadata?.truncated === true ? { ...message, truncated: true } : message
+      );
       setMessages(loadedMessages);
       const latestAssistant = [...loadedMessages].reverse().find((message) => message.role === "assistant");
       setCitations(latestAssistant?.citations ?? []);
@@ -339,7 +343,12 @@ export function ChatWorkspace() {
       const answer = response.answer.trim() || t.emptyAnswer;
       setMessages((current) => [
         ...current,
-        { role: "assistant", content: answer, citations: response.citations }
+        {
+          role: "assistant",
+          content: answer,
+          citations: response.citations,
+          truncated: response.truncated === true
+        }
       ]);
       setCitations(response.citations);
       setIsSourcesOpen(false);
@@ -522,6 +531,9 @@ export function ChatWorkspace() {
                       )
                     )
                   : message.content}
+                {message.role === "assistant" && message.truncated ? (
+                  <p className="mt-2 text-[12px] leading-5 text-ink-muted">{t.truncatedNotice}</p>
+                ) : null}
               </div>
               {message.role === "user" ? (
                 <div className="grid h-9 w-9 shrink-0 place-items-center rounded-control bg-paper-chip font-mono text-[11px] font-bold text-ink-muted" aria-hidden="true">

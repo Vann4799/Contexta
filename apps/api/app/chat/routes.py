@@ -17,7 +17,13 @@ except ModuleNotFoundError:
 
 from app.auth.dependencies import get_current_user
 from app.auth.supabase_jwt import CurrentUser
-from app.chat.llm import AnswerGenerator, DeepSeekAnswerGenerator, DeepSeekQueryRewriter, QueryRewriter
+from app.chat.llm import (
+    AnswerGenerator,
+    AnswerResult,
+    DeepSeekAnswerGenerator,
+    DeepSeekQueryRewriter,
+    QueryRewriter,
+)
 from app.chat.models import (
     ChatCitation,
     ChatQueryRequest,
@@ -157,9 +163,28 @@ def get_query_rewriter(
     return budgeted_query_rewriter(inner, current_user, settings)
 
 
-def build_chat_response(answer: str, contexts: list[dict[str, object]]) -> ChatQueryResponse:
+TRAILING_CITATION_MARKER = re.compile(r"\[Source\s*\d*\s*$")
+
+
+def finalize_answer(result: AnswerResult) -> str:
+    """Drop a citation marker the token budget cut in half (`[Source` or `[Source 3`).
+
+    The web turns `[Source N]` into a chip; a truncated left-over would render as raw
+    text the reader may mistake for part of the answer.
+    """
+    if not result.truncated:
+        return result.content
+    return TRAILING_CITATION_MARKER.sub("", result.content).rstrip()
+
+
+def build_chat_response(
+    answer: str,
+    contexts: list[dict[str, object]],
+    truncated: bool = False,
+) -> ChatQueryResponse:
     return ChatQueryResponse(
         answer=answer,
+        truncated=truncated,
         citations=[
             ChatCitation(
                 source_number=index,
@@ -445,7 +470,7 @@ def _answer_session_question(
 
     prompt = build_rag_prompt(question, contexts, history)
     try:
-        answer = answer_generator.generate_answer(prompt)
+        result = answer_generator.generate_answer(prompt)
     except HTTPException:
         # A spent daily model budget is the caller's answer, not a generation failure.
         raise
@@ -453,7 +478,7 @@ def _answer_session_question(
         logger.exception("answer generation failed")
         raise HTTPException(status_code=502, detail="Unable to answer question.") from exc
 
-    return build_chat_response(answer, contexts)
+    return build_chat_response(finalize_answer(result), contexts, truncated=result.truncated)
 
 
 @router.post("/query", response_model=ChatQueryResponse)
@@ -496,7 +521,7 @@ def query_chat(
 
     prompt = build_rag_prompt(payload.question, contexts)
     try:
-        answer = answer_generator.generate_answer(prompt)
+        result = answer_generator.generate_answer(prompt)
     except HTTPException:
         raise
     except Exception as exc:
@@ -505,7 +530,7 @@ def query_chat(
             status_code=502, detail="Unable to answer question."
         ) from exc
 
-    return build_chat_response(answer, contexts)
+    return build_chat_response(finalize_answer(result), contexts, truncated=result.truncated)
 
 
 @router.get("/sessions", response_model=list[ChatSessionResponse])
@@ -595,17 +620,21 @@ def create_chat_message(
         repository.delete_message(current_user.id, user_message.id)
         raise
 
+    metadata: dict[str, object] = {"retrieval_query": retrieval_query, "rewrite": rewrite_reason}
+    if chat_response.truncated:
+        metadata["truncated"] = True
     repository.create_message(
         current_user.id,
         session_id,
         "assistant",
         chat_response.answer,
         citations=chat_response.citations,
-        metadata={"retrieval_query": retrieval_query, "rewrite": rewrite_reason},
+        metadata=metadata,
     )
     repository.update_session_activity(current_user.id, session_id)
     return ChatSessionMessageResponse(
         session_id=session_id,
         answer=chat_response.answer,
         citations=chat_response.citations,
+        truncated=chat_response.truncated,
     )

@@ -7,7 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.documents import routes as document_routes
-from app.chat.llm import DeepSeekAnswerGenerator
+from app.chat.llm import AnswerResult, DeepSeekAnswerGenerator
 from app.documents.models import DocumentChunkResponse, DocumentCreate, DocumentResponse
 from app.documents.repository import (
     InMemoryDocumentRepository,
@@ -36,9 +36,9 @@ class FakeAnswerGenerator:
     def __init__(self) -> None:
         self.prompt = ""
 
-    def generate_answer(self, prompt: str) -> str:
+    def generate_answer(self, prompt: str) -> AnswerResult:
         self.prompt = prompt
-        return "AI brief: creator responses are dominated by X/Twitter content."
+        return AnswerResult("AI brief: creator responses are dominated by X/Twitter content.")
 
 
 def test_document_answer_generator_uses_configured_token_limit() -> None:

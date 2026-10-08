@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import logging
 import sys
+import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
@@ -13,6 +15,20 @@ logger = logging.getLogger(__name__)
 # empty content every time would be asked for ever larger budgets.
 RETRY_TOKEN_CAP = 8000
 
+# The web client aborts a chat request after 120s, so a generation may not quietly
+# consume two full attempt timeouts: a retry is only fired while the first attempt
+# has left enough of that window for another one.
+RETRY_TIME_BUDGET_SECONDS = 100.0
+RETRY_ATTEMPT_TIMEOUT_SECONDS = 60.0
+
+
+@dataclass(frozen=True)
+class AnswerResult:
+    """The answer plus whether it hit the token budget (finish_reason=length)."""
+
+    content: str
+    truncated: bool = False
+
 try:
     from contexta_rag.prompts import ConversationTurn, build_query_rewrite_prompt
 except ModuleNotFoundError:
@@ -22,7 +38,7 @@ except ModuleNotFoundError:
 
 
 class AnswerGenerator(Protocol):
-    def generate_answer(self, prompt: str) -> str:
+    def generate_answer(self, prompt: str) -> AnswerResult:
         ...
 
 
@@ -56,21 +72,31 @@ class DeepSeekAnswerGenerator:
         self._thinking = thinking
         self._client = client or httpx.Client(timeout=60)
 
-    def generate_answer(self, prompt: str) -> str:
+    def generate_answer(self, prompt: str) -> AnswerResult:
         if not self._api_key:
             raise RuntimeError("DEEPSEEK_API_KEY is not configured")
 
+        started = time.monotonic()
         content, finish_reason, reasoning_tokens = self._complete(prompt, self._max_tokens)
+        elapsed = time.monotonic() - started
 
         if not content and finish_reason == "length" and self._max_tokens < RETRY_TOKEN_CAP:
-            wider = min(self._max_tokens * 2, RETRY_TOKEN_CAP)
-            logger.warning(
-                "DeepSeek spent all %s tokens on reasoning (%s thinking, no answer); retrying at %s",
-                self._max_tokens,
-                reasoning_tokens,
-                wider,
-            )
-            content, finish_reason, reasoning_tokens = self._complete(prompt, wider)
+            if elapsed + RETRY_ATTEMPT_TIMEOUT_SECONDS <= RETRY_TIME_BUDGET_SECONDS:
+                wider = min(self._max_tokens * 2, RETRY_TOKEN_CAP)
+                logger.warning(
+                    "DeepSeek spent all %s tokens on reasoning (%s thinking, no answer); retrying at %s",
+                    self._max_tokens,
+                    reasoning_tokens,
+                    wider,
+                )
+                content, finish_reason, reasoning_tokens = self._complete(prompt, wider)
+            else:
+                logger.warning(
+                    "DeepSeek spent all %s tokens on reasoning and %.1fs of wall clock; "
+                    "skipping the wider retry because another attempt could outlast the client",
+                    self._max_tokens,
+                    elapsed,
+                )
 
         if not content:
             logger.error(
@@ -81,9 +107,10 @@ class DeepSeekAnswerGenerator:
             raise RuntimeError("DeepSeek returned an empty answer.")
 
         if finish_reason == "length":
-            # The answer is real but cut off; the caller deserves to know it may end mid-sentence.
+            # The answer is real but cut off; the flag tells the caller to say it may end
+            # mid-sentence instead of presenting it as complete.
             logger.warning("DeepSeek answer was truncated at the token budget.")
-        return content
+        return AnswerResult(content=content, truncated=finish_reason == "length")
 
     def _complete(self, prompt: str, max_tokens: int) -> tuple[str, str | None, int]:
         response = self._client.post(

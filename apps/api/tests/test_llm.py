@@ -33,7 +33,7 @@ def test_deepseek_model_name_is_normalized_before_request() -> None:
         client=httpx.Client(transport=httpx.MockTransport(handler)),
     )
 
-    assert generator.generate_answer("hello") == "ok"
+    assert generator.generate_answer("hello").content == "ok"
     assert captured_payload["model"] == "deepseek-v4-pro"
     assert captured_payload["max_tokens"] == 512
 
@@ -100,7 +100,10 @@ def test_reasoning_that_ate_the_budget_retries_once_wider() -> None:
         client=httpx.Client(transport=httpx.MockTransport(handler)),
     )
 
-    assert generator.generate_answer("hello") == "grounded answer"
+    result = generator.generate_answer("hello")
+
+    assert result.content == "grounded answer"
+    assert result.truncated is False
     assert budgets == [900, 1800]
 
 
@@ -157,7 +160,7 @@ def test_thinking_flag_reaches_the_request(thinking: bool, wire: str) -> None:
         client=httpx.Client(transport=httpx.MockTransport(handler)),
     )
 
-    assert generator.generate_answer("hello") == "ok"
+    assert generator.generate_answer("hello").content == "ok"
     assert captured_payload["thinking"] == {"type": wire}
 
 
@@ -175,5 +178,41 @@ def test_truncated_answer_is_returned_instead_of_raising() -> None:
         client=httpx.Client(transport=httpx.MockTransport(handler)),
     )
 
-    assert generator.generate_answer("hello") == "answer cut mid-sent"
+    result = generator.generate_answer("hello")
+
+    assert result.content == "answer cut mid-sent"
+    assert result.truncated is True
+    assert budgets == [900]
+
+
+class _SteppedClock:
+    """A clock whose every reading jumps, so the first attempt looks slow."""
+
+    def __init__(self, step_seconds: float) -> None:
+        self._now = 0.0
+        self._step = step_seconds
+
+    def monotonic(self) -> float:
+        self._now += self._step
+        return self._now
+
+
+def test_wide_retry_is_skipped_when_the_wall_clock_is_spent(monkeypatch: pytest.MonkeyPatch) -> None:
+    budgets: list[int] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        budgets.append(json.loads(request.content)["max_tokens"])
+        return httpx.Response(200, json=_reasoning_ate_the_budget())
+
+    generator = DeepSeekAnswerGenerator(
+        api_key="test-key",
+        model="deepseek-v4-pro",
+        max_tokens=900,
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    monkeypatch.setattr("app.chat.llm.time", _SteppedClock(61.0))
+
+    with pytest.raises(RuntimeError, match="empty answer"):
+        generator.generate_answer("hello")
+
     assert budgets == [900]

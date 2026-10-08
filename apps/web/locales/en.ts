@@ -775,6 +775,7 @@ export const en = {
     askPlaceholderNoDoc: "Choose a document first...",
     emptyAnswer: "Sorry, Contexta did not return an answer that can be shown. Try sending the question again.",
     answerCancelled: "Answer cancelled.",
+    truncatedNotice: "This answer hit the model's length limit and may end mid-sentence. Narrow the question and ask again for the missing part.",
     source: "Source",
     page: (pageNumber: number) => `p. ${pageNumber}`,
     pageUnknown: "page unknown",

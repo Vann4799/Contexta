@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 from app.auth.dependencies import get_current_user
 from app.auth.supabase_jwt import CurrentUser
+from app.chat.llm import AnswerResult
 from app.chat.models import ChatQueryResponse, RetrievedContext
 from app.chat.repository import InMemoryChatRepository
 from app.chat.routes import (
@@ -45,9 +46,9 @@ class FakeAnswerGenerator:
     def __init__(self) -> None:
         self.prompt = ""
 
-    def generate_answer(self, prompt: str) -> str:
+    def generate_answer(self, prompt: str) -> AnswerResult:
         self.prompt = prompt
-        return "Contexta is a grounded document chatbot. [Source 1]"
+        return AnswerResult("Contexta is a grounded document chatbot. [Source 1]")
 
 
 def override_user() -> CurrentUser:
@@ -95,6 +96,7 @@ def test_chat_query_returns_answer_with_citations() -> None:
                 "score": 0.91,
             }
         ],
+        "truncated": False,
     }
     assert retriever.received_user_id == "user-chat-123"
     assert retriever.received_question == "What is Contexta?"
@@ -117,6 +119,7 @@ def test_chat_query_returns_insufficient_context_when_no_chunks_match() -> None:
     assert response.json() == {
         "answer": "The document context is insufficient to answer that question.",
         "citations": [],
+        "truncated": False,
     }
     app.dependency_overrides.clear()
 
@@ -180,6 +183,54 @@ def test_session_message_stores_user_and_assistant_messages() -> None:
     assert messages[0]["content"] == "What is Contexta?"
     assert messages[1]["content"] == "Contexta is a grounded document chatbot. [Source 1]"
     assert messages[1]["citations"][0]["document_name"] == "overview.pdf"
+    app.dependency_overrides.clear()
+
+
+class TruncatedAnswerGenerator:
+    """Mirrors DeepSeek hitting max_tokens mid-marker: `[Source 2` without the close."""
+
+    def generate_answer(self, prompt: str) -> AnswerResult:
+        return AnswerResult(
+            "Rows 3 and 9 match the filter. [Source 1] [Source 2",
+            truncated=True,
+        )
+
+
+def test_truncated_query_answer_is_flagged_and_marker_repaired() -> None:
+    app.dependency_overrides[get_current_user] = override_user
+    app.dependency_overrides[get_retriever] = lambda: FakeRetriever(contexts_with_one_chunk())
+    app.dependency_overrides[get_answer_generator] = TruncatedAnswerGenerator
+
+    response = client.post("/chat/query", json={"question": "Which rows match?"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["truncated"] is True
+    assert body["answer"] == "Rows 3 and 9 match the filter. [Source 1]"
+    app.dependency_overrides.clear()
+
+
+def test_truncated_session_answer_is_persisted_with_the_flag() -> None:
+    repository = InMemoryChatRepository()
+    session = repository.create_session("user-chat-123", title="New chat")
+    app.dependency_overrides[get_current_user] = override_user
+    app.dependency_overrides[get_chat_repository] = lambda: repository
+    app.dependency_overrides[get_retriever] = lambda: FakeRetriever(contexts_with_one_chunk())
+    app.dependency_overrides[get_answer_generator] = TruncatedAnswerGenerator
+
+    response = client.post(
+        f"/chat/sessions/{session.id}/messages",
+        json={"question": "Which rows match?"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["truncated"] is True
+    assert body["answer"] == "Rows 3 and 9 match the filter. [Source 1]"
+
+    messages = client.get(f"/chat/sessions/{session.id}/messages").json()
+    assert messages[1]["content"] == "Rows 3 and 9 match the filter. [Source 1]"
+    assert messages[1]["metadata"]["truncated"] is True
     app.dependency_overrides.clear()
 
 

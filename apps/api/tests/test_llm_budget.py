@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 from app.auth.dependencies import get_current_user
 from app.auth.supabase_jwt import CurrentUser
+from app.chat.llm import AnswerResult
 from app.chat.models import RetrievedContext
 from app.chat.repository import InMemoryChatRepository
 from app.chat.routes import (
@@ -41,9 +42,9 @@ class CountingGenerator:
     def __init__(self) -> None:
         self.calls = 0
 
-    def generate_answer(self, prompt: str) -> str:
+    def generate_answer(self, prompt: str) -> AnswerResult:
         self.calls += 1
-        return "Grounded answer. [Source 1]"
+        return AnswerResult("Grounded answer. [Source 1]")
 
 
 class CountingRewriter:
@@ -156,7 +157,7 @@ def test_a_generator_that_is_never_called_never_spends_the_allowance() -> None:
     inner = CountingGenerator()
     wrapped = BudgetedAnswerGenerator(inner, budget, USER_ID, limit=1)
 
-    assert wrapped.generate_answer("prompt") == "Grounded answer. [Source 1]"
+    assert wrapped.generate_answer("prompt").content == "Grounded answer. [Source 1]"
     assert budget.used_today(USER_ID) == 1
 
     with pytest.raises(HTTPException):

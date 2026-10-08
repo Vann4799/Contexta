@@ -36,6 +36,7 @@ class ChatCitation(BaseModel):
 class ChatQueryResponse(BaseModel):
     answer: str
     citations: list[ChatCitation]
+    truncated: bool = False
 
 
 class ChatSessionCreate(BaseModel):

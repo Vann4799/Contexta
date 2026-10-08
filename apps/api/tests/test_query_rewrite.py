@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 from app.auth.dependencies import get_current_user
 from app.auth.supabase_jwt import CurrentUser
+from app.chat.llm import AnswerResult
 from app.chat.models import ChatMessageResponse, ChatSessionResponse, RetrievedContext
 from app.chat.repository import InMemoryChatRepository
 from app.chat.rewrite import accept_rewrite, conversation_history, needs_rewrite
@@ -134,9 +135,9 @@ class FakeAnswerGenerator:
     def __init__(self) -> None:
         self.prompt = ""
 
-    def generate_answer(self, prompt: str) -> str:
+    def generate_answer(self, prompt: str) -> AnswerResult:
         self.prompt = prompt
-        return "Hasilnya semua fitur lolos. [Source 1]"
+        return AnswerResult("Hasilnya semua fitur lolos. [Source 1]")
 
 
 class FakeRewriter:

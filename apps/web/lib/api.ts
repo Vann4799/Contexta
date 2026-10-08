@@ -116,6 +116,7 @@ export type ChatCitation = {
 export type ChatQueryResponse = {
   answer: string;
   citations: ChatCitation[];
+  truncated?: boolean;
 };
 
 export type ChatSession = {

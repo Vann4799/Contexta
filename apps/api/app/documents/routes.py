@@ -359,7 +359,9 @@ def generate_document_ai_brief(
         raise HTTPException(status_code=422, detail="document has no processed chunks")
 
     try:
-        brief = answer_generator.generate_answer(build_ai_brief_prompt(document, chunks))
+        brief = answer_generator.generate_answer(
+            build_ai_brief_prompt(document, chunks)
+        ).content
     except HTTPException:
         raise
     except Exception as exc:

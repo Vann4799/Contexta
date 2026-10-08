@@ -772,6 +772,7 @@ export const id: Dictionary = {
     askPlaceholderNoDoc: "Pilih dokumen dulu...",
     emptyAnswer: "Maaf, Contexta belum menerima jawaban yang bisa ditampilkan. Coba kirim ulang pertanyaannya.",
     answerCancelled: "Jawaban dibatalkan.",
+    truncatedNotice: "Jawaban ini kena batas panjang model dan bisa berhenti di tengah kalimat. Persempit pertanyaannya lalu tanya lagi bagian yang kurang.",
     source: "Sumber",
     page: (pageNumber: number) => `hlm. ${pageNumber}`,
     pageUnknown: "halaman tidak diketahui",
