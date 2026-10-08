@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import math
 import sys
 from datetime import datetime, timezone
@@ -14,10 +15,23 @@ except ModuleNotFoundError:
     from contexta_rag.chunking import chunk_pages
 
 
+logger = logging.getLogger(__name__)
+
 DocumentStatus = Literal["processing", "ready", "failed"]
 
 CHUNKER_VERSION = "window-v2"
 _TOKENS_PER_CHAR = 4
+
+UNEXPECTED_FAILURE_MESSAGE = "Indexing failed unexpectedly. Please retry."
+
+
+class UserVisibleError(Exception):
+    """A failure the worker can describe safely.
+
+    ``error_message`` is rendered in the document owner's browser, so only
+    messages written by this codebase may land there; anything else is logged
+    verbatim and replaced by a generic sentence.
+    """
 
 
 class ProcessingDocument(TypedDict, total=False):
@@ -165,17 +179,17 @@ class InMemoryDocumentRepository:
 
 class MissingDocumentStorage:
     def download_document(self, storage_path: str) -> bytes:
-        raise RuntimeError("Document storage is not configured")
+        raise UserVisibleError("Document storage is not configured")
 
 
 class MissingDocumentExtractor:
     def extract(self, content: bytes, file_type: str) -> ExtractedDocument:
-        raise RuntimeError("Document extractor is not configured")
+        raise UserVisibleError("Document extractor is not configured")
 
 
 class MissingEmbeddingProvider:
     def embed_texts(self, texts: list[str]) -> list[list[float]]:
-        raise RuntimeError("Embedding provider is not configured")
+        raise UserVisibleError("Embedding provider is not configured")
 
 
 class MissingVectorStore:
@@ -185,10 +199,10 @@ class MissingVectorStore:
         chunks: list[ProcessingChunk],
         embeddings: dict[str, list[list[float]]],
     ) -> list[str]:
-        raise RuntimeError("Vector store is not configured")
+        raise UserVisibleError("Vector store is not configured")
 
     def prune_stale_chunks(self, document_id: str, chunk_count: int) -> None:
-        raise RuntimeError("Vector store is not configured")
+        raise UserVisibleError("Vector store is not configured")
 
 
 class WorkerProcessor:
@@ -223,27 +237,32 @@ class WorkerProcessor:
 
         try:
             self.process_document(document)
-        except Exception as exc:
+        except UserVisibleError as exc:
             self.repository.mark_failed(document, str(exc))
+        except Exception:
+            logger.exception(
+                "unexpected indexing failure for document %s", document["id"]
+            )
+            self.repository.mark_failed(document, UNEXPECTED_FAILURE_MESSAGE)
 
         return True
 
     def process_document(self, document: ProcessingDocument) -> int:
         filename = document.get("filename", "")
         if not filename.endswith((".pdf", ".docx")):
-            raise ValueError("Unsupported document type")
+            raise UserVisibleError("Unsupported document type")
 
         content = self.storage.download_document(document["storage_path"])
         extracted_document = self.extractor.extract(content, document["file_type"])
         chunks = self._build_chunks(document, extracted_document)
         if not chunks:
-            raise ValueError("No extractable text found")
+            raise UserVisibleError("No extractable text found")
 
         embeddings = self._embed_arms(chunks)
 
         point_ids = self.vector_store.upsert_chunks(document, chunks, embeddings)
         if len(point_ids) != len(chunks):
-            raise ValueError("Vector point count did not match chunk count")
+            raise UserVisibleError("Vector point count did not match chunk count")
 
         self.vector_store.prune_stale_chunks(document["id"], len(chunks))
 
@@ -276,7 +295,7 @@ class WorkerProcessor:
         for arm in self.embedding_arms:
             vectors = arm.provider.embed_texts(texts)
             if len(vectors) != len(chunks):
-                raise ValueError(
+                raise UserVisibleError(
                     f"embedding arm '{arm.name or 'default'}' returned "
                     f"{len(vectors)} vectors for {len(chunks)} chunks"
                 )

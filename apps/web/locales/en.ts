@@ -680,6 +680,8 @@ export const en = {
       "filename extension must match upload content type": "The file extension must match its content type.",
       "filename must be a safe basename": "That file name is not allowed.",
       "No extractable text found": "No extractable text was found in this file.",
+      "Stored file is no longer available": "The stored file for this document is no longer available.",
+      "Indexing failed unexpectedly. Please retry.": "Indexing failed unexpectedly. Please retry, and contact support if it keeps happening.",
       "Unsupported document type": "This document type is not supported.",
       "Vector point count did not match chunk count": "The indexed vectors did not match the chunk count.",
       "Document storage is not configured": "Document storage is not configured on the server.",

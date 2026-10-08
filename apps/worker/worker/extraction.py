@@ -7,7 +7,7 @@ import fitz
 from docx import Document
 from docx.text.paragraph import Paragraph
 
-from worker.processor import ExtractedDocument, ExtractedPage
+from worker.processor import ExtractedDocument, ExtractedPage, UserVisibleError
 
 _MAX_HEADING_WORDS = 12
 _HEADING_LEVEL_ONE = 1.35
@@ -20,7 +20,7 @@ class DocumentTextExtractor:
             return self._extract_pdf(content)
         if file_type == "docx":
             return self._extract_docx(content)
-        raise ValueError("Unsupported document type")
+        raise UserVisibleError("Unsupported document type")
 
     def _extract_pdf(self, content: bytes) -> ExtractedDocument:
         pages: list[ExtractedPage] = []

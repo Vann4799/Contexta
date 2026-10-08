@@ -677,6 +677,8 @@ export const id: Dictionary = {
       "filename extension must match upload content type": "Ekstensi berkas harus cocok dengan tipe kontennya.",
       "filename must be a safe basename": "Nama berkas tersebut tidak diizinkan.",
       "No extractable text found": "Tidak ada teks yang bisa diekstrak dari berkas ini.",
+      "Stored file is no longer available": "Berkas asli dokumen ini sudah tidak tersedia di penyimpanan.",
+      "Indexing failed unexpectedly. Please retry.": "Indeksing gagal secara tak terduga. Coba lagi, dan hubungi dukungan jika terus terjadi.",
       "Unsupported document type": "Tipe dokumen ini tidak didukung.",
       "Vector point count did not match chunk count": "Jumlah vektor yang diindeks tidak cocok dengan jumlah chunk.",
       "Document storage is not configured": "Penyimpanan dokumen belum dikonfigurasi di server.",

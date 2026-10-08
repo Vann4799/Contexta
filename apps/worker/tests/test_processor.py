@@ -1,6 +1,12 @@
 from typing import Any
 
-from worker.processor import EmbeddingArm, InMemoryDocumentRepository, WorkerProcessor
+from worker.processor import (
+    UNEXPECTED_FAILURE_MESSAGE,
+    EmbeddingArm,
+    InMemoryDocumentRepository,
+    UserVisibleError,
+    WorkerProcessor,
+)
 
 
 ExtractedDocument = dict[str, list[dict[str, str | int]]]
@@ -285,3 +291,59 @@ def test_process_once_marks_document_failed_when_extraction_has_no_text() -> Non
     assert processed is True
     assert repository.documents[0]["status"] == "failed"
     assert repository.documents[0]["error_message"] == "No extractable text found"
+
+
+def build_processor(repository: InMemoryDocumentRepository, extractor: Any) -> WorkerProcessor:
+    return WorkerProcessor(
+        repository=repository,
+        storage=FakeStorage({"user-1/doc-1.pdf": b"document bytes"}),
+        extractor=extractor,
+        embedding_arms=[EmbeddingArm(name="", provider=FakeEmbeddingProvider())],
+        vector_store=FakeVectorStore(),
+    )
+
+
+def processing_repository() -> InMemoryDocumentRepository:
+    return InMemoryDocumentRepository(
+        documents=[
+            {
+                "id": "doc-1",
+                "user_id": "user-1",
+                "filename": "doc-1.pdf",
+                "file_type": "pdf",
+                "storage_path": "user-1/doc-1.pdf",
+                "status": "processing",
+            }
+        ]
+    )
+
+
+def test_unexpected_failure_is_replaced_by_a_generic_message() -> None:
+    class ExplodingExtractor:
+        def extract(self, content: bytes, file_type: str) -> ExtractedDocument:
+            raise RuntimeError(
+                "Client error '400 Bad Request' for url "
+                "'https://projectref.supabase.co/storage/v1/object/"
+                "contexta-documents/user-1/doc-1.pdf'"
+            )
+
+    repository = processing_repository()
+    build_processor(repository, ExplodingExtractor()).process_once()
+
+    message = repository.documents[0]["error_message"]
+    assert message == UNEXPECTED_FAILURE_MESSAGE
+    assert "supabase.co" not in message
+    assert "user-1" not in message
+
+
+def test_worker_written_failure_message_reaches_the_document() -> None:
+    class RefusedExtractor:
+        def extract(self, content: bytes, file_type: str) -> ExtractedDocument:
+            raise UserVisibleError("Stored file is no longer available")
+
+    repository = processing_repository()
+    build_processor(repository, RefusedExtractor()).process_once()
+
+    assert repository.documents[0]["error_message"] == (
+        "Stored file is no longer available"
+    )

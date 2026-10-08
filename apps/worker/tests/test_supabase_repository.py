@@ -4,7 +4,9 @@ from datetime import datetime, timezone
 import json
 
 import httpx
+import pytest
 
+from worker.processor import UserVisibleError
 from worker.supabase import SupabaseDocumentRepository, SupabaseDocumentStorage
 
 
@@ -168,6 +170,41 @@ def test_storage_downloads_encoded_object_path() -> None:
 
     assert content == b"file bytes"
     assert seen_url.endswith("/storage/v1/object/contexta-documents/user-1/folder%20name/file.pdf")
+
+
+@pytest.mark.parametrize(
+    "status_code,body",
+    [
+        (
+            400,
+            '{"statusCode":"404","error":"not_found",'
+            '"message":"Object not found","code":"NoSuchKey"}',
+        ),
+        (404, '{"error":"not_found"}'),
+    ],
+    ids=["supabase-400", "plain-404"],
+)
+def test_storage_reports_a_missing_object_without_leaking_the_url(
+    status_code: int,
+    body: str,
+) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(status_code, text=body)
+
+    storage = SupabaseDocumentStorage(
+        supabase_url="https://example.supabase.co",
+        service_role_key="service-key",
+        bucket="contexta-documents",
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+
+    with pytest.raises(UserVisibleError) as captured:
+        storage.download_document("user-1/doc-1.pdf")
+
+    message = str(captured.value)
+    assert message == "Stored file is no longer available"
+    assert "example.supabase.co" not in message
+    assert "service-key" not in message
 
 
 def test_prune_api_request_logs_deletes_past_retention_and_reports_the_count() -> None:
