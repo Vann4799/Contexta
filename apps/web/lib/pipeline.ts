@@ -167,6 +167,11 @@ function truncate(value: string, length: number) {
   return `${lastSpace > 8 ? clipped.slice(0, lastSpace) : clipped.trimEnd()}...`;
 }
 
+/**
+ * `summaryChunks` is the trusted row count from the /account/summary RPC; the
+ * denormalized `documents.chunk_count` a retry zeroes would otherwise make
+ * /pipeline disagree with /account/summary about how many vectors exist.
+ */
 export function buildPipelineSnapshot(
   documents: DocumentItem[],
   health: IndexingHealth | null,
@@ -175,13 +180,14 @@ export function buildPipelineSnapshot(
   copy: PipelineCopy,
   locale: string,
   errorText: (message: string) => string,
-  now = Date.now()
+  now = Date.now(),
+  summaryChunks: number | null = null
 ): PipelineSnapshot {
   const readyDocuments = documents.filter((document) => document.status === "ready");
   const queuedDocuments = documents.filter((document) => document.status === "uploaded");
   const processingDocuments = documents.filter((document) => document.status === "processing");
   const failedDocuments = documents.filter((document) => document.status === "failed");
-  const totalChunks = documents.reduce((sum, document) => sum + document.chunk_count, 0);
+  const totalChunks = summaryChunks ?? documents.reduce((sum, document) => sum + document.chunk_count, 0);
   const totalStorage = documents.reduce((sum, document) => sum + document.file_size, 0);
   const queueDepth = health?.queued_documents ?? queuedDocuments.length;
   const index = describeIndex(vector, copy.dimensionsNotReported);

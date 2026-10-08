@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { getIndexingHealth, getVectorHealth, listDocuments, type DocumentItem, type IndexingHealth, type VectorHealth } from "@/lib/api";
+import { getAccountSummary, getIndexingHealth, getVectorHealth, listDocuments, type DocumentItem, type IndexingHealth, type VectorHealth } from "@/lib/api";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { useLocale, useT } from "@/lib/i18n";
 import type { Dictionary } from "@/locales/en";
@@ -21,6 +21,7 @@ export function PipelineWorkspace() {
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [health, setHealth] = useState<IndexingHealth | null>(null);
   const [vector, setVector] = useState<VectorHealth | null>(null);
+  const [summaryChunks, setSummaryChunks] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("all");
@@ -56,6 +57,11 @@ export function PipelineWorkspace() {
       } catch {
         setVector(null);
       }
+      try {
+        setSummaryChunks((await getAccountSummary(accessToken)).chunks);
+      } catch {
+        setSummaryChunks(null);
+      }
     } catch (loadError) {
       setError(loadError instanceof Error && loadError.message ? loadError.message : "failed");
     } finally {
@@ -82,8 +88,8 @@ export function PipelineWorkspace() {
   }, [load, pendingCount]);
 
   const snapshot = useMemo(
-    () => buildPipelineSnapshot(documents, health, vector, range.hours, copy, locale, serverError),
-    [copy, documents, health, locale, range.hours, serverError, vector]
+    () => buildPipelineSnapshot(documents, health, vector, range.hours, copy, locale, serverError, Date.now(), summaryChunks),
+    [copy, documents, health, locale, range.hours, serverError, summaryChunks, vector]
   );
 
   const visibleClusters = useMemo(
