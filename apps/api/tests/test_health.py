@@ -384,3 +384,18 @@ async def test_qdrant_health_does_not_confirm_dimensions_of_a_slot_qdrant_does_n
         {"name": "minilm", "dimensions": 384, "model": "a"},
         {"name": "openai", "dimensions": None, "model": "b"},
     ]
+
+
+def test_unhandled_exception_returns_500_with_cors_headers() -> None:
+    @main.app.get("/test/boom")
+    def boom() -> None:
+        raise RuntimeError("boom")
+
+    # raise_server_exceptions=False mimics a real server: ServerErrorMiddleware would
+    # answer 500 without CORS headers, so the header assertion pins the converter.
+    with TestClient(main.app, raise_server_exceptions=False) as boom_client:
+        response = boom_client.get("/test/boom", headers={"Origin": "http://localhost:3000"})
+
+    assert response.status_code == 500
+    assert response.json() == {"detail": "Internal server error"}
+    assert response.headers["access-control-allow-origin"] == "http://localhost:3000"

@@ -1,10 +1,13 @@
 import asyncio
+import logging
 from time import perf_counter
 
 from fastapi import FastAPI, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from starlette.concurrency import run_in_threadpool
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.account.routes import router as account_router
 from app.apikeys.dependencies import finalize_api_request_log
@@ -21,7 +24,25 @@ from app.v1.routes import router as v1_router
 from app.v1.routes import v1_aware_validation_error
 
 
+logger = logging.getLogger(__name__)
+
+
+async def convert_unhandled_errors(request: Request, call_next):
+    """Turn unhandled exceptions into a plain 500 response instead of a bare connection error.
+
+    Added before CORSMiddleware so it sits inside it: the 500 this returns still passes
+    through CORSMiddleware on the way out and keeps its CORS headers, which a
+    ServerErrorMiddleware response raised past the CORS layer never would.
+    """
+    try:
+        return await call_next(request)
+    except Exception:
+        logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+        return JSONResponse({"detail": "Internal server error"}, status_code=500)
+
+
 app = FastAPI(title="Contexta API", version="0.1.0")
+app.add_middleware(BaseHTTPMiddleware, dispatch=convert_unhandled_errors)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=get_settings().cors_origins,

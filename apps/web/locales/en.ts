@@ -548,7 +548,7 @@ export const en = {
     clearPdf: "Clear selected PDF",
     previewTitle: "Markdown Preview",
     previewEmptyMeta: "Converted Markdown will appear here.",
-    previewFile: (name: string, size: string) => `${name} - ${size}`,
+    previewFile: (name: string, size: string) => `${name} - source PDF ${size}`,
     copy: "Copy",
     download: "Download",
     noMarkdown: "No Markdown generated yet.",

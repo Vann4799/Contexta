@@ -546,7 +546,7 @@ export const id: Dictionary = {
     clearPdf: "Hapus PDF terpilih",
     previewTitle: "Pratinjau Markdown",
     previewEmptyMeta: "Hasil konversi Markdown akan muncul di sini.",
-    previewFile: (name: string, size: string) => `${name} - ${size}`,
+    previewFile: (name: string, size: string) => `${name} - PDF sumber ${size}`,
     copy: "Salin",
     download: "Unduh",
     noMarkdown: "Belum ada Markdown yang dibuat.",
