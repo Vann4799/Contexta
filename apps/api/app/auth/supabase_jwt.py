@@ -1,8 +1,12 @@
+import json
+import logging
 from dataclasses import dataclass
 from functools import lru_cache
 
 import jwt
 from fastapi import HTTPException
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -37,6 +41,23 @@ def decode_supabase_jwt(
             options={"require": ["exp"]},
         )
         return _current_user_from_payload(payload)
+    # A JWKS fetch failure is an outage of the auth infrastructure, not proof of a
+    # bad token: answering 401 would tell a valid user to log in again while every
+    # request keeps failing. PyJWT wraps only URLError/TimeoutError in
+    # PyJWKClientConnectionError; a non-JSON body escapes as a bare JSONDecodeError,
+    # which used to surface as an unhandled (and CORS-less) 500.
+    except jwt.PyJWKClientConnectionError as exc:
+        logger.exception("could not fetch JWKS from %s", jwks_url)
+        raise HTTPException(
+            status_code=503,
+            detail="Authentication service temporarily unavailable",
+        ) from exc
+    except json.JSONDecodeError as exc:
+        logger.exception("JWKS endpoint returned a non-JSON body from %s", jwks_url)
+        raise HTTPException(
+            status_code=503,
+            detail="Authentication service temporarily unavailable",
+        ) from exc
     except jwt.PyJWTError as exc:
         raise HTTPException(
             status_code=401,

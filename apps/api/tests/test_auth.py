@@ -1,13 +1,24 @@
+import base64
+import json
+import threading
+from collections.abc import Iterator
+from contextlib import contextmanager
+from datetime import datetime, timedelta, timezone
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
 import jwt
 import pytest
 from cryptography.hazmat.primitives.asymmetric import ec
-from datetime import datetime, timedelta, timezone
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.testclient import TestClient
+from jwt.algorithms import ECAlgorithm
 
 from app.auth.dependencies import get_current_user
 from app.auth.supabase_jwt import CurrentUser, decode_supabase_jwt, get_jwks_client
 from app.core.config import Settings, get_settings
+from app.main import app
+
+client = TestClient(app)
 
 
 def future_timestamp() -> int:
@@ -16,6 +27,55 @@ def future_timestamp() -> int:
 
 def past_timestamp() -> int:
     return int((datetime.now(timezone.utc) - timedelta(minutes=5)).timestamp())
+
+
+def _unsigned_token(kid: str = "test-key") -> str:
+    # Structurally valid (three base64url segments) so PyJWKClient parses the
+    # header and reaches the JWKS fetch, where every failure under test happens.
+    def segment(data: dict[str, object]) -> str:
+        return base64.urlsafe_b64encode(json.dumps(data).encode()).rstrip(b"=").decode()
+
+    header = segment({"alg": "RS256", "typ": "JWT", "kid": kid})
+    payload = segment({"sub": "user-123", "aud": "authenticated", "exp": future_timestamp()})
+    return f"{header}.{payload}.c2ln"
+
+
+class _JwksServer:
+    """A real socket, because the failures under test live between urllib and
+    json.load inside PyJWKClient.fetch_data — an in-process double cannot
+    reproduce them."""
+
+    def __init__(self, status: int, body: bytes) -> None:
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self) -> None:
+                self.send_response(status)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, *args: object) -> None:
+                pass
+
+        self._server = HTTPServer(("127.0.0.1", 0), Handler)
+        self.port = self._server.server_address[1]
+        threading.Thread(target=self._server.serve_forever, daemon=True).start()
+
+    @property
+    def url(self) -> str:
+        return f"http://127.0.0.1:{self.port}/jwks"
+
+    def close(self) -> None:
+        self._server.shutdown()
+        self._server.server_close()
+
+
+@contextmanager
+def _served_jwks(status: int, body: bytes) -> Iterator[str]:
+    server = _JwksServer(status, body)
+    try:
+        yield server.url
+    finally:
+        server.close()
 
 
 def test_valid_hs256_jwt_with_authenticated_audience_returns_current_user() -> None:
@@ -208,3 +268,71 @@ def test_settings_derives_jwks_url_from_supabase_url() -> None:
         settings.resolved_supabase_jwks_url
         == "https://project.supabase.co/auth/v1/.well-known/jwks.json"
     )
+
+
+def test_an_unreachable_jwks_endpoint_answers_503_not_401() -> None:
+    server = _JwksServer(200, b'{"keys": []}')
+    port = server.port
+    server.close()
+
+    with pytest.raises(HTTPException) as exc_info:
+        decode_supabase_jwt(_unsigned_token(), jwks_url=f"http://127.0.0.1:{port}/jwks")
+
+    assert exc_info.value.status_code == 503
+    assert exc_info.value.detail == "Authentication service temporarily unavailable"
+
+
+def test_a_non_json_jwks_body_answers_503_not_a_bare_500() -> None:
+    # Measured on PyJWT 2.10.1: fetch_data only wraps URLError/TimeoutError, so a
+    # 200 answer whose body is not JSON escaped as a bare JSONDecodeError — an
+    # unhandled (and CORS-less) 500 on every authenticated request.
+    with _served_jwks(200, b"<html>gateway error page</html>") as jwks_url:
+        with pytest.raises(HTTPException) as exc_info:
+            decode_supabase_jwt(_unsigned_token(), jwks_url=jwks_url)
+
+    assert exc_info.value.status_code == 503
+
+
+def test_an_http_error_from_the_jwks_endpoint_answers_503_not_401() -> None:
+    with _served_jwks(500, b"upstream dead") as jwks_url:
+        with pytest.raises(HTTPException) as exc_info:
+            decode_supabase_jwt(_unsigned_token(), jwks_url=jwks_url)
+
+    assert exc_info.value.status_code == 503
+
+
+def test_a_token_with_an_unknown_kid_still_answers_401() -> None:
+    # Kid mismatch is a problem with the token, not with the auth infrastructure;
+    # the 503 mappings must not swallow it.
+    private_key = ec.generate_private_key(ec.SECP256R1())
+    jwk = ECAlgorithm.to_jwk(private_key.public_key(), as_dict=True)
+    jwk["kid"] = "other-key"
+    jwk["use"] = "sig"
+
+    with _served_jwks(200, json.dumps({"keys": [jwk]}).encode()) as jwks_url:
+        with pytest.raises(HTTPException) as exc_info:
+            decode_supabase_jwt(_unsigned_token(), jwks_url=jwks_url)
+
+    assert exc_info.value.status_code == 401
+
+
+def test_a_jwks_outage_through_the_real_app_answers_503_with_cors_headers() -> None:
+    with _served_jwks(200, b"<html>gateway error page</html>") as jwks_url:
+
+        def override_settings() -> Settings:
+            return Settings(supabase_jwks_url=jwks_url)
+
+        app.dependency_overrides[get_settings] = override_settings
+        try:
+            response = client.get(
+                "/documents",
+                headers={
+                    "Authorization": f"Bearer {_unsigned_token()}",
+                    "Origin": "http://localhost:3000",
+                },
+            )
+        finally:
+            app.dependency_overrides.pop(get_settings, None)
+
+    assert response.status_code == 503
+    assert response.headers["access-control-allow-origin"] == "http://localhost:3000"
