@@ -247,8 +247,9 @@ class WorkerProcessor:
         return True
 
     def process_document(self, document: ProcessingDocument) -> int:
-        filename = document.get("filename", "")
-        if not filename.endswith((".pdf", ".docx")):
+        # `documents.file_type` is what the extractor receives and the schema pins it to
+        # 'pdf' or 'docx'; a filename may be uppercase (SCAN.PDF) and is not a gate.
+        if document.get("file_type") not in {"pdf", "docx"}:
             raise UserVisibleError("Unsupported document type")
 
         content = self.storage.download_document(document["storage_path"])

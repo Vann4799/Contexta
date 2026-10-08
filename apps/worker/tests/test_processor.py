@@ -386,3 +386,14 @@ def test_failed_chunk_insert_drops_the_vectors_it_just_wrote() -> None:
 
     assert vector_store.deleted == ["doc-1"]
     assert repository.documents[0]["status"] == "failed"
+
+
+def test_uppercase_filename_still_indexes() -> None:
+    """The API lowercases the extension into `file_type`, and the gate reads that."""
+    document = {**processing_repository().documents[0], "filename": "SCAN.PDF"}
+    repository = InMemoryDocumentRepository(documents=[document])
+    vector_store = FakeVectorStore()
+
+    assert build_processor(repository, FakeExtractor(), vector_store).process_once()
+    assert repository.documents[0]["status"] == "ready"
+    assert vector_store.deleted == []
