@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { AuthForm } from "@/components/auth/auth-form";
 import { ContextaLogo } from "@/components/contexta-logo";
+import { LanguagePicker } from "@/components/ui/language-picker";
 import { useT } from "@/lib/i18n";
 import type { Dictionary } from "@/locales/en";
 
@@ -80,6 +81,8 @@ export default function LoginPage() {
           <div className="mt-8 border-t border-paper-line pt-5">
             <p className="text-center text-[11.5px] text-ink-faint">{t.auth.signIn.footnote}</p>
           </div>
+
+          <LanguagePicker label={t.common.language} />
         </div>
       </section>
     </main>
