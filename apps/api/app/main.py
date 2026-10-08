@@ -111,5 +111,7 @@ async def vector_health(response: Response) -> dict[str, object]:
 
 
 @app.get("/health/indexing")
-async def indexing_health() -> IndexingHealthResponse:
+def indexing_health() -> IndexingHealthResponse:
+    # Sync on purpose: the check blocks on httpx, and inside async def it would freeze
+    # the event loop for every concurrent request, not just this one.
     return check_indexing_health(get_settings())

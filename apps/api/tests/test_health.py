@@ -1,3 +1,5 @@
+import threading
+import time
 from datetime import datetime, timedelta, timezone
 
 from fastapi.testclient import TestClient
@@ -7,7 +9,7 @@ import app.main as main
 from app.core.config import Settings
 from app.documents.repository import InMemoryDocumentRepository
 from app.main import app
-from app.services.indexing_health import build_indexing_health
+from app.services.indexing_health import IndexingHealthResponse, build_indexing_health
 from app.services.qdrant_health import check_qdrant_health
 from contexta_rag.vector_space import VectorSpace
 
@@ -158,6 +160,43 @@ def test_indexing_health_reports_attention_for_stale_processing_documents(monkey
     assert body["queued_documents"] == 1
     assert body["stale_processing_documents"] == 1
     assert body["stale_after_minutes"] == 10
+
+
+def test_a_slow_indexing_health_check_leaves_the_event_loop_free(monkeypatch) -> None:
+    """The health check blocks on httpx. A sync def route runs it in the threadpool;
+    declared async def it would run on the event loop, and one slow Supabase answer
+    would stall every concurrent request with it."""
+
+    entered = threading.Event()
+    release = threading.Event()
+
+    def slow_check(settings: Settings) -> IndexingHealthResponse:
+        entered.set()
+        release.wait(timeout=5)
+        return build_indexing_health([], source="unknown")
+
+    monkeypatch.setattr(main, "check_indexing_health", slow_check)
+
+    with TestClient(app) as scoped:
+        slow_result: list[httpx.Response] = []
+
+        def slow_request() -> None:
+            slow_result.append(scoped.get("/health/indexing"))
+
+        thread = threading.Thread(target=slow_request)
+        thread.start()
+        assert entered.wait(timeout=5)
+
+        fast_started = time.perf_counter()
+        fast = scoped.get("/health")
+        fast_elapsed = time.perf_counter() - fast_started
+
+        release.set()
+        thread.join(timeout=5)
+
+    assert fast.status_code == 200
+    assert slow_result[0].status_code == 200
+    assert fast_elapsed < 0.5
 
 
 def test_build_indexing_health_uses_updated_at_when_processing_started_at_is_unknown() -> None:
