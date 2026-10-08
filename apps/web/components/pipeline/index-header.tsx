@@ -1,20 +1,25 @@
 "use client";
 
+import { useMemo } from "react";
 import { Waypoints } from "lucide-react";
 import type { IndexingHealth } from "@/lib/api";
-import { VIEW_TABS, type PipelineMetric } from "@/lib/pipeline";
+import { useT } from "@/lib/i18n";
+import { sampleMetrics, viewTabs, VECTOR_COLLECTION, VECTOR_SHAPE, type PipelineMetric } from "@/lib/pipeline";
 import { cn } from "@/lib/utils";
 
 type IndexHeaderProps = {
   metrics: PipelineMetric[];
-  sampleMetrics: PipelineMetric[];
   health: IndexingHealth | null;
   activeTab: string;
   isLoading: boolean;
   onTabChange: (tab: string) => void;
 };
 
-export function IndexHeader({ metrics, sampleMetrics, health, activeTab, isLoading, onTabChange }: IndexHeaderProps) {
+export function IndexHeader({ metrics, health, activeTab, isLoading, onTabChange }: IndexHeaderProps) {
+  const t = useT();
+  const copy = t.pipeline;
+  const tabs = useMemo(() => viewTabs(copy), [copy]);
+  const samples = useMemo(() => sampleMetrics(copy), [copy]);
   const attention = health?.status === "attention";
 
   return (
@@ -32,13 +37,13 @@ export function IndexHeader({ metrics, sampleMetrics, health, activeTab, isLoadi
         </div>
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className="eyebrow">Hybrid dense + BM25</span>
+            <span className="eyebrow">{copy.embeddingEyebrow}</span>
             <span className="rounded bg-accent px-1.5 py-[1px] text-[10px] font-bold tracking-[0.08em] text-ink">
-              {attention ? "ATTENTION" : "SYNCED"}
+              {attention ? copy.badgeAttention : copy.badgeSynced}
             </span>
           </div>
           <h1 className="mt-1 truncate text-[22px] font-semibold leading-tight tracking-tight">BAAI/bge-m3</h1>
-          <p className="mt-0.5 truncate font-mono text-[12px] text-ink-muted">Collection: contexta_chunks - 384d</p>
+          <p className="mt-0.5 truncate font-mono text-[12px] text-ink-muted">{copy.collectionLine(VECTOR_COLLECTION, VECTOR_SHAPE)}</p>
         </div>
       </div>
 
@@ -55,8 +60,8 @@ export function IndexHeader({ metrics, sampleMetrics, health, activeTab, isLoadi
           ))}
         </dl>
 
-        <div className="mt-5 flex flex-wrap items-center gap-2" aria-label="Pipeline views" role="tablist">
-          {VIEW_TABS.map((tab) => {
+        <div className="mt-5 flex flex-wrap items-center gap-2" aria-label={copy.viewsLabel} role="tablist">
+          {tabs.map((tab) => {
             const active = activeTab === tab.id;
             return (
               <button
@@ -79,9 +84,9 @@ export function IndexHeader({ metrics, sampleMetrics, health, activeTab, isLoadi
         </div>
 
         <div className="mt-5 rounded-control border border-dashed border-paper-edge px-4 py-3">
-          <p className="eyebrow">Sample - not instrumented yet</p>
+          <p className="eyebrow">{copy.sampleEyebrow}</p>
           <dl className="mt-2 flex flex-wrap gap-x-6 gap-y-2">
-            {sampleMetrics.map((stat) => (
+            {samples.map((stat) => (
               <div key={stat.label} className="flex items-baseline gap-1.5">
                 <dt className="text-[11.5px] text-ink-muted">{stat.label}</dt>
                 <dd className="nums text-[13px] font-semibold text-ink-muted">

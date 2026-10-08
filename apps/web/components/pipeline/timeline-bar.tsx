@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { CalendarClock, ChevronDown } from "lucide-react";
-import { TIMELINE_RANGES, type TimelineRange } from "@/lib/pipeline";
+import { useLocale, useT } from "@/lib/i18n";
+import type { TimelineRange } from "@/lib/pipeline";
 import { cn } from "@/lib/utils";
 
 type TimelineBarProps = {
@@ -10,17 +11,21 @@ type TimelineBarProps = {
   ingestedChunks: string;
   pendingCount: number;
   range: TimelineRange;
+  ranges: TimelineRange[];
   onRangeChange: (range: TimelineRange) => void;
 };
 
 const TICK_COUNT = 7;
 
-export function TimelineBar({ events, ingestedChunks, pendingCount, range, onRangeChange }: TimelineBarProps) {
+export function TimelineBar({ events, ingestedChunks, pendingCount, range, ranges, onRangeChange }: TimelineBarProps) {
+  const t = useT();
+  const locale = useLocale();
+  const copy = t.pipeline.timeline;
   const [open, setOpen] = useState(false);
   const [cursor, setCursor] = useState(0.5);
 
   const now = Date.now();
-  const tickFormatter = new Intl.DateTimeFormat("en-GB",
+  const tickFormatter = new Intl.DateTimeFormat(locale,
     range.hours <= 24 ? { hour: "2-digit", minute: "2-digit" } : { day: "2-digit", month: "short" }
   );
   const ticks = Array.from({ length: TICK_COUNT }, (_, index) => {
@@ -43,7 +48,7 @@ export function TimelineBar({ events, ingestedChunks, pendingCount, range, onRan
         </button>
         {open ? (
           <ul className="surface absolute bottom-10 left-0 z-20 w-44 p-1 text-[13px]">
-            {TIMELINE_RANGES.map((option) => (
+            {ranges.map((option) => (
               <li key={option.id}>
                 <button
                   className={cn(
@@ -101,21 +106,19 @@ export function TimelineBar({ events, ingestedChunks, pendingCount, range, onRan
           <span className="absolute top-0 z-0 h-full w-px bg-ink/70 transition-[left] duration-300" style={{ left: `${cursor * 100}%` }} />
         </div>
         {events.length === 0 ? (
-          <p className="text-[11.5px] text-ink-muted">No uploads inside this window.</p>
+          <p className="text-[11.5px] text-ink-muted">{copy.noEvents}</p>
         ) : (
-          <p className="text-[11.5px] text-ink-muted">
-            {events.length} upload{events.length === 1 ? "" : "s"} plotted across {range.label.toLowerCase()}.
-          </p>
+          <p className="text-[11.5px] text-ink-muted">{copy.plotted(events.length, range.label)}</p>
         )}
       </div>
 
       <div className="flex shrink-0 items-center gap-3 rounded-control bg-night px-4 py-2 text-[12.5px]">
         <span className="text-white/70">
-          Ingested: <span className="nums font-medium text-white">{ingestedChunks}</span>
+          {copy.ingested} <span className="nums font-medium text-white">{ingestedChunks}</span>
         </span>
         <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" />
         <span className="font-medium text-white">
-          {pendingCount} pending
+          {copy.pending(pendingCount)}
         </span>
       </div>
     </section>

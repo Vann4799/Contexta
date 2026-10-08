@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AuthCard } from "@/components/auth/auth-card";
+import { useT } from "@/lib/i18n";
+import { useServerError } from "@/lib/server-errors";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 
 type CallbackState =
@@ -26,10 +28,12 @@ function getAuthParams() {
 }
 
 export default function AuthCallbackPage() {
+  const t = useT();
+  const serverError = useServerError();
   const router = useRouter();
   const [callbackState, setCallbackState] = useState<CallbackState>({
     status: "loading",
-    message: "Checking your Contexta sign-in session."
+    message: "checking"
   });
 
   useEffect(() => {
@@ -51,7 +55,7 @@ export default function AuthCallbackPage() {
           }
 
           if (!data.session) {
-            throw new Error("No authenticated session was returned.");
+            throw new Error("noSessionReturned");
           }
 
           if (authParams.type === "recovery") {
@@ -61,7 +65,7 @@ export default function AuthCallbackPage() {
 
           setCallbackState({
             status: "success",
-            message: "Authentication complete. Continue to your dashboard."
+            message: "done"
           });
           return;
         }
@@ -77,7 +81,7 @@ export default function AuthCallbackPage() {
           }
 
           if (!data.session) {
-            throw new Error("No authenticated session was returned.");
+            throw new Error("noSessionReturned");
           }
 
           if (authParams.type === "recovery") {
@@ -87,7 +91,7 @@ export default function AuthCallbackPage() {
 
           setCallbackState({
             status: "success",
-            message: "Authentication complete. Continue to your dashboard."
+            message: "done"
           });
           return;
         }
@@ -100,7 +104,7 @@ export default function AuthCallbackPage() {
 
         if (!data.session) {
           const hasAuthParams = Boolean(authParams.accessToken || authParams.refreshToken);
-          throw new Error(hasAuthParams ? "Auth parameters were found, but no active session is available." : "No active sign-in session was found.");
+          throw new Error(hasAuthParams ? "paramsNoSession" : "noActiveSession");
         }
 
         if (authParams.type === "recovery") {
@@ -110,12 +114,12 @@ export default function AuthCallbackPage() {
 
         setCallbackState({
           status: "success",
-          message: "Authentication complete. Continue to your dashboard."
+          message: "done"
         });
       } catch (error) {
         setCallbackState({
           status: "error",
-          message: error instanceof Error ? error.message : "Unable to complete authentication."
+          message: error instanceof Error ? error.message : "failed"
         });
       }
     }
@@ -125,12 +129,13 @@ export default function AuthCallbackPage() {
 
   const isSuccess = callbackState.status === "success";
   const isError = callbackState.status === "error";
+  const messages = t.auth.callback.messages;
 
   return (
     <AuthCard
-      description={callbackState.message}
-      eyebrow={isError ? "Sign-in failed" : "Workspace session"}
-      title={isSuccess ? "Authentication complete" : isError ? "Authentication error" : "Completing authentication"}
+      description={messages[callbackState.message as keyof typeof messages] ?? serverError(callbackState.message)}
+      eyebrow={isError ? t.auth.callback.eyebrowFail : t.auth.callback.eyebrowOk}
+      title={isSuccess ? t.auth.callback.titleOk : isError ? t.auth.callback.titleFail : t.auth.callback.titlePending}
     >
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">
         <Link
@@ -139,13 +144,13 @@ export default function AuthCallbackPage() {
           }`}
           href="/"
         >
-          Dashboard
+          {t.auth.callback.dashboard}
         </Link>
         <Link
           className="focus-ring inline-flex h-10 max-w-full flex-1 items-center justify-center rounded-control border border-paper-line bg-paper-soft px-4 text-[13.5px] font-medium leading-none text-ink transition-colors hover:bg-paper-card"
           href="/login"
         >
-          Login
+          {t.auth.callback.login}
         </Link>
       </div>
     </AuthCard>

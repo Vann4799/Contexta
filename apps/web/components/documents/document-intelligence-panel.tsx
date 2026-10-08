@@ -14,6 +14,8 @@ import {
 } from "@/lib/api";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { saveBlobAsFile } from "@/lib/download";
+import { useT } from "@/lib/i18n";
+import { useServerError } from "@/lib/server-errors";
 import { StatusPill } from "@/components/ui/status-pill";
 import { Button } from "@/components/ui/button";
 import { DocumentChunksTable } from "@/components/documents/document-chunks-table";
@@ -105,6 +107,8 @@ function FormattedBrief({ text }: { text: string }) {
 }
 
 export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePanelProps) {
+  const t = useT().documents.intelligence;
+  const serverError = useServerError();
   const [document, setDocument] = useState<DocumentItem | null>(null);
   const [intelligence, setIntelligence] = useState<DocumentIntelligence | null>(null);
   const [aiBrief, setAIBrief] = useState<string | null>(null);
@@ -112,7 +116,7 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
   const [isGeneratingBrief, setIsGeneratingBrief] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [briefError, setBriefError] = useState<string | null>(null);
-  const [copyMessage, setCopyMessage] = useState<string | null>(null);
+  const [copyMessage, setCopyMessage] = useState<"copied" | "copyFailed" | null>(null);
   const [exportingFormat, setExportingFormat] = useState<DocumentExportFormat | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
 
@@ -132,7 +136,7 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
       try {
         const accessToken = await getAccessToken();
         if (!accessToken) {
-          throw new Error("Sign in to view this document.");
+          throw new Error("signInView");
         }
 
         const loadedDocument = await getDocument(accessToken, documentId);
@@ -146,7 +150,7 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
         setIntelligence(loadedIntelligence);
       } catch (loadError) {
         if (isMounted) {
-          setError(loadError instanceof Error ? loadError.message : "Unable to load document.");
+          setError(loadError instanceof Error ? loadError.message : "loadFailed");
         }
       } finally {
         if (isMounted) {
@@ -195,13 +199,13 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
     try {
       const accessToken = await getAccessToken();
       if (!accessToken) {
-        throw new Error("Sign in to generate an AI brief.");
+        throw new Error("signInBrief");
       }
 
       const generated = await generateDocumentAIBrief(accessToken, documentId);
       setAIBrief(generated.brief);
     } catch (generateError) {
-      setBriefError(generateError instanceof Error ? generateError.message : "Unable to generate AI brief.");
+      setBriefError(generateError instanceof Error ? generateError.message : "briefFailed");
     } finally {
       setIsGeneratingBrief(false);
     }
@@ -214,9 +218,9 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
 
     try {
       await navigator.clipboard.writeText(aiBrief);
-      setCopyMessage("Brief copied.");
+      setCopyMessage("copied");
     } catch {
-      setCopyMessage("Unable to copy brief.");
+      setCopyMessage("copyFailed");
     }
   };
 
@@ -231,28 +235,30 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
     try {
       const accessToken = await getAccessToken();
       if (!accessToken) {
-        throw new Error("Sign in to export this document.");
+        throw new Error("signInExport");
       }
 
       const file = await exportDocument(accessToken, documentId, format, document.filename);
       saveBlobAsFile(file.blob, file.filename);
     } catch (downloadError) {
-      setExportError(downloadError instanceof Error ? downloadError.message : "Unable to export document.");
+      setExportError(downloadError instanceof Error ? downloadError.message : "exportFailed");
     } finally {
       setExportingFormat(null);
     }
   };
 
   if (isLoading) {
-    return <section className="surface p-5 text-[13px] text-ink-muted">Loading document intelligence...</section>;
+    return <section className="surface p-5 text-[13px] text-ink-muted">{t.loading}</section>;
   }
 
   if (error || !document) {
     return (
       <section className="surface p-5">
-        <p className="text-[13px] text-danger">{error || "Document not found."}</p>
+        <p className="text-[13px] text-danger">
+          {error ? (t.errors[error as keyof typeof t.errors] ?? serverError(error)) : t.notFound}
+        </p>
         <Link className="mt-4 inline-block text-[13px] font-medium hover:underline" href="/documents">
-          Back to documents
+          {t.backToDocuments}
         </Link>
       </section>
     );
@@ -268,7 +274,7 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
           href="/documents"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          All documents
+          {t.allDocuments}
         </Link>
         <StatusPill status={normalizedStatus} />
       </div>
@@ -279,17 +285,17 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
             <FileText className="h-6 w-6 text-accent" strokeWidth={2.2} aria-hidden="true" />
           </div>
           <div className="min-w-0">
-            <p className="eyebrow">Document intelligence</p>
+            <p className="eyebrow">{t.eyebrow}</p>
             <h2 className="mt-1 truncate text-[20px] font-semibold leading-tight tracking-tight">{document.filename}</h2>
             <p className="mt-0.5 truncate font-mono text-[12px] text-ink-muted">
               {document.file_type.toUpperCase()} · {formatBytes(document.file_size)} ·{" "}
-              {intelligence?.chunk_count ?? document.chunk_count} chunks
+              {t.chunkCount(intelligence?.chunk_count ?? document.chunk_count)}
             </p>
           </div>
         </div>
         {document.status === "ready" ? (
           <div className="flex shrink-0 items-center gap-2">
-            <span className="text-[12px] font-semibold text-ink-muted">Export</span>
+            <span className="text-[12px] font-semibold text-ink-muted">{t.export}</span>
             <Button
               disabled={exportingFormat !== null}
               onClick={() => void handleExport("md")}
@@ -297,7 +303,7 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
               className="h-9 px-3"
             >
               <Download className="h-4 w-4" aria-hidden="true" />
-              {exportingFormat === "md" ? "Exporting..." : "Markdown"}
+              {exportingFormat === "md" ? t.exporting : "Markdown"}
             </Button>
             <Button
               disabled={exportingFormat !== null}
@@ -306,7 +312,7 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
               className="h-9 px-3"
             >
               <Download className="h-4 w-4" aria-hidden="true" />
-              {exportingFormat === "jsonl" ? "Exporting..." : "JSONL"}
+              {exportingFormat === "jsonl" ? t.exporting : "JSONL"}
             </Button>
           </div>
         ) : null}
@@ -314,31 +320,29 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
 
       {exportError ? (
         <p className="text-[13px] text-danger" role="alert">
-          {exportError}
+          {t.errors[exportError as keyof typeof t.errors] ?? serverError(exportError)}
         </p>
       ) : null}
 
       {normalizedStatus === "processing" ? (
         <section className="surface border-ink/15 px-5 py-4">
-          <h3 className="text-[15px] font-semibold tracking-tight">Indexing in progress</h3>
-          <p className="mt-1 text-[13px] leading-6 text-ink-muted">
-            Contexta is extracting text and creating searchable chunks. This page refreshes automatically every few seconds.
-          </p>
+          <h3 className="text-[15px] font-semibold tracking-tight">{t.processingTitle}</h3>
+          <p className="mt-1 text-[13px] leading-6 text-ink-muted">{t.processingBody}</p>
         </section>
       ) : null}
 
       {document.status === "failed" ? (
         <section className="rounded-card border border-danger-line bg-danger-soft p-5">
-          <h3 className="text-[15px] font-semibold tracking-tight text-danger">Processing failed</h3>
-          <p className="mt-1 text-[13px] leading-6 text-danger">{document.error_message || "The worker could not process this document."}</p>
+          <h3 className="text-[15px] font-semibold tracking-tight text-danger">{t.failedTitle}</h3>
+          <p className="mt-1 text-[13px] leading-6 text-danger">{serverError(document.error_message) || t.failedBody}</p>
           <Link className="mt-3 inline-block text-[13px] font-medium text-danger hover:underline" href="/documents">
-            Go back to documents to retry or delete it.
+            {t.failedBack}
           </Link>
         </section>
       ) : null}
 
       {document.status === "ready" && !intelligence ? (
-        <section className="surface p-5 text-[13px] text-ink-muted">Loading processed document details...</section>
+        <section className="surface p-5 text-[13px] text-ink-muted">{t.loadingDetails}</section>
       ) : null}
 
       {document.status === "ready" && intelligence ? (
@@ -350,34 +354,38 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
           <article className="surface p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
-                <p className="eyebrow">Summary</p>
-                <h3 className="mt-1 text-[17px] font-semibold tracking-tight">Automatic brief</h3>
+                <p className="eyebrow">{t.summaryEyebrow}</p>
+                <h3 className="mt-1 text-[17px] font-semibold tracking-tight">{t.summaryTitle}</h3>
               </div>
               <Button disabled={isGeneratingBrief || document.status !== "ready"} onClick={() => void handleGenerateBrief()}>
                 <Sparkles className="h-4 w-4" aria-hidden="true" />
-                {isGeneratingBrief ? "Generating..." : "Generate AI brief"}
+                {isGeneratingBrief ? t.generating : t.generateBrief}
               </Button>
             </div>
             <p className="mt-3 max-w-[950px] text-[13.5px] leading-6 text-ink">{intelligence.summary}</p>
-            {briefError ? <p className="mt-3 text-[13px] text-danger">{briefError}</p> : null}
+            {briefError ? (
+              <p className="mt-3 text-[13px] text-danger">
+                {t.errors[briefError as keyof typeof t.errors] ?? serverError(briefError)}
+              </p>
+            ) : null}
             {aiBrief ? (
               <div className="mt-4 max-w-[950px] rounded-card border border-paper-line bg-paper-soft px-4 py-3">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <h4 className="text-[13.5px] font-semibold">AI brief</h4>
+                  <h4 className="text-[13.5px] font-semibold">{t.aiBriefTitle}</h4>
                   <Button className="w-full sm:w-auto" onClick={() => void handleCopyBrief()} variant="secondary">
                     <Copy className="h-4 w-4" aria-hidden="true" />
-                    Copy brief
+                    {t.copyBrief}
                   </Button>
                 </div>
                 <FormattedBrief text={aiBrief} />
-                {copyMessage ? <p className="mt-3 text-[12px] text-ink-muted">{copyMessage}</p> : null}
+                {copyMessage ? <p className="mt-3 text-[12px] text-ink-muted">{t.notices[copyMessage]}</p> : null}
               </div>
             ) : null}
           </article>
 
           <article className="surface p-5">
-            <p className="eyebrow">Extracted</p>
-            <h3 className="mt-1 text-[17px] font-semibold tracking-tight">Key points</h3>
+            <p className="eyebrow">{t.extractedEyebrow}</p>
+            <h3 className="mt-1 text-[17px] font-semibold tracking-tight">{t.keyPointsTitle}</h3>
             {intelligence.key_points.length > 0 ? (
               <ul className="mt-3 grid gap-2 text-[13.5px] leading-6 lg:grid-cols-2">
                 {intelligence.key_points.map((point) => (
@@ -387,33 +395,33 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
                 ))}
               </ul>
             ) : (
-              <p className="mt-3 text-[13px] text-ink-muted">No text has been extracted yet.</p>
+              <p className="mt-3 text-[13px] text-ink-muted">{t.noText}</p>
             )}
           </article>
 
           <article className="surface grid gap-6 p-5 lg:grid-cols-[minmax(0,1fr)_360px]">
             <div className="min-w-0">
-              <p className="eyebrow">Entities</p>
-              <h3 className="mt-1 text-[17px] font-semibold tracking-tight">Detected fields</h3>
+              <p className="eyebrow">{t.entitiesEyebrow}</p>
+              <h3 className="mt-1 text-[17px] font-semibold tracking-tight">{t.detectedFields}</h3>
               <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 <div className="min-w-0">
-                  <p className="mb-2 text-[12px] font-medium text-ink-muted">Names</p>
-                  <FieldList empty="No names detected yet." items={intelligence.candidate_names} />
+                  <p className="mb-2 text-[12px] font-medium text-ink-muted">{t.names}</p>
+                  <FieldList empty={t.noNames} items={intelligence.candidate_names} />
                 </div>
                 <div className="min-w-0">
-                  <p className="mb-2 text-[12px] font-medium text-ink-muted">Emails</p>
-                  <FieldList empty="No emails detected yet." items={intelligence.emails} />
+                  <p className="mb-2 text-[12px] font-medium text-ink-muted">{t.emails}</p>
+                  <FieldList empty={t.noEmails} items={intelligence.emails} />
                 </div>
                 <div className="min-w-0">
-                  <p className="mb-2 text-[12px] font-medium text-ink-muted">Links</p>
-                  <FieldList empty="No links detected yet." items={intelligence.links} />
+                  <p className="mb-2 text-[12px] font-medium text-ink-muted">{t.links}</p>
+                  <FieldList empty={t.noLinks} items={intelligence.links} />
                 </div>
               </div>
             </div>
 
             <div className="min-w-0">
-              <p className="eyebrow">Ask</p>
-              <h3 className="mt-1 text-[17px] font-semibold tracking-tight">Suggested questions</h3>
+              <p className="eyebrow">{t.askEyebrow}</p>
+              <h3 className="mt-1 text-[17px] font-semibold tracking-tight">{t.suggestedTitle}</h3>
               <div className="mt-3 flex flex-col gap-2">
                 {intelligence.suggested_questions.map((question) => (
                   <Link

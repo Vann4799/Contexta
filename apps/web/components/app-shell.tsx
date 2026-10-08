@@ -5,9 +5,11 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Database } from "lucide-react";
 import { TopNav } from "@/components/top-nav";
+import { useT } from "@/lib/i18n";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 
 export function AppShell({ children }: { children: ReactNode }) {
+  const t = useT();
   const pathname = usePathname();
   const router = useRouter();
   const [authState, setAuthState] = useState<"checking" | "authenticated">("checking");
@@ -65,8 +67,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="mx-auto grid h-14 w-14 place-items-center rounded-card bg-night shadow-root">
             <Database className="h-6 w-6 text-accent" strokeWidth={2.2} aria-hidden="true" />
           </div>
-          <h1 className="mt-4 text-[22px] font-semibold tracking-tight">Checking access</h1>
-          <p className="mt-1 text-[13.5px] text-ink-muted">Please sign in to open your Contexta workspace.</p>
+          <h1 className="mt-4 text-[22px] font-semibold tracking-tight">{t.shell.checkingTitle}</h1>
+          <p className="mt-1 text-[13.5px] text-ink-muted">{t.shell.checkingBody}</p>
         </section>
       </main>
     );

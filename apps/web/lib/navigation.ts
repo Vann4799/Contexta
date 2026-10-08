@@ -1,9 +1,14 @@
+import type { Dictionary } from "@/locales/en";
+
 export type NavIcon = "dashboard" | "pipeline" | "documents" | "chat" | "convert";
 
-export const navigationItems: { href: string; label: string; icon: NavIcon }[] = [
-  { href: "/", label: "Dashboard", icon: "dashboard" },
-  { href: "/pipeline", label: "Pipeline", icon: "pipeline" },
-  { href: "/documents", label: "Documents", icon: "documents" },
-  { href: "/chat", label: "Chat", icon: "chat" },
-  { href: "/convert", label: "Convert", icon: "convert" }
+export type NavLabelKey = keyof Dictionary["shell"]["nav"];
+
+// Labels live in the dictionaries, so a nav item carries a key instead of display text.
+export const navigationItems: { href: string; labelKey: NavLabelKey; icon: NavIcon }[] = [
+  { href: "/", labelKey: "dashboard", icon: "dashboard" },
+  { href: "/pipeline", labelKey: "pipeline", icon: "pipeline" },
+  { href: "/documents", labelKey: "documents", icon: "documents" },
+  { href: "/chat", labelKey: "chat", icon: "chat" },
+  { href: "/convert", labelKey: "convert", icon: "convert" }
 ];

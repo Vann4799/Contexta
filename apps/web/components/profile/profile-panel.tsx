@@ -18,9 +18,14 @@ import {
   UserRound,
   type LucideIcon
 } from "lucide-react";
-import { DOCUMENT_TYPE_LABELS, getAccountSummary, type AccountSummary } from "@/lib/api";
+import { getAccountSummary, type AccountSummary } from "@/lib/api";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { useLocale, useT } from "@/lib/i18n";
+import { useServerError } from "@/lib/server-errors";
+import type { Dictionary } from "@/locales/en";
 import { Button } from "@/components/ui/button";
+
+type ProfileCopy = Dictionary["profile"];
 
 type ProfileRow = {
   id: string;
@@ -56,39 +61,35 @@ function formatBytes(bytes: number) {
   return `${size.toFixed(size >= 10 ? 0 : 1)} ${units[unitIndex]}`;
 }
 
-function formatDate(value: string | null) {
+function formatDate(value: string | null, locale: string, copy: ProfileCopy) {
   if (!value) {
-    return "Not available";
+    return copy.notAvailable;
   }
 
-  return new Intl.DateTimeFormat("id-ID", {
+  return new Intl.DateTimeFormat(locale, {
     day: "2-digit",
     month: "long",
     year: "numeric"
   }).format(new Date(value));
 }
 
-function formatRelative(value: string | null) {
+function formatRelative(value: string | null, locale: string, copy: ProfileCopy) {
   if (!value) {
     return null;
   }
 
   const elapsedDays = Math.floor((Date.now() - new Date(value).getTime()) / 86_400_000);
   if (elapsedDays <= 0) {
-    return "Today";
+    return copy.today;
   }
   if (elapsedDays === 1) {
-    return "Yesterday";
+    return copy.yesterday;
   }
   if (elapsedDays <= 30) {
-    return `${elapsedDays} days ago`;
+    return copy.daysAgo(elapsedDays);
   }
 
-  return formatDate(value);
-}
-
-function plural(count: number, noun: string) {
-  return `${count} ${noun}${count === 1 ? "" : "s"}`;
+  return formatDate(value, locale, copy);
 }
 
 function initialsFromProfile(profile: UserProfile | null) {
@@ -97,36 +98,57 @@ function initialsFromProfile(profile: UserProfile | null) {
   return words.slice(0, 2).map((word) => word[0]?.toUpperCase()).join("") || "CT";
 }
 
-const EMAIL_PASSWORD_LABEL = "Email & password";
+const EMAIL_SIGN_IN_PROVIDERS = ["email", "password"];
 
-const PROVIDER_LABELS: Record<string, string> = {
-  email: EMAIL_PASSWORD_LABEL,
-  password: EMAIL_PASSWORD_LABEL,
-  google: "Google",
-  github: "GitHub",
-  magiclink: "Magic link",
-  oauth: "OAuth"
+const PROVIDER_KEYS: Record<string, keyof Dictionary["profile"]["provider"]> = {
+  google: "google",
+  github: "github",
+  magiclink: "magicLink",
+  oauth: "oauth"
 };
 
-function providerLabel(provider: string) {
+function providerLabel(provider: string, copy: ProfileCopy) {
   if (!provider) {
     return null;
   }
 
-  const keyed = PROVIDER_LABELS[provider.toLowerCase()];
+  const name = provider.toLowerCase();
+  if (EMAIL_SIGN_IN_PROVIDERS.includes(name)) {
+    return copy.provider.emailAndPassword;
+  }
+
+  const keyed = PROVIDER_KEYS[name];
   if (keyed) {
-    return keyed;
+    return copy.provider[keyed];
   }
 
   return provider.charAt(0).toUpperCase() + provider.slice(1);
 }
 
-function profileErrorMessage(error: unknown) {
-  if (error instanceof Error) {
+function profileErrorKey(error: unknown, fallbackKey: string) {
+  if (error instanceof Error && error.message) {
     return error.message;
   }
 
-  return "Unable to load profile.";
+  return fallbackKey;
+}
+
+type ProfileMessage = { type: "success" | "error"; key: string };
+
+function profileMessageText(
+  message: ProfileMessage,
+  copy: ProfileCopy,
+  shell: Dictionary["shell"],
+  serverText: (message: string | null | undefined) => string
+) {
+  if (message.key === "saved") {
+    return copy.saved;
+  }
+  if (message.key === "signOutFailed") {
+    return shell.signOutFailed;
+  }
+
+  return copy.errors[message.key as keyof ProfileCopy["errors"]] ?? serverText(message.key);
 }
 
 function Chip({
@@ -156,13 +178,17 @@ function Chip({
 
 export function ProfilePanel() {
   const router = useRouter();
+  const t = useT();
+  const locale = useLocale();
+  const copy = t.profile;
+  const serverError = useServerError();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [displayName, setDisplayName] = useState("");
   const [summary, setSummary] = useState<AccountSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [message, setMessage] = useState<ProfileMessage | null>(null);
 
   const loadProfile = useCallback(async () => {
     setIsLoading(true);
@@ -206,7 +232,7 @@ export function ProfilePanel() {
       setSummary(await getAccountSummary(session.access_token));
     } catch (error) {
       setSummary(null);
-      setMessage({ type: "error", text: profileErrorMessage(error) });
+      setMessage({ type: "error", key: profileErrorKey(error, "loadFailed") });
     } finally {
       setIsLoading(false);
     }
@@ -219,27 +245,27 @@ export function ProfilePanel() {
   const stats = summary
     ? [
         {
-          label: "Documents",
+          label: copy.stats.documents,
           value: summary.documents.total.toString(),
-          helper: `${summary.documents.by_status.ready} ready, ${summary.documents.by_status.failed} failed`,
+          helper: copy.stats.documentsHelper(summary.documents.by_status.ready, summary.documents.by_status.failed),
           icon: FileText
         },
         {
-          label: "Chat sessions",
+          label: copy.stats.chatSessions,
           value: summary.sessions.toString(),
-          helper: `${plural(summary.activity.chats_7d, "question")} in the last 7 days`,
+          helper: copy.stats.questions7d(summary.activity.chats_7d),
           icon: MessageSquare
         },
         {
-          label: "Indexed chunks",
+          label: copy.stats.indexedChunks,
           value: summary.chunks.toString(),
-          helper: "Searchable text blocks",
+          helper: copy.stats.chunksHelper,
           icon: Database
         },
         {
-          label: "Storage used",
+          label: copy.stats.storageUsed,
           value: formatBytes(summary.storage_bytes),
-          helper: "Total size of uploaded files",
+          helper: copy.stats.storageHelper,
           icon: Save
         }
       ]
@@ -247,9 +273,9 @@ export function ProfilePanel() {
 
   const activity = summary
     ? [
-        { label: "Upload", count: summary.activity.uploads_7d, last: formatRelative(summary.activity.last_upload_at) },
-        { label: "Indexing", count: summary.activity.indexed_7d, last: formatRelative(summary.activity.last_index_at) },
-        { label: "Chat", count: summary.activity.chats_7d, last: formatRelative(summary.activity.last_chat_at) }
+        { label: copy.activity.upload, count: summary.activity.uploads_7d, last: formatRelative(summary.activity.last_upload_at, locale, copy) },
+        { label: copy.activity.indexing, count: summary.activity.indexed_7d, last: formatRelative(summary.activity.last_index_at, locale, copy) },
+        { label: copy.activity.chat, count: summary.activity.chats_7d, last: formatRelative(summary.activity.last_chat_at, locale, copy) }
       ]
     : [];
 
@@ -281,9 +307,9 @@ export function ProfilePanel() {
           display_name: trimmedDisplayName || null
         } : currentProfile.profile
       } : currentProfile);
-      setMessage({ type: "success", text: "Profile updated." });
+      setMessage({ type: "success", key: "saved" });
     } catch (error) {
-      setMessage({ type: "error", text: profileErrorMessage(error) });
+      setMessage({ type: "error", key: profileErrorKey(error, "saveFailed") });
     } finally {
       setIsSaving(false);
     }
@@ -304,19 +330,19 @@ export function ProfilePanel() {
       router.push("/login");
       router.refresh();
     } catch (error) {
-      setMessage({ type: "error", text: error instanceof Error ? error.message : "Sign out failed." });
+      setMessage({ type: "error", key: profileErrorKey(error, "signOutFailed") });
     } finally {
       setIsSigningOut(false);
     }
   }
 
   const accountItems = [
-    { label: "Email address", value: profile?.email || "Loading...", icon: Mail },
-    { label: "User ID", value: profile?.id || "Loading...", icon: KeyRound },
-    { label: "Joined", value: formatDate(profile?.createdAt ?? null), icon: CalendarDays }
+    { label: copy.emailLabel, value: profile?.email || copy.loading, icon: Mail },
+    { label: copy.userIdLabel, value: profile?.id || copy.loading, icon: KeyRound },
+    { label: copy.joined, value: formatDate(profile?.createdAt ?? null, locale, copy), icon: CalendarDays }
   ];
 
-  const signedInWith = profile ? providerLabel(profile.provider) : null;
+  const signedInWith = profile ? providerLabel(profile.provider, copy) : null;
   const topDocType = summary?.top_doc_type ?? null;
 
   return (
@@ -329,15 +355,15 @@ export function ProfilePanel() {
                 {initialsFromProfile(profile)}
               </div>
               <div className="min-w-0">
-                <p className="eyebrow">User Profile</p>
+                <p className="eyebrow">{copy.eyebrow}</p>
                 <h2 className="mt-1 truncate text-[26px] font-semibold text-ink">
-                  {profile?.fullName || profile?.email || "Contexta user"}
+                  {profile?.fullName || profile?.email || copy.userFallback}
                 </h2>
-                <p className="mt-1 truncate text-[13px] text-ink-muted">{profile?.email || "Loading account..."}</p>
+                <p className="mt-1 truncate text-[13px] text-ink-muted">{profile?.email || copy.loadingAccount}</p>
               </div>
             </div>
             <Button disabled={isSigningOut} onClick={handleSignOut} variant="secondary">
-              {isSigningOut ? "Signing out" : "Sign out"}
+              {isSigningOut ? t.shell.signingOut : t.shell.signOut}
             </Button>
           </div>
 
@@ -346,16 +372,16 @@ export function ProfilePanel() {
               {signedInWith ? <Chip icon={LogIn}>{signedInWith}</Chip> : null}
               {profile.emailConfirmedAt ? (
                 <Chip icon={BadgeCheck} tone="success">
-                  Email verified
+                  {copy.emailVerified}
                 </Chip>
               ) : (
                 <Chip icon={BadgeAlert} tone="warning">
-                  Email not verified
+                  {copy.emailNotVerified}
                 </Chip>
               )}
               {topDocType ? (
                 <Chip icon={FileText}>
-                  {DOCUMENT_TYPE_LABELS[topDocType.doc_type]} · {plural(topDocType.documents, "document")}
+                  {t.common.docTypes[topDocType.doc_type]} · {copy.documentCount(topDocType.documents)}
                 </Chip>
               ) : null}
             </div>
@@ -363,36 +389,36 @@ export function ProfilePanel() {
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
             <label className="grid gap-2 text-[13px] font-semibold text-ink" htmlFor="profile-display-name">
-              Display name
+              {copy.displayName}
               <input
                 className="h-10 rounded-control border border-paper-line bg-paper-card px-3 text-[13px] font-normal text-ink outline-none transition focus:border-ink"
                 disabled={isLoading || isSaving}
                 id="profile-display-name"
                 onChange={(event) => setDisplayName(event.target.value)}
-                placeholder="Add your display name"
+                placeholder={copy.displayNamePlaceholder}
                 value={displayName}
               />
             </label>
             <div className="grid gap-2 text-[13px] font-semibold text-ink">
-              Account email
+              {copy.accountEmail}
               <div className="flex h-10 items-center rounded-control border border-paper-line bg-paper px-3 text-[13px] font-normal text-ink-muted">
-                {profile?.email || "Loading..."}
+                {profile?.email || copy.loading}
               </div>
             </div>
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2">
             <Button disabled={isLoading || isSaving} onClick={handleSaveProfile}>
-              {isSaving ? "Saving" : "Save profile"}
+              {isSaving ? copy.saving : copy.save}
             </Button>
             <Button disabled={isLoading} onClick={() => void loadProfile()} variant="secondary">
-              Refresh
+              {copy.refresh}
             </Button>
           </div>
 
           {message ? (
             <p className={`mt-4 rounded-card border p-3 text-[13px] ${message.type === "success" ? "border-success-line bg-success-soft text-success-ink" : "border-danger-line bg-danger-soft text-danger"}`} role="alert">
-              {message.text}
+              {profileMessageText(message, copy, t.shell, serverError)}
             </p>
           ) : null}
         </article>
@@ -401,7 +427,7 @@ export function ProfilePanel() {
           <div className="flex h-10 w-10 items-center justify-center rounded-card bg-paper-chip text-ink">
             <UserRound className="h-5 w-5" strokeWidth={2.2} aria-hidden="true" />
           </div>
-          <h3 className="mt-4 text-[17px] font-semibold text-ink">Account Summary</h3>
+          <h3 className="mt-4 text-[17px] font-semibold text-ink">{copy.accountSummary}</h3>
           <div className="mt-4 space-y-3">
             {accountItems.map((item) => {
               const Icon = item.icon;
@@ -448,7 +474,7 @@ export function ProfilePanel() {
       </section>
 
       <section className="rounded-card border border-paper-line bg-paper-card p-6">
-        <h3 className="text-[17px] font-semibold text-ink">Activity in the last 7 days</h3>
+        <h3 className="text-[17px] font-semibold text-ink">{copy.activityTitle}</h3>
 
         {isLoading ? (
           <div aria-hidden="true" className="mt-4 h-[76px] animate-pulse rounded-control border border-paper-line bg-paper" />
@@ -459,28 +485,28 @@ export function ProfilePanel() {
                 <p className="text-[11.5px] font-semibold text-ink-muted">{item.label}</p>
                 <p className="nums mt-2 text-[24px] font-semibold text-ink">{item.count}</p>
                 <p className="mt-1 text-[11.5px] text-ink-muted">
-                  {item.last ? `Last: ${item.last}` : "No activity in this window"}
+                  {item.last ? copy.lastAt(item.last) : copy.noActivity}
                 </p>
               </div>
             ))}
           </div>
         ) : (
-          <p className="mt-4 text-[13px] text-danger">Activity numbers could not be loaded. Try Refresh.</p>
+          <p className="mt-4 text-[13px] text-danger">{copy.activityError}</p>
         )}
 
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-paper-line pt-4">
           <p className="text-[13px] text-ink-muted">
             {isLoading
-              ? "Loading API keys..."
+              ? copy.keysLine.loading
               : summary
-                ? `${plural(summary.developer.api_keys_active, "active key")} · ${summary.developer.api_requests_14d} requests in the last 14 days`
-                : "API key usage could not be loaded."}
+                ? copy.keysLine.summary(summary.developer.api_keys_active, summary.developer.api_requests_14d)
+                : copy.keysLine.error}
           </p>
           <Link
             className="focus-ring inline-flex h-10 items-center gap-2 rounded-control px-3 text-[13.5px] font-medium text-ink transition-colors hover:bg-paper-chip"
             href="/settings/developer"
           >
-            Manage API keys
+            {copy.manageKeys}
             <ArrowRight className="h-4 w-4" strokeWidth={2.1} aria-hidden="true" />
           </Link>
         </div>

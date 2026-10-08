@@ -3,18 +3,30 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getIndexingHealth, listDocuments, type DocumentItem, type IndexingHealth } from "@/lib/api";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
-import { buildPipelineSnapshot, SAMPLE_METRICS, TIMELINE_RANGES, type TimelineRange } from "@/lib/pipeline";
+import { useLocale, useT } from "@/lib/i18n";
+import type { Dictionary } from "@/locales/en";
+import { buildPipelineSnapshot, timelineRanges } from "@/lib/pipeline";
+import { useServerError } from "@/lib/server-errors";
 import { IndexHeader } from "@/components/pipeline/index-header";
 import { SynapseGraph } from "@/components/pipeline/synapse-graph";
 import { TimelineBar } from "@/components/pipeline/timeline-bar";
 
+type PipelineCopy = Dictionary["pipeline"];
+
 export function PipelineWorkspace() {
+  const t = useT();
+  const locale = useLocale();
+  const copy = t.pipeline;
+  const serverError = useServerError();
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [health, setHealth] = useState<IndexingHealth | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("all");
-  const [range, setRange] = useState<TimelineRange>(TIMELINE_RANGES[0]);
+  const [rangeId, setRangeId] = useState("24h");
+
+  const ranges = useMemo(() => timelineRanges(copy), [copy]);
+  const range = ranges.find((item) => item.id === rangeId) ?? ranges[0];
 
   const getAccessToken = useCallback(async () => {
     const supabase = getSupabaseBrowserClient();
@@ -28,7 +40,8 @@ export function PipelineWorkspace() {
     try {
       const accessToken = await getAccessToken();
       if (!accessToken) {
-        throw new Error("Sign in to view pipeline dynamics.");
+        setError("signIn");
+        return;
       }
 
       setDocuments(await listDocuments(accessToken));
@@ -38,7 +51,7 @@ export function PipelineWorkspace() {
         setHealth(null);
       }
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Unable to load pipeline dynamics.");
+      setError(loadError instanceof Error && loadError.message ? loadError.message : "failed");
     } finally {
       setIsLoading(false);
     }
@@ -62,7 +75,10 @@ export function PipelineWorkspace() {
     return () => window.clearInterval(intervalId);
   }, [load, pendingCount]);
 
-  const snapshot = useMemo(() => buildPipelineSnapshot(documents, health, range.hours), [documents, health, range.hours]);
+  const snapshot = useMemo(
+    () => buildPipelineSnapshot(documents, health, range.hours, copy, locale, serverError),
+    [copy, documents, health, locale, range.hours, serverError]
+  );
 
   const visibleClusters = useMemo(
     () => (activeTab === "all" ? snapshot.clusters : snapshot.clusters.filter((cluster) => cluster.id === activeTab)),
@@ -76,11 +92,14 @@ export function PipelineWorkspace() {
         health={health}
         isLoading={isLoading}
         metrics={snapshot.metrics}
-        sampleMetrics={SAMPLE_METRICS}
         onTabChange={setActiveTab}
       />
 
-      {error ? <section className="surface px-5 py-4 text-[13.5px] text-danger">{error}</section> : null}
+      {error ? (
+        <section className="surface px-5 py-4 text-[13.5px] text-danger">
+          {copy.errors[error as keyof PipelineCopy["errors"]] ?? serverError(error)}
+        </section>
+      ) : null}
 
       <SynapseGraph clusters={visibleClusters} root={snapshot.root} />
 
@@ -89,7 +108,8 @@ export function PipelineWorkspace() {
         ingestedChunks={snapshot.ingestedChunks}
         pendingCount={pendingCount}
         range={range}
-        onRangeChange={setRange}
+        ranges={ranges}
+        onRangeChange={(next) => setRangeId(next.id)}
       />
     </div>
   );

@@ -15,6 +15,9 @@ import {
   type DocumentItem
 } from "@/lib/api";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { useLocale, useT } from "@/lib/i18n";
+import { useServerError } from "@/lib/server-errors";
+import type { Dictionary } from "@/locales/en";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -25,25 +28,39 @@ const CHIP_CLASS = {
 } as const;
 
 type KeyState = "active" | "inactive" | "neutral";
+type DeveloperCopy = Dictionary["developer"];
+type StateWord = keyof DeveloperCopy["states"];
 
-function keyState(key: ApiKey): { state: KeyState; word: string } {
+function keyState(key: ApiKey): { state: KeyState; word: StateWord } {
   if (key.revoked_at) {
-    return { state: "inactive", word: "Revoked" };
+    return { state: "inactive", word: "revoked" };
   }
   if (key.expires_at && new Date(key.expires_at).getTime() <= Date.now()) {
-    return { state: "inactive", word: "Expired" };
+    return { state: "inactive", word: "expired" };
   }
-  return { state: "active", word: "Active" };
+  return { state: "active", word: "active" };
 }
 
-function formatDate(value: string | null) {
+function formatDate(value: string | null, locale: string, neverLabel: string) {
   if (!value) {
-    return "never";
+    return neverLabel;
   }
-  return new Date(value).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+  return new Date(value).toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" });
+}
+
+function developerErrorKey(error: unknown, fallbackKey: string) {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return fallbackKey;
 }
 
 export function DeveloperPanel() {
+  const t = useT();
+  const locale = useLocale();
+  const copy = t.developer;
+  const serverError = useServerError();
   const [keys, setKeys] = useState<ApiKey[]>([]);
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -71,14 +88,14 @@ export function DeveloperPanel() {
     try {
       const accessToken = await getAccessToken();
       if (!accessToken) {
-        setError("Sign in to manage API keys.");
+        setError("signIn");
         return;
       }
       const [keyRows, documentRows] = await Promise.all([listApiKeys(accessToken), listDocuments(accessToken)]);
       setKeys(keyRows);
       setDocuments(documentRows);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Unable to load API keys.");
+      setError(developerErrorKey(loadError, "loadFailed"));
     } finally {
       setIsRefreshing(false);
       setIsLoading(false);
@@ -93,7 +110,7 @@ export function DeveloperPanel() {
 
   const handleCreate = async () => {
     if (!name.trim() || (!scopeAll && selectedDocs.length === 0)) {
-      setError("Give the key a name, and pick at least one document if it is scoped.");
+      setError("needName");
       return;
     }
     setError(null);
@@ -101,7 +118,7 @@ export function DeveloperPanel() {
     try {
       const accessToken = await getAccessToken();
       if (!accessToken) {
-        setError("Sign in to create an API key.");
+        setError("signInCreate");
         return;
       }
       const created = await createApiKey(accessToken, name.trim(), scopeAll ? [] : selectedDocs);
@@ -112,7 +129,7 @@ export function DeveloperPanel() {
       setScopeAll(true);
       setKeys(await listApiKeys(accessToken));
     } catch (createError) {
-      setError(createError instanceof Error ? createError.message : "Unable to create an API key.");
+      setError(developerErrorKey(createError, "createFailed"));
     } finally {
       setIsCreating(false);
     }
@@ -126,7 +143,7 @@ export function DeveloperPanel() {
       await navigator.clipboard.writeText(createdKey.api_key);
       setIsCopied(true);
     } catch {
-      setError("The browser blocked clipboard access. Select the key and copy it manually.");
+      setError("clipboard");
     }
   };
 
@@ -136,13 +153,13 @@ export function DeveloperPanel() {
     try {
       const accessToken = await getAccessToken();
       if (!accessToken) {
-        setError("Sign in to revoke this key.");
+        setError("signInRevoke");
         return;
       }
       const revoked = await revokeApiKey(accessToken, keyId);
       setKeys((current) => current.map((item) => (item.id === keyId ? revoked : item)));
     } catch (revokeError) {
-      setError(revokeError instanceof Error ? revokeError.message : "Unable to revoke this key.");
+      setError(developerErrorKey(revokeError, "revokeFailed"));
     } finally {
       setRevokingId(null);
     }
@@ -162,87 +179,82 @@ export function DeveloperPanel() {
     try {
       const accessToken = await getAccessToken();
       if (!accessToken) {
-        setError("Sign in to load usage.");
+        setError("signInUsage");
         return;
       }
       const usage = await getApiKeyUsage(accessToken, keyId, 14);
       setUsageByKeyId((current) => ({ ...current, [keyId]: usage }));
     } catch (usageError) {
-      setError(usageError instanceof Error ? usageError.message : "Unable to load usage for this key.");
+      setError(developerErrorKey(usageError, "usageFailed"));
     } finally {
       setIsLoadingUsage(null);
     }
   };
 
   if (isLoading) {
-    return <p className="text-[13px] text-ink-muted">Loading developer settings...</p>;
+    return <p className="text-[13px] text-ink-muted">{copy.loading}</p>;
   }
 
   return (
     <div className="space-y-3">
       <section className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="eyebrow">Developer</p>
-          <h2 className="mt-2 text-[26px] font-semibold text-ink">API keys</h2>
-          <p className="mt-2 max-w-2xl text-[13px] text-ink-muted">
-            Machine access to retrieval over your indexed documents. Keys are limited to 60 requests a minute and 5.000 a
-            day, and every call is logged for 90 days.
-          </p>
+          <p className="eyebrow">{copy.eyebrow}</p>
+          <h2 className="mt-2 text-[26px] font-semibold text-ink">{copy.title}</h2>
+          <p className="mt-2 max-w-2xl text-[13px] text-ink-muted">{copy.description}</p>
         </div>
         <Button disabled={isRefreshing} onClick={() => void load()} variant="secondary">
           <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} aria-hidden="true" />
-          Refresh
+          {copy.refresh}
         </Button>
       </section>
 
       {error ? (
         <p className="rounded-control border border-danger-line bg-danger-soft px-3 py-2 text-[13px] text-danger" role="alert">
-          {error}
+          {copy.errors[error as keyof DeveloperCopy["errors"]] ?? serverError(error)}
         </p>
       ) : null}
 
       {createdKey ? (
         <section className="rounded-card border border-accent bg-paper-card p-5" aria-live="polite">
-          <h3 className="text-[15px] font-semibold text-ink">Copy it now — this is the only time it is shown</h3>
-          <p className="mt-1 text-[13px] text-ink-muted">
-            Contexta stores only a hash of the key, so a lost one cannot be recovered; revoke it and create a new one.
-          </p>
+          <h3 className="text-[15px] font-semibold text-ink">{copy.createdTitle}</h3>
+          <p className="mt-1 text-[13px] text-ink-muted">{copy.createdBody}</p>
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <code className="min-w-0 flex-1 break-all rounded-control border border-paper-line bg-paper px-3 py-2 font-mono text-[13px] text-ink">
               {createdKey.api_key}
             </code>
             <Button onClick={() => void handleCopy()} variant="primary">
               {isCopied ? <Check className="h-4 w-4" aria-hidden="true" /> : <Copy className="h-4 w-4" aria-hidden="true" />}
-              {isCopied ? "Copied" : "Copy"}
+              {isCopied ? copy.copied : copy.copy}
             </Button>
             <Button onClick={() => setCreatedKey(null)} variant="ghost">
-              Done
+              {copy.done}
             </Button>
           </div>
         </section>
       ) : null}
 
       <section className="rounded-card border border-paper-line bg-paper-card p-6">
-        <h3 className="text-[17px] font-semibold text-ink">Create a key</h3>
+        <h3 className="text-[17px] font-semibold text-ink">{copy.createTitle}</h3>
         <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
           <label className="block">
-            <span className="text-[13px] font-semibold text-ink">Name</span>
+            <span className="text-[13px] font-semibold text-ink">{copy.nameLabel}</span>
             <input
               value={name}
               maxLength={60}
               onChange={(event) => setName(event.target.value)}
-              placeholder="notebook, CI, internal tool..."
+              placeholder={copy.namePlaceholder}
               className="mt-2 h-10 w-full rounded-control border border-paper-line bg-paper px-3 text-[13px] text-ink outline-none focus:border-ink"
             />
           </label>
           <Button disabled={isCreating} onClick={() => void handleCreate()} variant="primary">
             <KeyRound className="h-4 w-4" aria-hidden="true" />
-            {isCreating ? "Creating..." : "Create key"}
+            {isCreating ? copy.creating : copy.createKey}
           </Button>
         </div>
 
         <fieldset className="mt-4 border-0 p-0">
-          <legend className="text-[13px] font-semibold text-ink">Documents this key may read</legend>
+          <legend className="text-[13px] font-semibold text-ink">{copy.scopeLegend}</legend>
           <div className="mt-2 flex flex-wrap gap-2">
             <button
               type="button"
@@ -252,7 +264,7 @@ export function DeveloperPanel() {
                 scopeAll ? "border-ink bg-night text-white" : "border-paper-line bg-paper text-ink-muted hover:border-ink"
               )}
             >
-              All documents
+              {copy.scopeAll}
             </button>
             <button
               type="button"
@@ -262,14 +274,14 @@ export function DeveloperPanel() {
                 !scopeAll ? "border-ink bg-night text-white" : "border-paper-line bg-paper text-ink-muted hover:border-ink"
               )}
             >
-              Selected only
+              {copy.scopeSelected}
             </button>
           </div>
 
           {!scopeAll ? (
             <div className="mt-3 max-h-52 overflow-y-auto rounded-control border border-paper-line bg-paper p-3">
               {readyDocuments.length === 0 ? (
-                <p className="text-[13px] text-ink-muted">No indexed document to select yet.</p>
+                <p className="text-[13px] text-ink-muted">{copy.noReadyDocuments}</p>
               ) : (
                 <ul className="space-y-1.5">
                   {readyDocuments.map((document) => (
@@ -298,9 +310,9 @@ export function DeveloperPanel() {
       </section>
 
       <section className="rounded-card border border-paper-line bg-paper-card p-6">
-        <h3 className="text-[17px] font-semibold text-ink">Existing keys</h3>
+        <h3 className="text-[17px] font-semibold text-ink">{copy.existingTitle}</h3>
         {keys.length === 0 ? (
-          <p className="mt-3 text-[13px] text-ink-muted">No API key created yet.</p>
+          <p className="mt-3 text-[13px] text-ink-muted">{copy.emptyKeys}</p>
         ) : (
           <ul className="mt-4 space-y-3">
             {keys.map((key) => {
@@ -312,16 +324,15 @@ export function DeveloperPanel() {
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-[14px] font-semibold text-ink">{key.name}</span>
-                        <span className={cn("chip", CHIP_CLASS[state.state])}>{state.word}</span>
+                        <span className={cn("chip", CHIP_CLASS[state.state])}>{copy.states[state.word]}</span>
                       </div>
                       <p className="mt-1 font-mono text-[12.5px] text-ink-muted">
                         {key.key_prefix}...{key.last_four}
                       </p>
                       <p className="mt-1 text-[12.5px] text-ink-muted">
-                        {key.document_ids.length === 0
-                          ? "All documents"
-                          : `${key.document_ids.length} document${key.document_ids.length === 1 ? "" : "s"}`}{" "}
-                        · created {formatDate(key.created_at)} · last used {formatDate(key.last_used_at)}
+                        {key.document_ids.length === 0 ? copy.scopeAll : copy.documentCount(key.document_ids.length)}{" "}
+                        · {copy.createdOn(formatDate(key.created_at, locale, copy.never))} ·{" "}
+                        {copy.lastUsedOn(formatDate(key.last_used_at, locale, copy.never))}
                       </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
@@ -331,7 +342,7 @@ export function DeveloperPanel() {
                         variant="ghost"
                         className="h-9 px-3"
                       >
-                        {isLoadingUsage === key.id ? "Loading..." : usage ? "Hide usage" : "Usage"}
+                        {isLoadingUsage === key.id ? copy.loadingShort : usage ? copy.hideUsage : copy.usage}
                       </Button>
                       {key.revoked_at ? null : (
                         <Button
@@ -341,7 +352,7 @@ export function DeveloperPanel() {
                           className="h-9 px-3"
                         >
                           <Trash2 className="h-4 w-4" aria-hidden="true" />
-                          {revokingId === key.id ? "Revoking..." : "Revoke"}
+                          {revokingId === key.id ? copy.revoking : copy.revoke}
                         </Button>
                       )}
                     </div>
@@ -350,8 +361,7 @@ export function DeveloperPanel() {
                   {usage ? (
                     <div className="mt-3 border-t border-paper-line pt-3">
                       <p className="text-[12.5px] font-semibold text-ink">
-                        {usage.total} request{usage.total === 1 ? "" : "s"} in the last {usage.days} days ·{" "}
-                        {usage.allowed} allowed · {usage.rejected} rejected
+                        {copy.usageSummary(usage.total, usage.days, usage.allowed, usage.rejected)}
                       </p>
                       <ul className="mt-2 space-y-1">
                         {usage.by_day
@@ -359,17 +369,19 @@ export function DeveloperPanel() {
                           .map((day) => (
                             <li key={day.date} className="flex items-center gap-3 text-[12.5px] text-ink-muted">
                               <span className="w-24 shrink-0">{day.date}</span>
-                              <span className="text-success-ink">{day.allowed} ok</span>
-                              {day.rejected > 0 ? <span className="text-danger">{day.rejected} blocked</span> : null}
+                              <span className="text-success-ink">{copy.dayAllowed(day.allowed)}</span>
+                              {day.rejected > 0 ? (
+                                <span className="text-danger">{copy.dayRejected(day.rejected)}</span>
+                              ) : null}
                             </li>
                           ))}
                         {usage.by_day.every((day) => day.allowed + day.rejected === 0) ? (
-                          <li className="text-[12.5px] text-ink-muted">No requests recorded yet.</li>
+                          <li className="text-[12.5px] text-ink-muted">{copy.noRequests}</li>
                         ) : null}
                       </ul>
                       {Object.keys(usage.by_outcome).some((outcome) => outcome !== "allowed") ? (
                         <p className="mt-2 text-[12.5px] text-ink-muted">
-                          Rejected by cause:{" "}
+                          {copy.rejectedByCause}{" "}
                           {Object.entries(usage.by_outcome)
                             .filter(([outcome]) => outcome !== "allowed")
                             .map(([outcome, count]) => `${outcome} ${count}`)
@@ -386,11 +398,10 @@ export function DeveloperPanel() {
       </section>
 
       <section className="rounded-card border border-paper-line bg-paper-card p-6">
-        <h3 className="text-[17px] font-semibold text-ink">Using a key</h3>
+        <h3 className="text-[17px] font-semibold text-ink">{copy.usingTitle}</h3>
         <p className="mt-2 text-[13px] text-ink-muted">
-          Retrieval only — no answer generation. Send the key as a bearer token; a browser login token is not accepted
-          here. Full endpoint reference lives in <code className="font-mono">docs/api-v1.md</code>. The same key works on
-          our MCP server at <code className="font-mono">/mcp</code> for Claude, Cursor, or any other MCP client.
+          {copy.usingIntro} <code className="font-mono">docs/api-v1.md</code>. {copy.usingMcp}{" "}
+          <code className="font-mono">/mcp</code> {copy.usingMcpTail}
         </p>
         <pre className="mt-4 overflow-x-auto rounded-control border border-paper-line bg-paper p-4 font-mono text-[12.5px] leading-6 text-ink">
           {`curl -X POST ${publicApiBaseUrl()}/v1/retrieve \\

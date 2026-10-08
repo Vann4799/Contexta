@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { CHUNK_PAGE_SIZE, listDocumentChunks, type DocumentChunksPage } from "@/lib/api";
+import { useT } from "@/lib/i18n";
+import { useServerError } from "@/lib/server-errors";
 import { cn } from "@/lib/utils";
 
 type DocumentChunksTableProps = {
@@ -38,6 +40,8 @@ function pageWindow(current: number, total: number): (number | "gap")[] {
 }
 
 export function DocumentChunksTable({ documentId, getAccessToken }: DocumentChunksTableProps) {
+  const t = useT().documents.chunks;
+  const serverError = useServerError();
   const [page, setPage] = useState(1);
   const [chunks, setChunks] = useState<DocumentChunksPage | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -50,12 +54,12 @@ export function DocumentChunksTable({ documentId, getAccessToken }: DocumentChun
     try {
       const accessToken = await getAccessToken();
       if (!accessToken) {
-        throw new Error("Sign in to view chunks.");
+        throw new Error("signIn");
       }
 
       setChunks(await listDocumentChunks(accessToken, documentId, page, CHUNK_PAGE_SIZE));
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Unable to load chunks.");
+      setError(loadError instanceof Error ? loadError.message : "failed");
     } finally {
       setIsLoading(false);
     }
@@ -81,15 +85,15 @@ export function DocumentChunksTable({ documentId, getAccessToken }: DocumentChun
     <section className="surface p-5">
       <div className="flex flex-col gap-1.5 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="eyebrow">Chunks</p>
-          <h3 className="mt-1 text-[17px] font-semibold tracking-tight">Chunk lines</h3>
+          <p className="eyebrow">{t.eyebrow}</p>
+          <h3 className="mt-1 text-[17px] font-semibold tracking-tight">{t.title}</h3>
         </div>
         <p className="nums text-[12px] text-ink-muted">
           {chunks
             ? chunks.total === 0
-              ? "0 chunks"
-              : `${firstRow + 1}\u2013${lastRow} of ${chunks.total}`
-            : "Counting chunks..."}
+              ? t.zero
+              : t.range(firstRow + 1, lastRow, chunks.total)
+            : t.counting}
         </p>
       </div>
 
@@ -98,31 +102,31 @@ export function DocumentChunksTable({ documentId, getAccessToken }: DocumentChun
           <thead>
             <tr className="border-b border-paper-line">
               <th className="eyebrow w-14 px-3 py-2 font-semibold">#</th>
-              <th className="eyebrow w-16 px-3 py-2 font-semibold">Page</th>
-              <th className="eyebrow w-20 px-3 py-2 font-semibold">Chars</th>
-              <th className="eyebrow px-3 py-2 font-semibold">Preview</th>
+              <th className="eyebrow w-16 px-3 py-2 font-semibold">{t.colPage}</th>
+              <th className="eyebrow w-20 px-3 py-2 font-semibold">{t.colChars}</th>
+              <th className="eyebrow px-3 py-2 font-semibold">{t.colPreview}</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <tr>
                 <td className="px-3 py-6 text-ink-muted" colSpan={4}>
-                  Loading chunks...
+                  {t.loading}
                 </td>
               </tr>
             ) : error ? (
               <tr>
                 <td className="px-3 py-6" colSpan={4}>
-                  <p className="text-[13px] text-danger">{error}</p>
+                  <p className="text-[13px] text-danger">{t.errors[error as keyof typeof t.errors] ?? serverError(error)}</p>
                   <button className="focus-ring mt-2 text-[12.5px] font-medium hover:underline" onClick={() => void loadPage()}>
-                    Retry
+                    {t.retry}
                   </button>
                 </td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
                 <td className="px-3 py-6 text-ink-muted" colSpan={4}>
-                  No chunks stored for this document yet.
+                  {t.empty}
                 </td>
               </tr>
             ) : (
@@ -145,7 +149,7 @@ export function DocumentChunksTable({ documentId, getAccessToken }: DocumentChun
                           <span className="font-mono">{chunk.section_path}</span>
                         ) : null}
                         {chunk.is_table ? (
-                          <span className="rounded-chip bg-paper-chip px-1.5 py-0.5">table</span>
+                          <span className="rounded-chip bg-paper-chip px-1.5 py-0.5">{t.tableTag}</span>
                         ) : null}
                       </p>
                     ) : null}
@@ -158,9 +162,9 @@ export function DocumentChunksTable({ documentId, getAccessToken }: DocumentChun
         </table>
       </div>
 
-      <nav aria-label="Chunk pages" className="mt-4 flex items-center justify-center gap-1.5">
+      <nav aria-label={t.pages} className="mt-4 flex items-center justify-center gap-1.5">
         <button
-          aria-label="Previous chunk page"
+          aria-label={t.previous}
           className="focus-ring inline-flex h-8 w-8 items-center justify-center rounded-control border border-paper-line bg-paper-soft text-ink-muted transition-colors hover:bg-paper-card disabled:cursor-not-allowed disabled:opacity-40"
           disabled={page <= 1 || isLoading}
           onClick={() => gotoPage(page - 1)}
@@ -190,7 +194,7 @@ export function DocumentChunksTable({ documentId, getAccessToken }: DocumentChun
           )
         )}
         <button
-          aria-label="Next chunk page"
+          aria-label={t.next}
           className="focus-ring inline-flex h-8 w-8 items-center justify-center rounded-control border border-paper-line bg-paper-soft text-ink-muted transition-colors hover:bg-paper-card disabled:cursor-not-allowed disabled:opacity-40"
           disabled={page >= totalPages || isLoading}
           onClick={() => gotoPage(page + 1)}

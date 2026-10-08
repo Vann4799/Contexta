@@ -10,17 +10,6 @@ export type DocumentType =
   | "reference"
   | "other";
 
-export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
-  unclassified: "Unclassified",
-  sop: "SOP",
-  policy: "Policy",
-  contract: "Contract",
-  report: "Report",
-  thesis: "Thesis / paper",
-  reference: "Reference",
-  other: "Other"
-};
-
 export type DocumentItem = {
   id: string;
   user_id: string;
@@ -150,6 +139,10 @@ const CHAT_ANSWER_TIMEOUT_MS = 120000;
 /** Multipart uploads wait on the user's uplink: 50 MB at a slow connection is minutes, not seconds. */
 const FILE_TRANSFER_TIMEOUT_MS = 300000;
 
+// Compared by identity in the chat panel to tell "user cancelled" from a real failure, so
+// this stays a stable protocol marker and must never be routed through the UI dictionaries.
+export const REQUEST_CANCELED_MESSAGE = "Request canceled.";
+
 function apiBaseUrls() {
   const primaryUrl = apiBaseUrl().replace(/\/$/, "");
   const urls = [primaryUrl];
@@ -194,7 +187,7 @@ async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
-      throw new Error(requestSignal?.aborted ? "Request canceled." : "Request timed out. Please try again.");
+      throw new Error(requestSignal?.aborted ? REQUEST_CANCELED_MESSAGE : "Request timed out. Please try again.");
     }
     throw error;
   } finally {

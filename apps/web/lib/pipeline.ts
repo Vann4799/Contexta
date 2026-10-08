@@ -1,5 +1,8 @@
 import type { DocumentItem, IndexingHealth } from "@/lib/api";
+import type { Dictionary } from "@/locales/en";
 import { formatBytes } from "@/lib/utils";
+
+export type PipelineCopy = Dictionary["pipeline"];
 
 export type PipelineClusterId = "indexed" | "queue" | "failed";
 
@@ -23,7 +26,7 @@ export type ChunkNode = { key: string; label: string; collapsed: boolean };
  * Chunks are addressed by index server-side, so the drawn positions are real
  * addresses - not text previews.
  */
-export function chunkFan(documentId: string, chunkCount: number): ChunkNode[] {
+export function chunkFan(documentId: string, chunkCount: number, locale = "en"): ChunkNode[] {
   const drawn = Math.min(chunkCount, CHUNK_FAN_LIMIT);
   const nodes: ChunkNode[] = Array.from({ length: drawn }, (_, index) => ({
     key: `${documentId}-chunk-${index}`,
@@ -32,13 +35,16 @@ export function chunkFan(documentId: string, chunkCount: number): ChunkNode[] {
   }));
   const rest = chunkCount - drawn;
   if (rest > 0) {
-    nodes.push({ key: `${documentId}-chunk-rest`, label: `+${countFormat(rest)}`, collapsed: true });
+    nodes.push({ key: `${documentId}-chunk-rest`, label: `+${countFormat(rest, locale)}`, collapsed: true });
   }
   return nodes;
 }
 
 /** Every chunk becomes exactly one point in the collection. */
 export const VECTOR_SHAPE = "384d";
+
+/** Collection the worker writes to. Reported here until the API exposes it on /health/vector. */
+export const VECTOR_COLLECTION = "contexta_chunks";
 
 export type PipelineCluster = {
   id: PipelineClusterId;
@@ -67,28 +73,34 @@ export type PipelineSnapshot = {
   ingestedChunks: string;
 };
 
-export const VIEW_TABS: { id: "all" | PipelineClusterId; label: string }[] = [
-  { id: "all", label: "All nodes" },
-  { id: "indexed", label: "Indexed chunks" },
-  { id: "queue", label: "Ingestion queue" },
-  { id: "failed", label: "Failed jobs" }
-];
+export function viewTabs(copy: PipelineCopy): { id: "all" | PipelineClusterId; label: string }[] {
+  return [
+    { id: "all", label: copy.tabs.all },
+    { id: "indexed", label: copy.tabs.indexed },
+    { id: "queue", label: copy.tabs.queue },
+    { id: "failed", label: copy.tabs.failed }
+  ];
+}
 
 export type TimelineRange = { id: string; label: string; hours: number };
 
-export const TIMELINE_RANGES: TimelineRange[] = [
-  { id: "24h", label: "Past 24 Hours", hours: 24 },
-  { id: "7d", label: "Past 7 Days", hours: 24 * 7 },
-  { id: "30d", label: "Past 30 Days", hours: 24 * 30 }
-];
+export function timelineRanges(copy: PipelineCopy): TimelineRange[] {
+  return [
+    { id: "24h", label: copy.timeline.ranges.d24h, hours: 24 },
+    { id: "7d", label: copy.timeline.ranges.d7d, hours: 24 * 7 },
+    { id: "30d", label: copy.timeline.ranges.d30d, hours: 24 * 30 }
+  ];
+}
 
 /** Headline numbers the API does not measure yet - rendered as labelled samples. */
-export const SAMPLE_METRICS: PipelineMetric[] = [
-  { label: "Query Latency", value: "142", unit: "ms" },
-  { label: "Retrieval Score", value: "0.94", unit: "cos" },
-  { label: "Hit Rate", value: "99.2", unit: "%" },
-  { label: "Cache Ratio", value: "68.4", unit: "%" }
-];
+export function sampleMetrics(copy: PipelineCopy): PipelineMetric[] {
+  return [
+    { label: copy.sampleLabels.queryLatency, value: "142", unit: "ms" },
+    { label: copy.sampleLabels.retrievalScore, value: "0.94", unit: "cos" },
+    { label: copy.sampleLabels.hitRate, value: "99.2", unit: "%" },
+    { label: copy.sampleLabels.cacheRatio, value: "68.4", unit: "%" }
+  ];
+}
 
 const LEAF_LIMIT = 4;
 
@@ -96,43 +108,47 @@ const LEAF_LIMIT = 4;
 export const OVERFLOW_LEAF_ID = "overflow";
 
 /** Keeps a cluster honest: when the card counts more documents than it draws, the remainder gets its own branch. */
-function withOverflow(items: PipelineLeaf[], total: number): PipelineLeaf[] {
+function withOverflow(items: PipelineLeaf[], total: number, copy: PipelineCopy): PipelineLeaf[] {
   if (total <= items.length) {
     return items;
   }
-  return [...items, { id: OVERFLOW_LEAF_ID, name: `+${total - items.length} more in this cluster`, href: "/documents" }];
+  return [...items, { id: OVERFLOW_LEAF_ID, name: copy.leaf.moreInCluster(total - items.length), href: "/documents" }];
 }
 
-function countFormat(value: number) {
-  return new Intl.NumberFormat("en-US").format(value);
+function countFormat(value: number, locale = "en") {
+  return new Intl.NumberFormat(locale).format(value);
 }
 
-function plural(value: number, word: string) {
-  return `${countFormat(value)} ${word}${value === 1 ? "" : "s"}`;
-}
-
-function relativeTime(value: string, now: number) {
+function relativeTime(value: string, now: number, copy: PipelineCopy) {
   const minutes = Math.max(0, Math.round((now - new Date(value).getTime()) / 60000));
   if (minutes < 60) {
-    return `${minutes}m ago`;
+    return copy.leaf.agoMinutes(minutes);
   }
 
   const hours = Math.round(minutes / 60);
   if (hours < 24) {
-    return `${hours}h ago`;
+    return copy.leaf.agoHours(hours);
   }
 
-  return `${Math.round(hours / 24)}d ago`;
+  return copy.leaf.agoDays(Math.round(hours / 24));
 }
 
 function truncate(value: string, length: number) {
-  return value.length > length ? `${value.slice(0, length - 1)}...` : value;
+  if (value.length <= length) {
+    return value;
+  }
+  const clipped = value.slice(0, length - 1);
+  const lastSpace = clipped.lastIndexOf(" ");
+  return `${lastSpace > 8 ? clipped.slice(0, lastSpace) : clipped.trimEnd()}...`;
 }
 
 export function buildPipelineSnapshot(
   documents: DocumentItem[],
   health: IndexingHealth | null,
   rangeHours: number,
+  copy: PipelineCopy,
+  locale: string,
+  errorText: (message: string) => string,
   now = Date.now()
 ): PipelineSnapshot {
   const readyDocuments = documents.filter((document) => document.status === "ready");
@@ -150,19 +166,20 @@ export function buildPipelineSnapshot(
   if (readyDocuments.length > 0) {
     clusters.push({
       id: "indexed",
-      title: "Indexed Chunks",
-      subtitle: `${plural(totalChunks, "chunk")} in Qdrant`,
-      badge: { label: "Ready", tone: "lime" },
+      title: copy.clusters.indexed.title,
+      subtitle: copy.clusters.indexed.subtitle(copy.chunkCount(totalChunks)),
+      badge: { label: copy.clusters.indexed.badge, tone: "lime" },
       items: withOverflow(
         [...readyDocuments].sort(byRecent).slice(0, LEAF_LIMIT).map((document) => ({
           id: document.id,
           name: truncate(document.filename, 34),
-          meta: `[${countFormat(document.chunk_count)} tok]`,
+          meta: copy.leaf.tokens(countFormat(document.chunk_count, locale)),
           tag: document.file_type.toUpperCase(),
           chunkCount: document.chunk_count,
           href: `/documents/${document.id}`
         })),
-        readyDocuments.length
+        readyDocuments.length,
+        copy
       )
     });
   }
@@ -170,20 +187,21 @@ export function buildPipelineSnapshot(
   if (queuedDocuments.length + processingDocuments.length > 0) {
     clusters.push({
       id: "queue",
-      title: "Ingestion Queue",
-      subtitle: `${queueDepth} queued - ${processingDocuments.length} processing`,
-      badge: { label: "Live", tone: "dark" },
+      title: copy.clusters.queue.title,
+      subtitle: copy.clusters.queue.subtitle(queueDepth, processingDocuments.length),
+      badge: { label: copy.clusters.queue.badge, tone: "dark" },
       items: withOverflow(
         [...queuedDocuments, ...processingDocuments].sort(byRecent).slice(0, LEAF_LIMIT).map((document) => ({
           id: document.id,
           name: truncate(document.filename, 34),
-          meta: relativeTime(document.updated_at, now),
-          tag: document.status === "uploaded" ? "QUEUED" : "WORKING",
+          meta: relativeTime(document.updated_at, now, copy),
+          tag: document.status === "uploaded" ? copy.tags.queued : copy.tags.working,
           dot: document.status === "processing",
           chunkCount: document.chunk_count,
           href: `/documents/${document.id}`
         })),
-        queuedDocuments.length + processingDocuments.length
+        queuedDocuments.length + processingDocuments.length,
+        copy
       )
     });
   }
@@ -191,18 +209,19 @@ export function buildPipelineSnapshot(
   if (failedDocuments.length > 0) {
     clusters.push({
       id: "failed",
-      title: "Failed Jobs",
-      subtitle: `${failedDocuments.length} document${failedDocuments.length === 1 ? "" : "s"} need a retry`,
+      title: copy.clusters.failed.title,
+      subtitle: copy.clusters.failed.subtitle(failedDocuments.length),
       items: withOverflow(
         failedDocuments.sort(byRecent).slice(0, LEAF_LIMIT).map((document) => ({
           id: document.id,
           name: truncate(document.filename, 34),
-          meta: truncate(document.error_message ?? "Worker error", 28),
-          tag: "RETRY",
+          meta: truncate(errorText(document.error_message ?? copy.leaf.workerError), 28),
+          tag: copy.tags.retry,
           chunkCount: document.chunk_count,
           href: `/documents/${document.id}`
         })),
-        failedDocuments.length
+        failedDocuments.length,
+        copy
       )
     });
   }
@@ -214,24 +233,30 @@ export function buildPipelineSnapshot(
     .map((timestamp) => Math.min(1, Math.max(0, (timestamp - windowStart) / (now - windowStart))))
     .sort((a, b) => a - b);
 
+  const storage = formatBytes(totalStorage).split(" ");
+
   return {
     metrics: [
-      { label: "Documents", value: countFormat(documents.length), unit: "files" },
-      { label: "Ready", value: countFormat(readyDocuments.length), unit: "indexed" },
-      { label: "In queue", value: countFormat(queueDepth + processingDocuments.length), unit: "pending" },
-      { label: "Chunks", value: countFormat(totalChunks), unit: "vectors" },
-      { label: "Storage", value: formatBytes(totalStorage).split(" ")[0], unit: formatBytes(totalStorage).split(" ")[1] }
+      { label: copy.metrics.documents, value: countFormat(documents.length, locale), unit: copy.metricUnits.files },
+      { label: copy.metrics.ready, value: countFormat(readyDocuments.length, locale), unit: copy.metricUnits.indexed },
+      {
+        label: copy.metrics.inQueue,
+        value: countFormat(queueDepth + processingDocuments.length, locale),
+        unit: copy.metricUnits.pending
+      },
+      { label: copy.metrics.chunks, value: countFormat(totalChunks, locale), unit: copy.metricUnits.vectors },
+      { label: copy.metrics.storage, value: storage[0], unit: storage[1] ?? "" }
     ],
     root: {
-      name: "Contexta Workspace",
+      name: copy.rootName,
       engine: "Qdrant",
-      collection: "contexta_chunks",
-      primary: plural(totalChunks, "chunk"),
-      clusters: `${clusters.length} active`,
-      files: countFormat(documents.length)
+      collection: VECTOR_COLLECTION,
+      primary: copy.chunkCount(totalChunks),
+      clusters: copy.activeClusters(clusters.length),
+      files: countFormat(documents.length, locale)
     },
     clusters,
     events,
-    ingestedChunks: plural(totalChunks, "chunk")
+    ingestedChunks: copy.chunkCount(totalChunks)
   };
 }

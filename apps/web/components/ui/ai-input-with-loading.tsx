@@ -4,6 +4,7 @@ import { CornerRightUp } from "lucide-react";
 import type { FormEvent, ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
+import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useAutoResizeTextarea } from "@/components/hooks/use-auto-resize-textarea";
 
@@ -24,7 +25,7 @@ interface AIInputWithLoadingProps {
 
 export function AIInputWithLoading({
   id = "ai-input-with-loading",
-  placeholder = "Ask me anything!",
+  placeholder,
   minHeight = 56,
   maxHeight = 200,
   onSubmit,
@@ -36,6 +37,7 @@ export function AIInputWithLoading({
   helperText,
   initialValue = ""
 }: AIInputWithLoadingProps) {
+  const t = useT().chat;
   const [inputValue, setInputValue] = useState(initialValue);
   const { textareaRef, adjustHeight } = useAutoResizeTextarea({ minHeight, maxHeight });
 
@@ -101,7 +103,7 @@ export function AIInputWithLoading({
             )}
             type="button"
             disabled={disabled || (!isLoading && !inputValue.trim())}
-            aria-label={isLoading ? "Cancel response" : "Send message"}
+            aria-label={isLoading ? t.cancelResponse : t.send}
           >
             {isLoading ? (
               <div

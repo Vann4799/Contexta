@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AlertTriangle, ChevronRight, FileInput, Layers, Minus, Plus, RotateCcw, Waypoints, type LucideIcon } from "lucide-react";
 import type { PipelineCluster, PipelineClusterId, PipelineRoot } from "@/lib/pipeline";
 import { chunkFan, OVERFLOW_LEAF_ID, VECTOR_SHAPE } from "@/lib/pipeline";
+import { useLocale, useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 const CLUSTER_ICONS: Record<PipelineClusterId, LucideIcon> = {
@@ -39,6 +40,9 @@ type SynapseGraphProps = {
 };
 
 export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
+  const t = useT();
+  const locale = useLocale();
+  const copy = t.pipeline;
   const stageRef = useRef<HTMLDivElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const clusterRefs = useRef(new Map<string, HTMLElement>());
@@ -56,7 +60,7 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
   const openChunkCount = realLeaves
     .filter((leaf) => (leaf.chunkCount ?? 0) > 0 && openDocs.has(leaf.id))
     .reduce((sum, leaf) => {
-      const fan = chunkFan(leaf.id, leaf.chunkCount ?? 0);
+      const fan = chunkFan(leaf.id, leaf.chunkCount ?? 0, locale);
       return sum + fan.length + fan.filter((node) => !node.collapsed).length;
     }, 0);
   const nodeCount = 1 + clusters.length + realLeaves.length + openChunkCount;
@@ -216,7 +220,7 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
 
   return (
     <section
-      aria-label="Live synapse graph"
+      aria-label={copy.graph.ariaLabel}
       className="relative overflow-hidden rounded-card border border-paper-line bg-paper-deep"
       style={{
         backgroundImage: "linear-gradient(to right, rgb(19 19 21 / 0.05) 1px, transparent 1px)",
@@ -226,13 +230,13 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
       <div className="absolute left-5 top-5 z-20 flex items-center gap-1 rounded-card border border-paper-line bg-paper-card p-1 shadow-node lg:left-12 lg:top-11">
         <span className="flex items-center gap-2 px-2.5 text-[13px] text-ink-muted">
           <Waypoints className="h-4 w-4 text-ink" aria-hidden="true" />
-          <span className="hidden sm:inline">Live Synapse Graph</span>
+          <span className="hidden sm:inline">{copy.graph.title}</span>
         </span>
         <span className="mx-1 h-5 w-px bg-paper-line" />
-        <ToolButton label="Zoom out" onClick={() => setZoom((z) => Math.max(MIN_ZOOM, +(z - 0.1).toFixed(2)))}>
+        <ToolButton label={copy.graph.zoomOut} onClick={() => setZoom((z) => Math.max(MIN_ZOOM, +(z - 0.1).toFixed(2)))}>
           <Minus className="h-3.5 w-3.5" aria-hidden="true" />
         </ToolButton>
-        <ToolButton label="Zoom in" onClick={() => setZoom((z) => Math.min(MAX_ZOOM, +(z + 0.1).toFixed(2)))}>
+        <ToolButton label={copy.graph.zoomIn} onClick={() => setZoom((z) => Math.min(MAX_ZOOM, +(z + 0.1).toFixed(2)))}>
           <Plus className="h-3.5 w-3.5" aria-hidden="true" />
         </ToolButton>
         <button
@@ -244,9 +248,9 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
             setOpenDocs(new Set());
           }}
         >
-          <RotateCcw className="h-3 w-3" aria-hidden="true" /> Reset
+          <RotateCcw className="h-3 w-3" aria-hidden="true" /> {copy.graph.reset}
         </button>
-        <span className="nums px-2.5 font-mono text-[12.5px] font-medium text-ink">Nodes: {nodeCount}</span>
+        <span className="nums px-2.5 font-mono text-[12.5px] font-medium text-ink">{copy.graph.nodes(nodeCount)}</span>
       </div>
 
       <div
@@ -327,7 +331,7 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
 
             <div className="flex min-w-0 flex-1 flex-col gap-8">
               {clusters.length === 0 ? (
-                <p className="text-[13px] text-ink-muted">No nodes in this view - pick another tab or upload a document.</p>
+                <p className="text-[13px] text-ink-muted">{copy.graph.empty}</p>
               ) : null}
               {clusters.map((cluster) => (
                 <div
@@ -367,7 +371,7 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
       </div>
 
       <p className="pointer-events-none absolute bottom-3 right-4 z-20 hidden font-mono text-[10.5px] uppercase tracking-[0.14em] text-ink-faint lg:block">
-        drag to pan - expand a file to fan its chunks
+        {copy.graph.hint}
       </p>
     </section>
   );
@@ -387,12 +391,14 @@ function ToolButton({ label, onClick, children }: { label: string; onClick: () =
 }
 
 function RootCard({ root }: { root: PipelineRoot }) {
+  const t = useT();
+  const graphCopy = t.pipeline.graph;
   return (
     <div className="rounded-card bg-night p-4 text-white shadow-root ring-1 ring-black/40">
       <div className="flex items-center justify-between">
         <span className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-accent">
           <span className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-accent" aria-hidden="true" />
-          Knowledge Root
+          {graphCopy.knowledgeRoot}
         </span>
         <span className="rounded bg-night-raised px-1.5 py-0.5 font-mono text-[10px] text-white/70">{root.engine}</span>
       </div>
@@ -402,11 +408,11 @@ function RootCard({ root }: { root: PipelineRoot }) {
       <div className="my-4 h-px bg-night-line" />
       <dl className="grid grid-cols-2 gap-2">
         <div>
-          <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/45">Clusters</dt>
+          <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/45">{graphCopy.clustersLabel}</dt>
           <dd className="mt-0.5 text-[14px] font-semibold">{root.clusters}</dd>
         </div>
         <div>
-          <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/45">Documents</dt>
+          <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/45">{graphCopy.documentsLabel}</dt>
           <dd className="nums mt-0.5 font-mono text-[14px] font-semibold">{root.files}</dd>
         </div>
       </dl>
@@ -461,9 +467,12 @@ type LeafNodeProps = {
 };
 
 function LeafNode({ item, open, onToggle }: LeafNodeProps) {
+  const t = useT();
+  const locale = useLocale();
+  const copy = t.pipeline;
   const isOverflow = item.id === OVERFLOW_LEAF_ID;
   const chunkCount = item.chunkCount ?? 0;
-  const fan = open && chunkCount > 0 ? chunkFan(item.id, chunkCount) : [];
+  const fan = open && chunkCount > 0 ? chunkFan(item.id, chunkCount, locale) : [];
 
   return (
     <div>
@@ -499,11 +508,11 @@ function LeafNode({ item, open, onToggle }: LeafNodeProps) {
                 : "border-paper-line bg-paper-soft text-ink-muted hover:border-ink/30 hover:text-ink"
             )}
             onClick={onToggle}
-            title={open ? "Collapse chunk positions" : `Fan out ${chunkCount} chunk positions`}
+            title={open ? copy.fan.collapse : copy.fan.expand(chunkCount)}
             type="button"
           >
             <ChevronRight className={cn("h-3 w-3 transition-transform", open && "rotate-90")} aria-hidden="true" />
-            <span className="nums">{chunkCount} {chunkCount === 1 ? "chunk" : "chunks"}</span>
+            <span className="nums">{copy.chunkCount(chunkCount)}</span>
           </button>
         ) : null}
       </div>
@@ -517,25 +526,25 @@ function LeafNode({ item, open, onToggle }: LeafNodeProps) {
                   className="focus-ring inline-flex h-6 shrink-0 items-center rounded-control border border-dashed border-paper-edge bg-paper-soft px-2 font-mono text-[11px] text-ink-muted transition hover:border-ink/30 hover:text-ink"
                   data-chunk={node.key}
                   href={item.href}
-                  title="Open the document to read every chunk"
+                  title={copy.fan.openDocument}
                 >
                   <span className="nums">{node.label}</span>
-                  <span className="ml-1 text-[10px] uppercase tracking-[0.1em]">more</span>
+                  <span className="ml-1 text-[10px] uppercase tracking-[0.1em]">{copy.fan.more}</span>
                 </Link>
               ) : (
                 <span
                   className="inline-flex h-6 shrink-0 items-center rounded-control border border-paper-line bg-paper-card px-2 font-mono text-[11px] text-ink shadow-node"
                   data-chunk={node.key}
-                  title={`Chunk position ${node.label.slice(1)} of ${chunkCount} - the text itself lives in the document`}
+                  title={copy.fan.position(node.label.slice(1), String(chunkCount))}
                 >
                   <span className="nums">{node.label}</span>
-                  <span className="ml-1 text-[10px] uppercase tracking-[0.1em] text-ink-faint">chunk</span>
+                  <span className="ml-1 text-[10px] uppercase tracking-[0.1em] text-ink-faint">{copy.fan.chunk}</span>
                 </span>
               )}
               {node.collapsed ? null : (
                 <span className="inline-flex h-5 shrink-0 items-center rounded-control bg-night-raised px-1.5 font-mono text-[10px] text-white/75" data-vector={node.key}>
                   <span className="mr-1 h-1 w-1 rounded-full bg-accent" aria-hidden="true" />
-                  {VECTOR_SHAPE} point
+                  {copy.fan.point(VECTOR_SHAPE)}
                 </span>
               )}
             </div>

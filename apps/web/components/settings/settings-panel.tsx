@@ -14,14 +14,27 @@ import {
   SlidersHorizontal
 } from "lucide-react";
 import { getApiHealth, getIndexingHealth, getVectorHealth } from "@/lib/api";
+import { useT } from "@/lib/i18n";
+import type { Dictionary } from "@/locales/en";
 
 type CheckState = "checking" | "ok" | "warn" | "down";
+type SettingsCopy = Dictionary["settings"];
+type StatusId = keyof SettingsCopy["services"];
+type StatusWord = keyof SettingsCopy["words"];
+
+type QueueCounts = {
+  queued: number;
+  processing: number;
+  stale: number;
+  minutes: number;
+};
 
 type StatusRow = {
-  label: string;
+  id: StatusId;
   state: CheckState;
-  word: string;
+  word: StatusWord;
   detail: string;
+  queue: QueueCounts | null;
 };
 
 const CHIP_CLASS: Record<CheckState, string> = {
@@ -33,13 +46,25 @@ const CHIP_CLASS: Record<CheckState, string> = {
 
 function initialState(): StatusRow[] {
   return [
-    { label: "API service", state: "checking", word: "Checking", detail: "Pinging /health" },
-    { label: "Vector store", state: "checking", word: "Checking", detail: "Pinging /health/vector" },
-    { label: "Indexing queue", state: "checking", word: "Checking", detail: "Reading /health/indexing" }
+    { id: "api", state: "checking", word: "checking", detail: "pingHealth", queue: null },
+    { id: "vector", state: "checking", word: "checking", detail: "pingVector", queue: null },
+    { id: "indexing", state: "checking", word: "checking", detail: "pingIndexing", queue: null }
   ];
 }
 
+function statusDetail(row: StatusRow, copy: SettingsCopy) {
+  if (row.queue) {
+    return copy.details.queueCounts(row.queue.queued, row.queue.processing, row.queue.stale, row.queue.minutes);
+  }
+
+  const resolved = copy.details[row.detail as keyof SettingsCopy["details"]];
+
+  return typeof resolved === "string" ? resolved : row.detail;
+}
+
 export function SettingsPanel() {
+  const t = useT();
+  const copy = t.settings;
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8001";
   const [statusRows, setStatusRows] = useState<StatusRow[]>(initialState);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -56,29 +81,32 @@ export function SettingsPanel() {
 
     setStatusRows([
       {
-        label: "API service",
+        id: "api",
         state: api ? "ok" : "down",
-        word: api ? "Reachable" : "Unreachable",
-        detail: api ? api.service : "The API did not answer /health."
+        word: api ? "reachable" : "unreachable",
+        detail: api ? api.service : "apiUnreachable",
+        queue: null
       },
       {
-        label: "Vector store",
+        id: "vector",
         state: !vector ? "down" : vector.status === "ok" ? "ok" : "down",
-        word: vector && vector.status === "ok" ? "Reachable" : "Unreachable",
-        detail: !vector
-          ? "Status unknown — no answer from the API."
-          : vector.status === "ok"
-            ? "Qdrant reported healthy."
-            : "Qdrant is not reachable from the API."
+        word: vector && vector.status === "ok" ? "reachable" : "unreachable",
+        detail: !vector ? "unknown" : vector.status === "ok" ? "vectorOk" : "vectorUnreachable",
+        queue: null
       },
       {
-        label: "Indexing queue",
+        id: "indexing",
         state: !indexing ? "down" : indexing.status === "ok" ? "ok" : "warn",
-        word: !indexing ? "No answer" : indexing.status === "ok" ? "Active" : "Needs attention",
-        detail: !indexing
-          ? "Status unknown — no answer from the API."
-          : `${indexing.queued_documents} queued, ${indexing.processing_documents} processing, ` +
-            `${indexing.stale_processing_documents} stale over ${indexing.stale_after_minutes} min.`
+        word: !indexing ? "noAnswer" : indexing.status === "ok" ? "active" : "needsAttention",
+        detail: !indexing ? "unknown" : "queueCounts",
+        queue: indexing
+          ? {
+              queued: indexing.queued_documents,
+              processing: indexing.processing_documents,
+              stale: indexing.stale_processing_documents,
+              minutes: indexing.stale_after_minutes
+            }
+          : null
       }
     ]);
     setIsRefreshing(false);
@@ -89,28 +117,26 @@ export function SettingsPanel() {
   }, [runChecks]);
 
   const runtimeItems = [
-    { label: "API base URL", value: apiBaseUrl, icon: Server },
-    { label: "Vector collection", value: "contexta_chunks", icon: Database },
-    { label: "Supported uploads", value: "PDF and DOCX up to 50 MB", icon: FileUp },
-    { label: "Answer generation", value: "DeepSeek API", icon: Bot }
+    { label: copy.runtime.apiBaseUrl, value: apiBaseUrl, icon: Server },
+    { label: copy.runtime.vectorCollection, value: "contexta_chunks", icon: Database },
+    { label: copy.runtime.supportedUploads, value: copy.runtime.supportedUploadsValue, icon: FileUp },
+    { label: copy.runtime.answerGeneration, value: "DeepSeek API", icon: Bot }
   ];
 
   const capabilityItems = [
-    { label: "Authentication", value: "Supabase email sign-in", icon: ShieldCheck },
-    { label: "Document storage", value: "Supabase Storage", icon: HardDrive },
-    { label: "Vector search", value: "Qdrant, called by the API", icon: Database },
-    { label: "Private keys", value: "Server env only, never sent here", icon: KeyRound }
+    { label: copy.capabilities.authentication, value: copy.capabilities.authenticationValue, icon: ShieldCheck },
+    { label: copy.capabilities.documentStorage, value: copy.capabilities.documentStorageValue, icon: HardDrive },
+    { label: copy.capabilities.vectorSearch, value: copy.capabilities.vectorSearchValue, icon: Database },
+    { label: copy.capabilities.privateKeys, value: copy.capabilities.privateKeysValue, icon: KeyRound }
   ];
 
   return (
     <div className="space-y-3">
       <section className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="eyebrow">Workspace Settings</p>
-          <h2 className="mt-2 text-[26px] font-semibold text-ink">System controls</h2>
-          <p className="mt-2 max-w-2xl text-[13px] text-ink-muted">
-            Read-only configuration for this workspace. Core secrets stay on the API server and are not exposed here.
-          </p>
+          <p className="eyebrow">{copy.eyebrow}</p>
+          <h2 className="mt-2 text-[26px] font-semibold text-ink">{copy.title}</h2>
+          <p className="mt-2 max-w-2xl text-[13px] text-ink-muted">{copy.description}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link
@@ -118,19 +144,19 @@ export function SettingsPanel() {
             className="inline-flex h-10 items-center justify-center gap-2 rounded-card border border-paper-line bg-paper px-4 text-[13px] font-semibold text-ink transition hover:border-ink"
           >
             <KeyRound className="h-4 w-4" strokeWidth={2.1} aria-hidden="true" />
-            API keys
+            {copy.apiKeys}
           </Link>
           <Link
             href="/documents"
             className="inline-flex h-10 items-center justify-center rounded-card border border-paper-line bg-paper-card px-4 text-[13px] font-semibold text-ink transition hover:border-ink hover:text-ink"
           >
-            Manage documents
+            {copy.manageDocuments}
           </Link>
           <Link
             href="/chat"
             className="inline-flex h-10 items-center justify-center rounded-card border border-ink bg-night px-4 text-[13px] font-semibold text-white transition hover:bg-night-raised"
           >
-            Open chat
+            {copy.openChat}
           </Link>
         </div>
       </section>
@@ -142,8 +168,8 @@ export function SettingsPanel() {
               <SlidersHorizontal className="h-5 w-5" strokeWidth={2.2} aria-hidden="true" />
             </div>
             <div>
-              <h3 className="text-[17px] font-semibold text-ink">Runtime Status</h3>
-              <p className="mt-1 text-[13px] text-ink-muted">Configuration currently used by the web app and API.</p>
+              <h3 className="text-[17px] font-semibold text-ink">{copy.runtimeTitle}</h3>
+              <p className="mt-1 text-[13px] text-ink-muted">{copy.runtimeSubtitle}</p>
             </div>
           </div>
 
@@ -167,21 +193,16 @@ export function SettingsPanel() {
 
         <aside className="space-y-4 lg:col-span-4">
           <article className="rounded-card border border-paper-line bg-paper-card p-5">
-            <h3 className="text-[17px] font-semibold text-ink">Edit access</h3>
+            <h3 className="text-[17px] font-semibold text-ink">{copy.editAccessTitle}</h3>
             <div className="mt-4 rounded-control border border-paper-line bg-paper p-4">
-              <p className="text-[13px] font-semibold text-ink">Nothing here is writable</p>
-              <p className="mt-1 text-[13px] text-ink-muted">
-                Changing these values means editing the API server environment and restarting the service.
-              </p>
+              <p className="text-[13px] font-semibold text-ink">{copy.editAccessHead}</p>
+              <p className="mt-1 text-[13px] text-ink-muted">{copy.editAccessBody}</p>
             </div>
           </article>
 
           <article className="rounded-card border border-paper-line bg-paper-card p-5">
-            <h3 className="text-[17px] font-semibold text-ink">Security Note</h3>
-            <p className="mt-3 text-[13px] leading-6 text-ink-muted">
-              Supabase service role, DeepSeek key, and database credentials must stay in backend `.env` files. The web
-              app should only receive public client settings.
-            </p>
+            <h3 className="text-[17px] font-semibold text-ink">{copy.securityTitle}</h3>
+            <p className="mt-3 text-[13px] leading-6 text-ink-muted">{copy.securityBody}</p>
           </article>
         </aside>
       </section>
@@ -192,7 +213,7 @@ export function SettingsPanel() {
           return (
             <article key={item.label} className="rounded-card border border-paper-line bg-paper-card p-5">
               <div className="flex h-10 w-10 items-center justify-center rounded-card bg-paper-chip text-ink">
-                <Icon className="h-5 w-5" strokeWidth={2.2} aria-hidden="true" />
+                <Icon className="h-5 w-5" strokeWidth={2.1} aria-hidden="true" />
               </div>
               <h3 className="mt-4 text-[15px] font-semibold text-ink">{item.label}</h3>
               <p className="mt-1 text-[13px] text-ink-muted">{item.value}</p>
@@ -203,7 +224,7 @@ export function SettingsPanel() {
 
       <section className="rounded-card border border-paper-line bg-paper-card p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="text-[17px] font-semibold text-ink">Service Status</h3>
+          <h3 className="text-[17px] font-semibold text-ink">{copy.serviceTitle}</h3>
           <button
             type="button"
             onClick={() => void runChecks()}
@@ -211,25 +232,29 @@ export function SettingsPanel() {
             className="focus-ring inline-flex h-9 items-center gap-2 rounded-control border border-paper-line bg-paper px-3 text-[13px] font-semibold text-ink transition hover:border-ink disabled:opacity-60"
           >
             <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} aria-hidden="true" />
-            {isRefreshing ? "Checking" : "Re-check"}
+            {isRefreshing ? copy.checking : copy.recheck}
           </button>
         </div>
 
         <div className="mt-4 grid gap-3 md:grid-cols-3">
-          {statusRows.map((row) => (
-            <div
-              key={row.label}
-              className="rounded-card border border-paper-line bg-paper p-4"
-              role="status"
-              aria-label={`${row.label}: ${row.word}`}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[13px] font-semibold text-ink">{row.label}</span>
-                <span className={`chip ${CHIP_CLASS[row.state]}`}>{row.word}</span>
+          {statusRows.map((row) => {
+            const label = copy.services[row.id];
+            const word = copy.words[row.word];
+            return (
+              <div
+                key={row.id}
+                className="rounded-card border border-paper-line bg-paper p-4"
+                role="status"
+                aria-label={`${label}: ${word}`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[13px] font-semibold text-ink">{label}</span>
+                  <span className={`chip ${CHIP_CLASS[row.state]}`}>{word}</span>
+                </div>
+                <p className="mt-2 text-[13px] leading-6 text-ink-muted">{statusDetail(row, copy)}</p>
               </div>
-              <p className="mt-2 text-[13px] leading-6 text-ink-muted">{row.detail}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
     </div>

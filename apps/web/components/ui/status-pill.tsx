@@ -1,3 +1,6 @@
+"use client";
+
+import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type Status = "ready" | "processing" | "failed";
@@ -8,13 +11,9 @@ const styles: Record<Status, string> = {
   failed: "border-danger-line bg-danger-soft text-danger"
 };
 
-const labels: Record<Status, string> = {
-  ready: "Ready",
-  processing: "Processing",
-  failed: "Failed"
-};
-
 export function StatusPill({ status, className = "" }: { status: Status; className?: string }) {
+  const labels = useT().common.status;
+
   return (
     <span
       className={cn(
