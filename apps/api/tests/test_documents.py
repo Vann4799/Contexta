@@ -891,9 +891,15 @@ async def test_supabase_storage_url_encodes_path_segments(
 class RecordingDeleteClient:
     """Mirrors httpx.AsyncClient.delete's signature so an unsupported argument fails."""
 
-    def __init__(self, captured: dict[str, object], status_code: int) -> None:
+    def __init__(
+        self,
+        captured: dict[str, object],
+        status_code: int,
+        text: str = "",
+    ) -> None:
         self._captured = captured
         self.status_code = status_code
+        self.text = text
 
     async def __aenter__(self) -> "RecordingDeleteClient":
         return self
@@ -911,12 +917,20 @@ class RecordingDeleteClient:
     ) -> "FakeDeleteResponse":
         self._captured["url"] = url
         self._captured["headers"] = headers
-        return FakeDeleteResponse(self.status_code)
+        return FakeDeleteResponse(self.status_code, self.text)
+
+
+# Verbatim from a live DELETE of an absent key: Supabase reports it as 400, not 404.
+MISSING_OBJECT_BODY = (
+    '{"statusCode":"404","error":"not_found",'
+    '"message":"Object not found","code":"NoSuchKey"}'
+)
 
 
 class FakeDeleteResponse:
-    def __init__(self, status_code: int) -> None:
+    def __init__(self, status_code: int, text: str = "") -> None:
         self.status_code = status_code
+        self.text = text
 
     def raise_for_status(self) -> None:
         if self.status_code >= 400:
@@ -965,3 +979,46 @@ async def test_supabase_storage_delete_tolerates_missing_object(
     )
 
     await storage.delete_document(f"{USER_ID}/{DOCUMENT_ID}/probe-latency.pdf")
+
+
+@pytest.mark.asyncio
+async def test_supabase_storage_delete_tolerates_the_400_not_found_shape(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+    monkeypatch.setattr(
+        "app.documents.storage.httpx.AsyncClient",
+        lambda *args, **kwargs: RecordingDeleteClient(
+            captured, 400, MISSING_OBJECT_BODY
+        ),
+    )
+
+    storage = SupabaseDocumentStorage(
+        "https://example.supabase.co",
+        "service-role-key",
+        "documents",
+    )
+
+    await storage.delete_document(f"{USER_ID}/{DOCUMENT_ID}/qa-probe-register.pdf")
+
+
+@pytest.mark.asyncio
+async def test_supabase_storage_delete_still_raises_on_other_client_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+    monkeypatch.setattr(
+        "app.documents.storage.httpx.AsyncClient",
+        lambda *args, **kwargs: RecordingDeleteClient(
+            captured, 400, '{"error":"invalid_request","message":"Bucket disabled"}'
+        ),
+    )
+
+    storage = SupabaseDocumentStorage(
+        "https://example.supabase.co",
+        "service-role-key",
+        "documents",
+    )
+
+    with pytest.raises(RuntimeError, match="storage delete failed: 400"):
+        await storage.delete_document(f"{USER_ID}/{DOCUMENT_ID}/report.pdf")

@@ -17,6 +17,17 @@ class DocumentStorage(Protocol):
         ...
 
 
+# Supabase Storage reports a missing key as HTTP 400 with the real status in the
+# body ({"statusCode":"404","error":"not_found","code":"NoSuchKey"}), not as 404.
+def _is_missing_object(response: httpx.Response) -> bool:
+    if response.status_code == 404:
+        return True
+    if response.status_code != 400:
+        return False
+    body = response.text
+    return "not_found" in body or "NoSuchKey" in body
+
+
 class SupabaseDocumentStorage:
     def __init__(
         self,
@@ -65,7 +76,7 @@ class SupabaseDocumentStorage:
         )
         async with httpx.AsyncClient() as client:
             response = await client.delete(url, headers=headers)
-            if response.status_code == 404:
+            if _is_missing_object(response):
                 return
             response.raise_for_status()
 
