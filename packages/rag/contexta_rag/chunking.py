@@ -328,8 +328,9 @@ def _heading(words: list[str]) -> tuple[int, str] | None:
 def _is_section_title(title: str) -> bool:
     """Accept only headings that read like a section name.
 
-    MarkItDown turns page numbers, raw HTML and figure captions into '#' lines,
-    and every one of them would otherwise be stored as a chunk's section_path.
+    The extractor's font-size heuristic turns page numbers, raw HTML and figure
+    captions into '#' lines, and every one of them would otherwise be stored as a
+    chunk's section_path.
     The word cap is the caption separator: the longest real title in the indexed
     corpus is 7 words, every screenshot caption emitted as a heading is longer.
     Rejecting too much is the safe direction - the chunk then keeps the section

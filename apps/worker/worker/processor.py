@@ -9,10 +9,12 @@ from typing import Literal, NamedTuple, Protocol, TypedDict
 
 try:
     from contexta_rag.chunking import chunk_pages
+    from contexta_rag.extraction import ExtractedDocument, ExtractedPage
 except ModuleNotFoundError:
     rag_package_path = Path(__file__).resolve().parents[3] / "packages" / "rag"
     sys.path.append(str(rag_package_path))
     from contexta_rag.chunking import chunk_pages
+    from contexta_rag.extraction import ExtractedDocument, ExtractedPage
 
 
 logger = logging.getLogger(__name__)
@@ -46,15 +48,6 @@ class ProcessingDocument(TypedDict, total=False):
     doc_type: str
     doc_version: str
     source_url: str
-
-
-class ExtractedPage(TypedDict):
-    page_number: int
-    text: str
-
-
-class ExtractedDocument(TypedDict):
-    pages: list[ExtractedPage]
 
 
 class ProcessingChunk(TypedDict):

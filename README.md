@@ -11,7 +11,7 @@ Contexta is currently an MVP for a single-user document intelligence workspace. 
 - background indexing into Qdrant.
 - grounded chat with citations.
 - document intelligence pages.
-- PDF to Markdown conversion with MarkItDown.
+- PDF to Markdown conversion with the same extractor that builds the index.
 
 ## Apps
 
