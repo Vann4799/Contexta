@@ -223,7 +223,7 @@ def _workspace_bytes(
                     entry.write(
                         json_line(conversation_record(session, message))
                     )
-            yield from sink.drain()
+                yield from sink.drain()
     finally:
         archive.close()
 

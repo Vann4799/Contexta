@@ -4,6 +4,7 @@ import io
 import json
 import zipfile
 from datetime import datetime, timezone
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -17,6 +18,7 @@ from app.core.config import Settings, get_settings
 from app.documents.models import DocumentCreate, DocumentResponse
 from app.documents.repository import InMemoryDocumentRepository
 from app.documents.routes import get_document_repository
+from app.export import routes as export_routes
 from app.main import app
 
 
@@ -395,3 +397,46 @@ def test_browser_can_read_the_export_filename_from_a_cross_origin_call() -> None
     exposed = response.headers.get("access-control-expose-headers", "")
     assert "content-disposition" in exposed.lower()
     setup_module(None)
+
+
+def test_the_conversation_member_streams_out_instead_of_buffering(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """workspace.md and chunks.jsonl leave one document at a time; conversations
+    used to wait for the whole chat history because it drained only once."""
+    pending: list[int] = []
+    real_stream = export_routes._PushStream
+
+    class WatchingStream(real_stream):
+        def drain(self):
+            pending.append(sum(len(part) for part in self._parts))
+            yield from super().drain()
+
+    monkeypatch.setattr(export_routes, "_PushStream", WatchingStream)
+
+    documents = InMemoryDocumentRepository()
+    chats = InMemoryChatRepository()
+    document = ready_document(documents, USER_ID, "skripsi.pdf", 1)
+    add_chunk(documents, document, 0, "Bab satu berisi latar belakang.", 12)
+
+    # Incompressible so the compressed member size tracks the message volume.
+    noise = " ".join(uuid4().hex for _ in range(1000))
+    for index in range(8):
+        session = chats.create_session(USER_ID, f"Sesi {index}")
+        chats.create_message(USER_ID, session.id, "user", noise)
+
+    body = b"".join(
+        export_routes._workspace_bytes(
+            USER_ID,
+            documents.list_documents(USER_ID),
+            documents,
+            chats,
+            _settings(),
+            "2026-10-08T00:00:00+00:00",
+        )
+    )
+
+    archive = zipfile.ZipFile(io.BytesIO(body))
+    assert len(archive.read("conversations.jsonl").splitlines()) == 8
+    conversations = archive.getinfo("conversations.jsonl").compress_size
+    assert max(pending) < conversations / 2
