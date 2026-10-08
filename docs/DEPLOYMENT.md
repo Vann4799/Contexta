@@ -98,6 +98,20 @@ above plus an existing `DEEPSEEK_API_KEY` means the rewrite is live as soon as t
 rebuilt. To switch it off without a code change, set `DEEPSEEK_REWRITE_MODEL=` to an empty value and
 restart the api service; follow-ups then search with the raw question.
 
+Optional api quota:
+
+```text
+LLM_DAY_LIMIT=200
+```
+
+`LLM_DAY_LIMIT` caps the paid DeepSeek calls one user can trigger per UTC day across chat answers
+and document briefs; past the cap the endpoints answer `429 llm_day_limit_exceeded` with a
+`Retry-After` until midnight UTC. Questions served without a model call (exact-count and
+highest-metric answers, insufficient-context replies) cost nothing, and a declined rewrite never
+reaches the model. The counter is in-process and approximate: it is per worker process, reset by a
+restart or scale change, and is a cost brake rather than billing. Set it to `0` to meter nothing at
+all. The only durable quota stays the per-key daily limit behind `/v1`.
+
 Optional worker setting:
 
 ```text
