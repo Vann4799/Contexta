@@ -4,6 +4,7 @@ import sys
 from typing import Annotated, Callable
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fitz import FileDataError
 from pydantic import BaseModel
 
 from app.auth.dependencies import get_current_user
@@ -88,12 +89,27 @@ async def convert_pdf_to_markdown(
         markdown = converter_factory()(content)
     except HTTPException:
         raise
+    except FileDataError as exc:
+        # A broken file is bad input, not a server fault; EmptyFileError subclasses
+        # FileDataError but the empty check above answers it first.
+        raise HTTPException(
+            status_code=422,
+            detail="uploaded PDF could not be read",
+        ) from exc
     except Exception as exc:
         logger.exception("could not convert %s to markdown", filename)
         raise HTTPException(
             status_code=500,
             detail="Unable to convert PDF to Markdown.",
         ) from exc
+
+    if not markdown.strip():
+        # Same verdict the worker reaches for these bytes: "No extractable text
+        # found" — a scanned PDF converts to nothing and must not answer 200.
+        raise HTTPException(
+            status_code=422,
+            detail="uploaded PDF contains no extractable text",
+        )
 
     return MarkdownConversionResult(
         filename=filename,

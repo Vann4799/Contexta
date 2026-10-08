@@ -109,6 +109,39 @@ def test_convert_markdown_returns_clean_500_on_converter_failure() -> None:
     assert "raw converter traceback detail" not in response.text
 
 
+def test_convert_markdown_rejects_a_corrupt_pdf_as_a_validation_error() -> None:
+    # Both byte shapes were measured against PyMuPDF: each raises fitz.FileDataError,
+    # which this route used to answer with a 500.
+    for corrupt in (b"not a pdf at all", b"%PDF-1.7"):
+        response = client.post(
+            "/convert/markdown",
+            files={"file": ("broken.pdf", corrupt, "application/pdf")},
+            headers=auth_headers(),
+        )
+
+        assert response.status_code == 422
+        assert response.json()["detail"] == "uploaded PDF could not be read"
+        assert "FileDataError" not in response.text
+
+
+def test_convert_markdown_rejects_a_pdf_without_extractable_text() -> None:
+    # A page with no text layer (the scanned-PDF shape) converts to an empty
+    # markdown and used to answer 200; indexing the same bytes fails instead.
+    document = fitz.open()
+    document.new_page()
+    content = document.tobytes()
+    document.close()
+
+    response = client.post(
+        "/convert/markdown",
+        files={"file": ("scan.pdf", content, "application/pdf")},
+        headers=auth_headers(),
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "uploaded PDF contains no extractable text"
+
+
 def pdf_drawn_bottom_to_top() -> bytes:
     # Text placed from the bottom of the page upwards, so the content stream order and
     # the reading order disagree. This is the shape that came out of Convert reversed.
