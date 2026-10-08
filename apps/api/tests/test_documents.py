@@ -15,6 +15,7 @@ from app.documents.repository import (
 )
 from app.main import app
 from app.documents.routes import (
+    build_document_answer_generator,
     get_document_answer_generator,
     get_document_repository,
     get_document_storage,
@@ -41,7 +42,7 @@ class FakeAnswerGenerator:
 
 
 def test_document_answer_generator_uses_configured_token_limit() -> None:
-    generator = get_document_answer_generator(
+    generator = build_document_answer_generator(
         Settings(
             deepseek_api_key="test-key",
             deepseek_model="deepseek-v4-pro",

@@ -8,6 +8,7 @@ from app.chat.models import ChatMessageResponse, ChatSessionResponse, RetrievedC
 from app.chat.repository import InMemoryChatRepository
 from app.chat.rewrite import accept_rewrite, conversation_history, needs_rewrite
 from app.chat.routes import (
+    build_query_rewriter,
     get_answer_generator,
     get_chat_repository,
     get_document_repository,
@@ -240,6 +241,12 @@ def test_a_broken_rewrite_still_answers_with_the_raw_question() -> None:
 
 
 def test_rewriter_is_disabled_without_a_key_or_without_a_model() -> None:
-    assert get_query_rewriter(Settings(deepseek_api_key="", deepseek_rewrite_model="deepseek-chat")) is None
-    assert get_query_rewriter(Settings(deepseek_api_key="k", deepseek_rewrite_model="")) is None
-    assert get_query_rewriter(Settings(deepseek_api_key="k", deepseek_rewrite_model="deepseek-chat")) is not None
+    assert build_query_rewriter(
+        Settings(deepseek_api_key="", deepseek_rewrite_model="deepseek-chat")
+    ) is None
+    assert build_query_rewriter(
+        Settings(deepseek_api_key="k", deepseek_rewrite_model="")
+    ) is None
+    assert build_query_rewriter(
+        Settings(deepseek_api_key="k", deepseek_rewrite_model="deepseek-chat")
+    ) is not None

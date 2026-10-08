@@ -19,6 +19,7 @@ from app.auth.dependencies import get_current_user
 from app.auth.supabase_jwt import CurrentUser
 from app.chat.llm import AnswerGenerator, DeepSeekAnswerGenerator
 from app.core.config import Settings, get_settings
+from app.services.llm_budget import budgeted_answer_generator
 from app.documents.models import (
     DEFAULT_CHUNK_PAGE_SIZE,
     MAX_CHUNK_PAGE_SIZE,
@@ -103,7 +104,7 @@ def get_document_vector_cleanup(
     )
 
 
-def get_document_answer_generator(
+def build_document_answer_generator(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> AnswerGenerator:
     return DeepSeekAnswerGenerator(
@@ -112,6 +113,15 @@ def get_document_answer_generator(
         max_tokens=settings.deepseek_max_tokens,
         thinking=settings.deepseek_thinking,
     )
+
+
+def get_document_answer_generator(
+    settings: Annotated[Settings, Depends(get_settings)],
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    inner: Annotated[AnswerGenerator, Depends(build_document_answer_generator)],
+) -> AnswerGenerator:
+    """The metered surface: a brief is a paid completion per click."""
+    return budgeted_answer_generator(inner, current_user, settings)
 
 
 def infer_upload_file_type(filename: str, content_type: str | None) -> str:
@@ -350,6 +360,8 @@ def generate_document_ai_brief(
 
     try:
         brief = answer_generator.generate_answer(build_ai_brief_prompt(document, chunks))
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.exception("could not generate a brief for document %s", document_id)
         raise HTTPException(

@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     retrieval_arm_window: int = 10
     api_key_minute_limit: int = 60
     api_key_day_limit: int = 5000
+    llm_day_limit: int = 200
     api_log_retention_days: int = 90
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

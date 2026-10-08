@@ -37,7 +37,7 @@ from evals.retrieval_eval import (  # noqa: E402
 )
 
 from app.chat.rewrite import resolve_retrieval_query  # noqa: E402
-from app.chat.routes import get_query_rewriter  # noqa: E402
+from app.chat.routes import build_query_rewriter  # noqa: E402
 from app.core.config import get_settings  # noqa: E402
 
 DEFAULT_CASES = API_ROOT / "evals" / "query_rewrite_cases.json"
@@ -122,7 +122,7 @@ def main() -> int:
         else settings.retrieval_arm_window
     )
     retriever = build_retriever(settings, arm_window)
-    rewriter = get_query_rewriter(settings)
+    rewriter = build_query_rewriter(settings)
     arms = arm_descriptions(settings)
 
     print(

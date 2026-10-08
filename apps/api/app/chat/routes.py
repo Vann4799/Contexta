@@ -42,6 +42,10 @@ from app.documents.repository import (
     document_repository,
 )
 from app.core.config import Settings, get_settings
+from app.services.llm_budget import (
+    budgeted_answer_generator,
+    budgeted_query_rewriter,
+)
 
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -113,7 +117,7 @@ def get_retriever(
     return retriever_from_settings(settings)
 
 
-def get_answer_generator(
+def build_answer_generator(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> AnswerGenerator:
     return DeepSeekAnswerGenerator(
@@ -124,7 +128,16 @@ def get_answer_generator(
     )
 
 
-def get_query_rewriter(
+def get_answer_generator(
+    settings: Annotated[Settings, Depends(get_settings)],
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    inner: Annotated[AnswerGenerator, Depends(build_answer_generator)],
+) -> AnswerGenerator:
+    """The metered surface: every prompt here costs a paid completion."""
+    return budgeted_answer_generator(inner, current_user, settings)
+
+
+def build_query_rewriter(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> QueryRewriter | None:
     """None is the kill switch: follow-ups then search with the raw question."""
@@ -134,6 +147,14 @@ def get_query_rewriter(
         api_key=settings.deepseek_api_key,
         model=settings.deepseek_rewrite_model,
     )
+
+
+def get_query_rewriter(
+    settings: Annotated[Settings, Depends(get_settings)],
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    inner: Annotated[QueryRewriter | None, Depends(build_query_rewriter)],
+) -> QueryRewriter | None:
+    return budgeted_query_rewriter(inner, current_user, settings)
 
 
 def build_chat_response(answer: str, contexts: list[dict[str, object]]) -> ChatQueryResponse:
@@ -425,6 +446,9 @@ def _answer_session_question(
     prompt = build_rag_prompt(question, contexts, history)
     try:
         answer = answer_generator.generate_answer(prompt)
+    except HTTPException:
+        # A spent daily model budget is the caller's answer, not a generation failure.
+        raise
     except Exception as exc:
         logger.exception("answer generation failed")
         raise HTTPException(status_code=502, detail="Unable to answer question.") from exc
@@ -473,6 +497,8 @@ def query_chat(
     prompt = build_rag_prompt(payload.question, contexts)
     try:
         answer = answer_generator.generate_answer(prompt)
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.exception("answer generation failed")
         raise HTTPException(
