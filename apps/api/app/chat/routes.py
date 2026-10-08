@@ -171,6 +171,19 @@ def split_extracted_table_rows(text: str) -> list[str]:
     ]
 
 
+def count_target_pattern(target: str) -> re.Pattern[str]:
+    """Match a creator name as a whole token.
+
+    A bare `re.escape(target)` let "chacha" count rows belonging to "chachary" or to
+    the address "cicachacha23@…". The lookarounds are only added where the target
+    itself starts or ends with a word character, because a handle ("@chacha") begins
+    with one that has no word boundary in front of it.
+    """
+    prefix = r"(?<!\w)" if target[0].isalnum() or target[0] == "_" else ""
+    suffix = r"(?!\w)" if target[-1].isalnum() or target[-1] == "_" else ""
+    return re.compile(f"{prefix}{re.escape(target)}{suffix}", re.IGNORECASE)
+
+
 def requested_metric(question: str) -> str | None:
     normalized_question = question.lower()
     for metric, aliases in METRIC_ALIASES.items():
@@ -270,26 +283,40 @@ def build_exact_count_response(
     if not document:
         return None
 
-    target_pattern = re.compile(re.escape(target), re.IGNORECASE)
-    matching_records: list[tuple[object, str]] = []
+    target_pattern = count_target_pattern(target)
+    matched_rows: list[tuple[object, str]] = []
+    prose_matches: list[tuple[object, str]] = []
     total_occurrences = 0
-    saw_table_rows = False
+    seen_rows: set[str] = set()
     for chunk in repository.list_document_chunks(user_id, document.id):
         rows = split_extracted_table_rows(chunk.text)
+        for row in rows:
+            # Overlapping chunks repeat the tail of one chunk at the head of the next,
+            # so the same posting arrives twice; the reply promises it counts once.
+            if row in seen_rows:
+                continue
+            seen_rows.add(row)
+            if target_pattern.search(row):
+                matched_rows.append((chunk, row))
+
         if rows:
-            saw_table_rows = True
-            for row in rows:
-                if target_pattern.search(row):
-                    matching_records.append((chunk, row))
             continue
 
         occurrences = target_pattern.findall(chunk.text)
         if occurrences:
             total_occurrences += len(occurrences)
-            matching_records.append((chunk, chunk.text))
+            prose_matches.append((chunk, chunk.text))
 
-    total_matches = len(matching_records) if saw_table_rows else total_occurrences
-    match_unit = "postingan/baris" if saw_table_rows else "kemunculan teks"
+    # A table document's postings are its rows. Prose that merely mentions the name is
+    # not another post, so the two are never added into one number.
+    if matched_rows:
+        matching_records = matched_rows
+        total_matches = len(matched_rows)
+        match_unit = "postingan/baris"
+    else:
+        matching_records = prose_matches
+        total_matches = total_occurrences
+        match_unit = "kemunculan teks"
 
     if total_matches == 0:
         return ChatQueryResponse(

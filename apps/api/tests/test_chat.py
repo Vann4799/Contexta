@@ -4,9 +4,17 @@ from fastapi.testclient import TestClient
 
 from app.auth.dependencies import get_current_user
 from app.auth.supabase_jwt import CurrentUser
-from app.chat.models import RetrievedContext
+from app.chat.models import ChatQueryResponse, RetrievedContext
 from app.chat.repository import InMemoryChatRepository
-from app.chat.routes import get_answer_generator, get_chat_repository, get_document_repository, get_retriever
+from app.chat.routes import (
+    build_exact_count_response,
+    build_highest_metric_response,
+    count_target_pattern,
+    get_answer_generator,
+    get_chat_repository,
+    get_document_repository,
+    get_retriever,
+)
 from app.documents.models import DocumentResponse
 from app.documents.repository import InMemoryDocumentRepository
 from app.main import app
@@ -493,3 +501,182 @@ def test_failed_answer_does_not_leave_an_orphan_question_in_history() -> None:
     stored = repository.list_messages("user-chat-123", session_id)
     assert [message.role for message in stored] == ["user", "assistant"]
     app.dependency_overrides.clear()
+
+
+COUNT_QUESTION = (
+    "cek ada berapa total postingan yang di punyai oleh user dengan nama chacha"
+)
+HIGHEST_VIEW_QUESTION = "Siapa creator dengan view paling tinggi?"
+
+
+def table_row(*, timestamp: str, email: str, name: str, link: str, view: int) -> str:
+    return (
+        f"{timestamp} {email} {name} 1111111111 {link} "
+        f"Short post X (Twitter) 5 {view} 0 0"
+    )
+
+
+def table_repository(chunk_texts: list[str]) -> InMemoryDocumentRepository:
+    repository = InMemoryDocumentRepository()
+    repository._documents.append(
+        DocumentResponse(
+            id="doc-1",
+            user_id="user-chat-123",
+            filename="creator-track.pdf",
+            file_type="pdf",
+            file_size=100,
+            storage_path="user-chat-123/doc-1/creator-track.pdf",
+            status="ready",
+            error_message=None,
+            chunk_count=len(chunk_texts),
+            created_at="2026-06-06T00:00:00+00:00",
+            updated_at="2026-06-06T00:00:00+00:00",
+        )
+    )
+    repository.add_chunks(
+        [
+            {
+                "document_id": "doc-1",
+                "user_id": "user-chat-123",
+                "chunk_index": index,
+                "text": text,
+                "page_number": 1,
+                "qdrant_point_id": f"point-{index}",
+            }
+            for index, text in enumerate(chunk_texts)
+        ]
+    )
+    return repository
+
+
+def count_response(repository: InMemoryDocumentRepository) -> ChatQueryResponse:
+    answer = build_exact_count_response(
+        COUNT_QUESTION,
+        "user-chat-123",
+        ["doc-1"],
+        repository,
+    )
+    assert answer is not None
+    return answer
+
+
+def test_exact_count_matches_whole_names_only() -> None:
+    """A bare substring made "chacha" claim the rows of "chachary" and of the address "cicachacha23@…"."""
+    repository = table_repository(
+        [
+            " ".join(
+                [
+                    table_row(
+                        timestamp="4/20/2026 10:29:31",
+                        email="first@example.com",
+                        name="chacha",
+                        link="https://x.com/c/1",
+                        view=26,
+                    ),
+                    table_row(
+                        timestamp="4/20/2026 10:30:31",
+                        email="chachary@example.com",
+                        name="chachary",
+                        link="https://x.com/r/1",
+                        view=9,
+                    ),
+                    table_row(
+                        timestamp="4/20/2026 10:31:31",
+                        email="cicachacha23@gmail.com",
+                        name="Chacha",
+                        link="https://x.com/c/2",
+                        view=11,
+                    ),
+                ]
+            )
+        ]
+    )
+
+    response = count_response(repository)
+
+    assert "2 postingan/baris" in response.answer
+    assert all("chachary" not in citation.text for citation in response.citations)
+
+
+def test_overlapping_chunks_count_one_posting_once() -> None:
+    first = table_row(
+        timestamp="4/20/2026 10:29:31",
+        email="first@example.com",
+        name="chacha",
+        link="https://x.com/c/1",
+        view=26,
+    )
+    second = table_row(
+        timestamp="4/20/2026 10:30:31",
+        email="first@example.com",
+        name="chacha",
+        link="https://x.com/c/2",
+        view=9,
+    )
+    third = table_row(
+        timestamp="4/20/2026 10:31:31",
+        email="first@example.com",
+        name="chacha",
+        link="https://x.com/c/3",
+        view=11,
+    )
+    repository = table_repository([f"{first} {second}", f"{second} {third}"])
+
+    response = count_response(repository)
+
+    assert "3 postingan/baris" in response.answer
+
+
+def test_prose_mentions_are_not_added_to_table_rows() -> None:
+    row = table_row(
+        timestamp="4/20/2026 10:29:31",
+        email="first@example.com",
+        name="chacha",
+        link="https://x.com/c/1",
+        view=26,
+    )
+    repository = table_repository(
+        [row, "chacha wrote the summary, then chacha forwarded it"]
+    )
+
+    response = count_response(repository)
+
+    assert "1 postingan/baris" in response.answer
+    assert "kemunculan" not in response.answer
+
+
+def test_prose_only_document_falls_back_to_occurrences() -> None:
+    repository = table_repository(["chacha wrote the summary, then chacha forwarded it"])
+
+    response = count_response(repository)
+
+    assert "2 kemunculan teks" in response.answer
+
+
+def test_count_target_pattern_handles_prefixed_names() -> None:
+    pattern = count_target_pattern("chacha")
+    assert pattern.search("4/20/2026 10:29:31 a@b.com chacha 1111111111")
+    assert not pattern.search("chachary")
+    assert not pattern.search("cicachacha23@gmail.com")
+
+    handle = count_target_pattern("@chacha")
+    assert handle.search("posted by @chacha on X")
+    assert not handle.search("@chachary")
+
+
+def test_highest_metric_declines_when_no_row_parses() -> None:
+    """Rows the metrics regex cannot read are a decline, not a crash or a wrong winner."""
+    repository = table_repository(
+        ["4/20/2026 10:29:31 first@example.com chacha a post with no id or metrics"]
+    )
+
+    answer = build_highest_metric_response(
+        HIGHEST_VIEW_QUESTION,
+        "user-chat-123",
+        ["doc-1"],
+        repository,
+    )
+
+    assert answer is not None
+    assert "belum bisa menghitung" in answer.answer
+    assert answer.citations == []
