@@ -307,7 +307,7 @@ export function DashboardInsights() {
                 {copy.activityUploads}
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-[#4f7e4d]" />
+                <span className="h-2 w-2 rounded-full bg-[#2f6b46]" />
                 {copy.activityIndexed}
               </span>
             </div>
@@ -360,7 +360,7 @@ export function DashboardInsights() {
                       />
                       {/* Indexed area */}
                       <path
-                        fill="#4f7e4d"
+                        fill="#2f6b46"
                         fillOpacity="0.1"
                         d={`${activityBuckets
                           .map((b, i) => {
@@ -393,7 +393,7 @@ export function DashboardInsights() {
                       {/* Indexed smooth line */}
                       <path
                         fill="none"
-                        stroke="#4f7e4d"
+                        stroke="#2f6b46"
                         strokeWidth="2.5"
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -449,7 +449,7 @@ export function DashboardInsights() {
                             cx={x}
                             cy={y}
                             r="4"
-                            fill="#4f7e4d"
+                            fill="#2f6b46"
                             className="pointer-events-none"
                           />
                         );
@@ -485,7 +485,7 @@ export function DashboardInsights() {
                         <span className="font-semibold nums">{activityBuckets[hoveredIndex].uploads}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full bg-[#4f7e4d]" />
+                        <span className="h-2 w-2 rounded-full bg-[#2f6b46]" />
                         <span className="text-ink-muted">{copy.activityIndexed}:</span>
                         <span className="font-semibold nums">{activityBuckets[hoveredIndex].indexed}</span>
                       </div>
