@@ -100,6 +100,7 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
       for (const leaf of stage.querySelectorAll<HTMLElement>(`[data-cluster="${cluster.id}"] [data-leaf]`)) {
         const leafRect = leaf.getBoundingClientRect();
         const leafIn = anchor(leafRect, box, k, "left");
+        const leafOut = anchor(leafRect, box, k, "right");
         next.push({
           id: `${cluster.id}-${leaf.dataset.leaf}`,
           d: curve(clusterOut.x, clusterOut.y, leafIn.x, leafIn.y),
@@ -113,7 +114,7 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
           const chipIn = anchor(chip.getBoundingClientRect(), box, k, "left");
           next.push({
             id: `chunk-${chip.dataset.chunk}`,
-            d: curve(leafIn.x, leafIn.y, chipIn.x, chipIn.y),
+            d: curve(leafOut.x, leafOut.y, chipIn.x, chipIn.y),
             kind: "chunk",
             cluster: cluster.id,
             end: chipIn
@@ -477,8 +478,8 @@ function LeafNode({ item, open, onToggle, arms }: LeafNodeProps) {
   const fan = open && chunkCount > 0 ? chunkFan(item.id, chunkCount, locale) : [];
 
   return (
-    <div>
-      <div className="flex items-center gap-1.5" data-leaf={item.id}>
+    <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:gap-8">
+      <div className="flex shrink-0 items-center gap-1.5" data-leaf={item.id}>
         <Link
           className={cn(
             "focus-ring group inline-flex min-w-0 max-w-full flex-1 items-center gap-2.5 rounded-control border py-1 pl-3 pr-1 text-left shadow-node transition hover:border-ink/30",
@@ -520,7 +521,7 @@ function LeafNode({ item, open, onToggle, arms }: LeafNodeProps) {
       </div>
 
       {fan.length > 0 ? (
-        <div className="mt-1.5 flex flex-col gap-1.5 pl-[76px]">
+        <div className="flex flex-col gap-1.5 pl-[76px] lg:mt-0.5 lg:pl-0">
           {fan.map((node) => (
             <div className="flex items-center gap-[30px]" data-chunk-row key={node.key}>
               {node.collapsed ? (
