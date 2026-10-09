@@ -306,18 +306,18 @@ export function DashboardInsights() {
                 <div className="flex h-[190px] items-end gap-[6px] px-1">
                   {activityBuckets.map((b, i) => {
                     const val = Math.max(b.uploads, b.indexed);
-                    const pct = (val / activityMax) * 100;
+                    const barH = Math.max((val / activityMax) * 190, val > 0 ? 16 : 4);
                     const color = val === 0 ? "bg-paper-line/60" : b.indexed >= b.uploads && b.indexed > 0 ? "bg-[#4f7e4d]" : "bg-accent";
                     return (
                       <div
                         key={b.date}
-                        className="relative flex flex-1 flex-col items-center"
+                        className="relative flex flex-1 flex-col items-end"
                         onMouseEnter={() => setHoveredIndex(i)}
                         onMouseLeave={() => setHoveredIndex(null)}
                       >
                         <div
                           className={`w-full rounded-t-md transition-opacity duration-150 ${color} ${hoveredIndex === i ? "opacity-100" : "opacity-80"}`}
-                          style={{ height: `${Math.max(pct, val > 0 ? 8 : 3)}%` }}
+                          style={{ height: `${barH}px` }}
                         />
                         {hoveredIndex === i && (
                           <div className="absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg border border-paper-line bg-paper-card px-3 py-2 text-[12px] shadow-node">
