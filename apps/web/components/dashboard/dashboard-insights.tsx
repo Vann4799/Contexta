@@ -303,42 +303,182 @@ export function DashboardInsights() {
               <div className="flex h-full items-center justify-center text-[13px] text-ink-muted">Loading...</div>
             ) : (
               <>
-                <div className="flex h-[190px] items-end gap-[6px] px-1">
-                  {activityBuckets.map((b, i) => {
-                    const val = Math.max(b.uploads, b.indexed);
-                    const barH = Math.max((val / activityMax) * 190, val > 0 ? 16 : 4);
-                    const color = val === 0 ? "bg-paper-line/60" : b.indexed >= b.uploads && b.indexed > 0 ? "bg-[#4f7e4d]" : "bg-accent";
-                    return (
-                      <div
-                        key={b.date}
-                        className="relative flex flex-1 flex-col items-end"
-                        onMouseEnter={() => setHoveredIndex(i)}
-                        onMouseLeave={() => setHoveredIndex(null)}
-                      >
-                        <div
-                          className={`w-full rounded-t-md transition-opacity duration-150 ${color} ${hoveredIndex === i ? "opacity-100" : "opacity-80"}`}
-                          style={{ height: `${barH}px` }}
+                <div className="relative h-[190px] w-full">
+                  {/* Y-axis labels */}
+                  <div className="absolute left-0 top-0 flex h-full flex-col justify-between pr-2 text-[10px] text-ink-muted nums">
+                    {[4, 3, 2, 1, 0].map((n) => (
+                      <span key={n}>{n}</span>
+                    ))}
+                  </div>
+                  <div className="ml-6 h-full">
+                    <svg
+                      className="h-full w-full"
+                      viewBox={`0 0 ${activityBuckets.length * 40} 190`}
+                      preserveAspectRatio="none"
+                    >
+                      {/* Grid lines */}
+                      {[0, 1, 2, 3, 4].map((n) => {
+                        const y = (n / 4) * 180 + 5;
+                        return (
+                          <line
+                            key={`grid-${n}`}
+                            x1="0"
+                            y1={y}
+                            x2={activityBuckets.length * 40}
+                            y2={y}
+                            stroke="currentColor"
+                            className="text-paper-line/40"
+                            strokeWidth="1"
+                          />
+                        );
+                      })}
+                      {/* Uploads area */}
+                      <path
+                        fill="#f2fb48"
+                        fillOpacity="0.1"
+                        d={`${activityBuckets
+                          .map((b, i) => {
+                            const x = i * 40 + 20;
+                            const y = 185 - (b.uploads / 4) * 180;
+                            return `${i === 0 ? "M" : "L"} ${x},${y}`;
+                          })
+                          .join(" ")} L ${(activityBuckets.length - 1) * 40 + 20},185 L 20,185 Z`}
+                      />
+                      {/* Indexed area */}
+                      <path
+                        fill="#4f7e4d"
+                        fillOpacity="0.1"
+                        d={`${activityBuckets
+                          .map((b, i) => {
+                            const x = i * 40 + 20;
+                            const y = 185 - (b.indexed / 4) * 180;
+                            return `${i === 0 ? "M" : "L"} ${x},${y}`;
+                          })
+                          .join(" ")} L ${(activityBuckets.length - 1) * 40 + 20},185 L 20,185 Z`}
+                      />
+                      {/* Uploads smooth line */}
+                      <path
+                        fill="none"
+                        stroke="#f2fb48"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d={activityBuckets
+                          .map((b, i) => {
+                            const x = i * 40 + 20;
+                            const y = 185 - (b.uploads / 4) * 180;
+                            if (i === 0) return `M ${x},${y}`;
+                            const prevX = (i - 1) * 40 + 20;
+                            const prevY = 185 - (activityBuckets[i - 1].uploads / 4) * 180;
+                            const cpx1 = prevX + 13;
+                            const cpx2 = x - 13;
+                            return `C ${cpx1},${prevY} ${cpx2},${y} ${x},${y}`;
+                          })
+                          .join(" ")}
+                      />
+                      {/* Indexed smooth line */}
+                      <path
+                        fill="none"
+                        stroke="#4f7e4d"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d={activityBuckets
+                          .map((b, i) => {
+                            const x = i * 40 + 20;
+                            const y = 185 - (b.indexed / 4) * 180;
+                            if (i === 0) return `M ${x},${y}`;
+                            const prevX = (i - 1) * 40 + 20;
+                            const prevY = 185 - (activityBuckets[i - 1].indexed / 4) * 180;
+                            const cpx1 = prevX + 13;
+                            const cpx2 = x - 13;
+                            return `C ${cpx1},${prevY} ${cpx2},${y} ${x},${y}`;
+                          })
+                          .join(" ")}
+                      />
+                      {/* Hover zones */}
+                      {activityBuckets.map((b, i) => (
+                        <rect
+                          key={`hover-${i}`}
+                          x={i * 40}
+                          y="0"
+                          width="40"
+                          height="190"
+                          fill="transparent"
+                          className="cursor-pointer"
+                          onMouseEnter={() => setHoveredIndex(i)}
+                          onMouseLeave={() => setHoveredIndex(null)}
                         />
-                        {hoveredIndex === i && (
-                          <div className="absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg border border-paper-line bg-paper-card px-3 py-2 text-[12px] shadow-node">
-                            <p className="mb-1 font-medium text-ink-muted">{b.date}</p>
-                            <div className="flex items-center gap-2">
-                              <span className="h-2 w-2 rounded-full bg-accent" />
-                              <span className="text-ink-muted">{copy.activityUploads}:</span>
-                              <span className="font-semibold nums">{b.uploads}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="h-2 w-2 rounded-full bg-[#4f7e4d]" />
-                              <span className="text-ink-muted">{copy.activityIndexed}:</span>
-                              <span className="font-semibold nums">{b.indexed}</span>
-                            </div>
-                          </div>
-                        )}
+                      ))}
+                      {/* Data points for uploads */}
+                      {activityBuckets.map((b, i) => {
+                        const x = i * 40 + 20;
+                        const y = 185 - (b.uploads / 4) * 180;
+                        return (
+                          <circle
+                            key={`up-${i}`}
+                            cx={x}
+                            cy={y}
+                            r="4"
+                            fill="#f2fb48"
+                            className="pointer-events-none"
+                          />
+                        );
+                      })}
+                      {/* Data points for indexed */}
+                      {activityBuckets.map((b, i) => {
+                        const x = i * 40 + 20;
+                        const y = 185 - (b.indexed / 4) * 180;
+                        return (
+                          <circle
+                            key={`idx-${i}`}
+                            cx={x}
+                            cy={y}
+                            r="4"
+                            fill="#4f7e4d"
+                            className="pointer-events-none"
+                          />
+                        );
+                      })}
+                      {/* Hover line */}
+                      {hoveredIndex !== null && (
+                        <line
+                          x1={hoveredIndex * 40 + 20}
+                          y1="5"
+                          x2={hoveredIndex * 40 + 20}
+                          y2="185"
+                          stroke="currentColor"
+                          className="text-paper-line"
+                          strokeWidth="1"
+                          strokeDasharray="4 2"
+                        />
+                      )}
+                    </svg>
+                  </div>
+                  {/* Tooltip */}
+                  {hoveredIndex !== null && (
+                    <div
+                      className="absolute z-20 -translate-x-1/2 whitespace-nowrap rounded-lg border border-paper-line bg-paper-card px-3 py-2 text-[12px] shadow-node"
+                      style={{
+                        left: `calc(${(hoveredIndex * 40 + 20) / (activityBuckets.length * 40) * 100}% + 24px)`,
+                        top: "10px"
+                      }}
+                    >
+                      <p className="mb-1 font-medium text-ink-muted">{activityBuckets[hoveredIndex].date}</p>
+                      <div className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-accent" />
+                        <span className="text-ink-muted">{copy.activityUploads}:</span>
+                        <span className="font-semibold nums">{activityBuckets[hoveredIndex].uploads}</span>
                       </div>
-                    );
-                  })}
+                      <div className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-[#4f7e4d]" />
+                        <span className="text-ink-muted">{copy.activityIndexed}:</span>
+                        <span className="font-semibold nums">{activityBuckets[hoveredIndex].indexed}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="flex gap-[6px] px-1 pt-1.5">
+                <div className="ml-6 flex gap-[6px] px-1 pt-1.5">
                   {activityBuckets.map((b) => (
                     <div key={b.date} className="flex-1 text-center text-[10px] text-ink-muted nums">
                       {b.label}
