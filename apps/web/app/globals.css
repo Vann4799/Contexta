@@ -92,4 +92,30 @@ a {
   .nums {
     font-variant-numeric: tabular-nums;
   }
+
+  .glow-bar {
+    box-shadow: 0 0 12px #FF5B14, 0 0 24px rgba(255, 91, 20, 0.6);
+  }
+
+  .ambient-glow {
+    background: radial-gradient(circle at 10% 90%, rgba(255, 91, 20, 0.18) 0%, rgba(180, 50, 0, 0.08) 28%, rgba(8, 8, 10, 0) 65%);
+  }
+}
+
+.dark-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.dark-scrollbar::-webkit-scrollbar-track {
+  background: #111115;
+}
+
+.dark-scrollbar::-webkit-scrollbar-thumb {
+  background: #2B2B36;
+  border-radius: 9999px;
+}
+
+.dark-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #FF5B14;
 }
