@@ -349,7 +349,7 @@ export function DocumentUploadPanel() {
         <div className="min-w-0">
           <p className="eyebrow">{copy.eyebrow}</p>
           <h2 className="mt-1 text-[22px] font-semibold leading-tight tracking-tight">{copy.title}</h2>
-          <p className="mt-1 text-[13px] text-ink-muted">{copy.description}</p>
+          <p className="mt-1 font-secondary text-[13px] text-ink-muted">{copy.description}</p>
         </div>
         <div className="flex shrink-0 flex-wrap items-end gap-2">
           <label className="grid gap-1.5 text-[12px] font-semibold text-ink-muted">

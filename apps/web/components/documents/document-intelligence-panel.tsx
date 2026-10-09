@@ -327,7 +327,7 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
       {normalizedStatus === "processing" ? (
         <section className="surface border-ink/15 px-5 py-4">
           <h3 className="text-[15px] font-semibold tracking-tight">{t.processingTitle}</h3>
-          <p className="mt-1 text-[13px] leading-6 text-ink-muted">{t.processingBody}</p>
+          <p className="mt-1 font-secondary text-[13px] leading-6 text-ink-muted">{t.processingBody}</p>
         </section>
       ) : null}
 

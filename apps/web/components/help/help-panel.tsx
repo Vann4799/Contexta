@@ -38,7 +38,7 @@ export function HelpPanel() {
         <div>
           <p className="eyebrow">{t.eyebrow}</p>
           <h2 className="mt-2 text-[26px] font-semibold text-ink">{t.title}</h2>
-          <p className="mt-2 max-w-2xl text-[13px] leading-6 text-ink-muted">{t.intro}</p>
+          <p className="mt-2 max-w-2xl font-secondary text-[13px] leading-6 text-ink-muted">{t.intro}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link
@@ -63,7 +63,7 @@ export function HelpPanel() {
               <Icon className="h-5 w-5" strokeWidth={2.2} aria-hidden="true" />
             </div>
             <h3 className="mt-4 text-[15px] font-semibold text-ink">{t.steps[key].title}</h3>
-            <p className="mt-2 text-[13px] leading-6 text-ink-muted">{t.steps[key].description}</p>
+            <p className="mt-2 font-secondary text-[13px] leading-6 text-ink-muted">{t.steps[key].description}</p>
           </article>
         ))}
       </section>
@@ -76,7 +76,7 @@ export function HelpPanel() {
             </div>
             <div>
               <h3 className="text-[17px] font-semibold text-ink">{t.troubleshooting.title}</h3>
-              <p className="mt-1 text-[13px] text-ink-muted">{t.troubleshooting.subtitle}</p>
+              <p className="mt-1 font-secondary text-[13px] text-ink-muted">{t.troubleshooting.subtitle}</p>
             </div>
           </div>
           <div className="mt-5 space-y-3">
@@ -86,7 +86,7 @@ export function HelpPanel() {
                   <Icon className="h-4 w-4 text-ink" strokeWidth={2.1} aria-hidden="true" />
                   {t.troubleshooting.items[key].problem}
                 </div>
-                <p className="mt-2 text-[13px] leading-6 text-ink-muted">{t.troubleshooting.items[key].answer}</p>
+                <p className="mt-2 font-secondary text-[13px] leading-6 text-ink-muted">{t.troubleshooting.items[key].answer}</p>
               </div>
             ))}
           </div>

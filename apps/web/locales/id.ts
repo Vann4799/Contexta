@@ -41,7 +41,8 @@ export const id: Dictionary = {
       documents: "Dokumen",
       chat: "Chat",
       convert: "Konversi",
-      apiKeys: "Kunci API"
+      apiKeys: "Kunci API",
+      usage: "Pemakaian"
     }
   },
   auth: {
@@ -346,7 +347,28 @@ export const id: Dictionary = {
     errors: {
       signIn: "Masuk dulu untuk melihat ringkasan dashboard.",
       failed: "Tidak bisa memuat ringkasan dashboard."
-    }
+    },
+    activityTitle: "Aktivitas",
+    activitySubtitle: "14 hari terakhir",
+    activityUploads: "Unggahan",
+    activityIndexed: "Terindeks",
+    activityChats: "Chat",
+    statusTitle: "Status dokumen",
+    statusSubtitle: "Distribusi di seluruh pustaka",
+    statusReady: "Siap",
+    statusProcessing: "Memproses",
+    statusFailed: "Gagal",
+    statusUploaded: "Diunggah",
+    heatmapTitle: "Peta kontribusi",
+    heatmapSubtitle: "Dokumen yang ditambahkan per hari",
+    docTypesTitle: "Jenis dokumen",
+    docTypesSubtitle: "Rincian klasifikasi",
+    metricSessions: "Sesi",
+    metricApiKeys: "Kunci API",
+    metricApiReqs: "Permintaan API (14h)",
+    metricTopType: "Jenis terbanyak",
+    noActivity: "Belum ada aktivitas",
+    noTypes: "Belum ada dokumen yang diklasifikasi"
   },
   profile: {
     eyebrow: "Profil Pengguna",
@@ -850,6 +872,36 @@ export const id: Dictionary = {
       countPosts: "Hitung total postingan untuk nama ISA.",
       topLiked: "Postingan mana yang punya like paling tinggi?",
       insights: "Buatkan daftar insight yang bisa dipakai untuk keputusan bisnis."
+    }
+  },
+  usage: {
+    eyebrow: "Pemakaian API",
+    title: "Ringkasan pemakaian kunci",
+    subtitle: "Pantau permintaan di semua kunci API Anda.",
+    refresh: "Muat ulang",
+    noKeys: "Belum ada kunci API.",
+    noKeysHint: "Buat kunci di Pengaturan → Developer untuk mulai menggunakan API.",
+    goToKeys: "Ke kunci API",
+    totalRequests: "Total permintaan",
+    allowed: "Diizinkan",
+    rejected: "Ditolak",
+    activeKeys: "Kunci aktif",
+    period: (days: number) => `${days} hari terakhir`,
+    dailyBreakdown: "Rincian harian",
+    dailySubtitle: "Permintaan diizinkan vs ditolak per hari",
+    perKeyTitle: "Pemakaian per kunci",
+    perKeySubtitle: "Permintaan dikelompokkan per kunci API",
+    keyName: "Kunci",
+    keyRequests: "Permintaan",
+    keyAllowed: "Diizinkan",
+    keyRejected: "Ditolak",
+    keyLastUsed: "Terakhir dipakai",
+    never: "Belum pernah",
+    revoked: "Dicabut",
+    loading: "Memuat data pemakaian...",
+    errors: {
+      signIn: "Masuk dulu untuk melihat pemakaian API.",
+      failed: "Tidak bisa memuat data pemakaian."
     }
   }
 };

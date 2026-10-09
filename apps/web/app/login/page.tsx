@@ -38,13 +38,13 @@ export default function LoginPage() {
             {t.auth.hero.titleLead} <span className="text-accent">{t.auth.hero.titleAccent}</span>
             {t.auth.hero.titleTail}
           </h1>
-          <p className="mt-4 max-w-md text-[14px] leading-6 text-white/60">{t.auth.hero.subtitle}</p>
+          <p className="mt-4 max-w-md font-secondary text-[14px] leading-6 text-white/60">{t.auth.hero.subtitle}</p>
 
           <ul className="mt-9 space-y-3 border-t border-white/10 pt-6">
             {FEATURE_KEYS.map((feature) => (
               <li className="flex items-baseline gap-3" key={feature.label}>
                 <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
-                <p className="text-[13px] leading-5 text-white/70">
+                <p className="font-secondary text-[13px] leading-5 text-white/70">
                   <span className="font-semibold text-white">{t.auth.hero[feature.label]}</span> - {t.auth.hero[feature.note]}
                 </p>
               </li>
@@ -64,7 +64,7 @@ export default function LoginPage() {
           <div>
             <p className="eyebrow">{t.auth.signIn.eyebrow}</p>
             <h2 className="mt-2 text-[26px] font-semibold tracking-tight">{t.auth.signIn.title}</h2>
-            <p className="mt-2 text-[13px] leading-6 text-ink-muted">{t.auth.signIn.description}</p>
+            <p className="mt-2 font-secondary text-[13px] leading-6 text-ink-muted">{t.auth.signIn.description}</p>
           </div>
 
           <AuthForm mode="login" />

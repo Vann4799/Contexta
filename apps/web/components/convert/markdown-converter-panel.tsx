@@ -186,7 +186,7 @@ export function MarkdownConverterPanel() {
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <h2 className="text-[26px] font-semibold text-ink">{copy.title}</h2>
-          <p className="mt-1 text-[13px] text-ink-muted">{copy.description}</p>
+          <p className="mt-1 font-secondary text-[13px] text-ink-muted">{copy.description}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button disabled={isConverting} onClick={() => fileInputRef.current?.click()} variant="secondary">

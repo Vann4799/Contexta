@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BarChart3,
   FileCode,
   FileText,
   HelpCircle,
@@ -30,7 +31,8 @@ const NAV_ICONS: Record<NavIcon, LucideIcon> = {
   documents: FileText,
   chat: MessageSquare,
   convert: FileCode,
-  apiKeys: KeyRound
+  apiKeys: KeyRound,
+  usage: BarChart3
 };
 
 function isActiveRoute(pathname: string, href: string) {

@@ -41,7 +41,8 @@ export const en = {
       documents: "Documents",
       chat: "Chat",
       convert: "Convert",
-      apiKeys: "API keys"
+      apiKeys: "API keys",
+      usage: "Usage"
     }
   },
   auth: {
@@ -347,7 +348,28 @@ export const en = {
     errors: {
       signIn: "Sign in to view dashboard insights.",
       failed: "Unable to load dashboard insights."
-    }
+    },
+    activityTitle: "Activity",
+    activitySubtitle: "Last 14 days",
+    activityUploads: "Uploads",
+    activityIndexed: "Indexed",
+    activityChats: "Chats",
+    statusTitle: "Document status",
+    statusSubtitle: "Distribution across library",
+    statusReady: "Ready",
+    statusProcessing: "Processing",
+    statusFailed: "Failed",
+    statusUploaded: "Uploaded",
+    heatmapTitle: "Contribution map",
+    heatmapSubtitle: "Documents added per day",
+    docTypesTitle: "Document types",
+    docTypesSubtitle: "Classification breakdown",
+    metricSessions: "Sessions",
+    metricApiKeys: "API keys",
+    metricApiReqs: "API requests (14d)",
+    metricTopType: "Top type",
+    noActivity: "No activity yet",
+    noTypes: "No documents classified yet"
   },
   profile: {
     eyebrow: "User Profile",
@@ -853,6 +875,36 @@ export const en = {
       countPosts: "Count the total posts for the name ISA.",
       topLiked: "Which post has the most Likes?",
       insights: "List insights from this document that could support a business decision."
+    }
+  },
+  usage: {
+    eyebrow: "API Usage",
+    title: "Key usage overview",
+    subtitle: "Track requests across all your API keys.",
+    refresh: "Refresh",
+    noKeys: "No API keys yet.",
+    noKeysHint: "Create a key in Settings → Developer to start using the API.",
+    goToKeys: "Go to API keys",
+    totalRequests: "Total requests",
+    allowed: "Allowed",
+    rejected: "Rejected",
+    activeKeys: "Active keys",
+    period: (days: number) => `Last ${days} days`,
+    dailyBreakdown: "Daily breakdown",
+    dailySubtitle: "Allowed vs rejected requests per day",
+    perKeyTitle: "Per-key usage",
+    perKeySubtitle: "Requests grouped by API key",
+    keyName: "Key",
+    keyRequests: "Requests",
+    keyAllowed: "Allowed",
+    keyRejected: "Rejected",
+    keyLastUsed: "Last used",
+    never: "Never",
+    revoked: "Revoked",
+    loading: "Loading usage data...",
+    errors: {
+      signIn: "Sign in to view API usage.",
+      failed: "Unable to load usage data."
     }
   }
 };

@@ -22,7 +22,7 @@ export function AuthCard({ eyebrow, title, description, children }: AuthCardProp
         <div className="mt-8">
           <p className="eyebrow">{eyebrow}</p>
           <h1 className="mt-1.5 text-[22px] font-semibold tracking-tight text-ink">{title}</h1>
-          {description ? <p className="mt-2 text-[13px] leading-6 text-ink-muted">{description}</p> : null}
+          {description ? <p className="mt-2 font-secondary text-[13px] leading-6 text-ink-muted">{description}</p> : null}
         </div>
         {children}
         <LanguagePicker label={t.common.language} />

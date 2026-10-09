@@ -139,7 +139,7 @@ export function SettingsPanel() {
         <div>
           <p className="eyebrow">{copy.eyebrow}</p>
           <h2 className="mt-2 text-[26px] font-semibold text-ink">{copy.title}</h2>
-          <p className="mt-2 max-w-2xl text-[13px] text-ink-muted">{copy.description}</p>
+          <p className="mt-2 max-w-2xl font-secondary text-[13px] text-ink-muted">{copy.description}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link
@@ -205,7 +205,7 @@ export function SettingsPanel() {
 
           <article className="rounded-card border border-paper-line bg-paper-card p-5">
             <h3 className="text-[17px] font-semibold text-ink">{copy.securityTitle}</h3>
-            <p className="mt-3 text-[13px] leading-6 text-ink-muted">{copy.securityBody}</p>
+            <p className="mt-3 font-secondary text-[13px] leading-6 text-ink-muted">{copy.securityBody}</p>
           </article>
         </aside>
       </section>
@@ -254,7 +254,7 @@ export function SettingsPanel() {
                   <span className="text-[13px] font-semibold text-ink">{label}</span>
                   <span className={`chip ${CHIP_CLASS[row.state]}`}>{word}</span>
                 </div>
-                <p className="mt-2 text-[13px] leading-6 text-ink-muted">{statusDetail(row, copy)}</p>
+                <p className="mt-2 font-secondary text-[13px] leading-6 text-ink-muted">{statusDetail(row, copy)}</p>
               </div>
             );
           })}

@@ -206,7 +206,7 @@ export function DeveloperPanel() {
         <div>
           <p className="eyebrow">{copy.eyebrow}</p>
           <h2 className="mt-2 text-[26px] font-semibold text-ink">{copy.title}</h2>
-          <p className="mt-2 max-w-2xl text-[13px] text-ink-muted">{copy.description}</p>
+          <p className="mt-2 max-w-2xl font-secondary text-[13px] text-ink-muted">{copy.description}</p>
         </div>
         <Button disabled={isRefreshing} onClick={() => void load()} variant="secondary">
           <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} aria-hidden="true" />
@@ -223,7 +223,7 @@ export function DeveloperPanel() {
       {createdKey ? (
         <section className="rounded-card border border-accent bg-paper-card p-5" aria-live="polite">
           <h3 className="text-[15px] font-semibold text-ink">{copy.createdTitle}</h3>
-          <p className="mt-1 text-[13px] text-ink-muted">{copy.createdBody}</p>
+          <p className="mt-1 font-secondary text-[13px] text-ink-muted">{copy.createdBody}</p>
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <code className="min-w-0 flex-1 break-all rounded-control border border-paper-line bg-paper px-3 py-2 font-mono text-[13px] text-ink">
               {createdKey.api_key}
@@ -404,7 +404,7 @@ export function DeveloperPanel() {
 
       <section className="rounded-card border border-paper-line bg-paper-card p-6">
         <h3 className="text-[17px] font-semibold text-ink">{copy.usingTitle}</h3>
-        <p className="mt-2 text-[13px] text-ink-muted">
+        <p className="mt-2 font-secondary text-[13px] text-ink-muted">
           {copy.usingIntro} <code className="font-mono">docs/api-v1.md</code>. {copy.usingMcp}{" "}
           <code className="font-mono">/mcp</code> {copy.usingMcpTail}
         </p>

@@ -224,8 +224,8 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
       aria-label={copy.graph.ariaLabel}
       className="relative overflow-hidden rounded-card border border-paper-line bg-paper-deep"
       style={{
-        backgroundImage: "linear-gradient(to right, rgb(19 19 21 / 0.05) 1px, transparent 1px)",
-        backgroundSize: "80px 100%"
+        backgroundImage: "radial-gradient(circle, rgb(19 19 21 / 0.12) 1px, transparent 1px)",
+        backgroundSize: "28px 28px"
       }}
     >
       <div className="absolute left-5 top-5 z-20 flex items-center gap-1 rounded-card border border-paper-line bg-paper-card p-1 shadow-node lg:left-12 lg:top-11">
@@ -372,7 +372,7 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
         </div>
       </div>
 
-      <p className="pointer-events-none absolute bottom-3 right-4 z-20 hidden font-mono text-[10.5px] uppercase tracking-[0.14em] text-ink-faint lg:block">
+      <p className="pointer-events-none absolute bottom-3 right-4 z-20 hidden font-mono text-[10.5px] uppercase tracking-[0.06em] text-ink-faint lg:block">
         {copy.graph.hint}
       </p>
     </section>
@@ -398,7 +398,7 @@ function RootCard({ root }: { root: PipelineRoot }) {
   return (
     <div className="rounded-card bg-night p-4 text-white shadow-root ring-1 ring-black/40">
       <div className="flex items-center justify-between">
-        <span className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-accent">
+        <span className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-accent">
           <span className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-accent" aria-hidden="true" />
           {graphCopy.knowledgeRoot}
         </span>
@@ -410,11 +410,11 @@ function RootCard({ root }: { root: PipelineRoot }) {
       <div className="my-4 h-px bg-night-line" />
       <dl className="grid grid-cols-2 gap-2">
         <div>
-          <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/45">{graphCopy.clustersLabel}</dt>
+          <dt className="text-[10px] font-semibold uppercase tracking-[0.06em] text-white/45">{graphCopy.clustersLabel}</dt>
           <dd className="mt-0.5 text-[14px] font-semibold">{root.clusters}</dd>
         </div>
         <div>
-          <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/45">{graphCopy.documentsLabel}</dt>
+          <dt className="text-[10px] font-semibold uppercase tracking-[0.06em] text-white/45">{graphCopy.documentsLabel}</dt>
           <dd className="nums mt-0.5 font-mono text-[14px] font-semibold">{root.files}</dd>
         </div>
       </dl>
@@ -532,7 +532,7 @@ function LeafNode({ item, open, onToggle, arms }: LeafNodeProps) {
                   title={copy.fan.openDocument}
                 >
                   <span className="nums">{node.label}</span>
-                  <span className="ml-1 text-[10px] uppercase tracking-[0.1em]">{copy.fan.more}</span>
+                  <span className="ml-1 text-[10px] uppercase tracking-[0.05em]">{copy.fan.more}</span>
                 </Link>
               ) : (
                 <span
@@ -541,7 +541,7 @@ function LeafNode({ item, open, onToggle, arms }: LeafNodeProps) {
                   title={copy.fan.position(node.label.slice(1), String(chunkCount))}
                 >
                   <span className="nums">{node.label}</span>
-                  <span className="ml-1 text-[10px] uppercase tracking-[0.1em] text-ink-faint">{copy.fan.chunk}</span>
+                  <span className="ml-1 text-[10px] uppercase tracking-[0.05em] text-ink-faint">{copy.fan.chunk}</span>
                 </span>
               )}
               {node.collapsed || arms === 0 ? null : (

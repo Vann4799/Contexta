@@ -57,7 +57,8 @@ const config: Config = {
     extend: {
       colors: v2,
       fontFamily: {
-        sans: ["var(--font-sans)", "Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        sans: ["var(--font-sans)", "Plus Jakarta Sans", "Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        secondary: ["var(--font-secondary)", "Inter", "ui-sans-serif", "system-ui", "sans-serif"],
         mono: ["var(--font-mono)", "JetBrains Mono", "ui-monospace", "SFMono-Regular", "Consolas", "monospace"]
       },
       borderRadius: {
