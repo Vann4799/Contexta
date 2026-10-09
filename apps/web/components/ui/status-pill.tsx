@@ -8,7 +8,7 @@ type Status = "ready" | "processing" | "failed";
 const styles: Record<Status, string> = {
   ready: "border-transparent bg-accent text-ink",
   processing: "border-transparent bg-night text-accent",
-  failed: "border-danger-line bg-danger-soft text-danger"
+  failed: "border-transparent bg-[#8b8680]/20 text-[#8b8680]"
 };
 
 export function StatusPill({ status, className = "" }: { status: Status; className?: string }) {

@@ -43,10 +43,10 @@ import { cn } from "@/lib/utils";
 type DashboardCopy = Dictionary["dashboard"];
 
 const STATUS_COLORS: Record<string, string> = {
-  ready: "#c8a84b",
-  processing: "#c8a84b",
+  ready: "#f2fb48",
+  processing: "#f2fb48",
   uploaded: "#8b8680",
-  failed: "#b54a4a"
+  failed: "#8b8680"
 };
 
 function statusForPill(status: DocumentStatus) {
@@ -219,9 +219,9 @@ export function DashboardInsights() {
 
   const topMetrics = [
     { label: copy.stats.documents, value: String(documents.length), icon: Files, accent: "text-accent" },
-    { label: copy.stats.chunks, value: String(totals.chunks), icon: Layers, accent: "text-[#c8a84b]" },
-    { label: copy.stats.storage, value: formatBytes(totals.storage), icon: HardDrive, accent: "text-[#6b5b95]" },
-    { label: copy.metricApiReqs, value: String(summary?.developer.api_requests_14d ?? 0), icon: Key, accent: "text-[#c8a84b]" }
+    { label: copy.stats.chunks, value: String(totals.chunks), icon: Layers, accent: "text-accent" },
+    { label: copy.stats.storage, value: formatBytes(totals.storage), icon: HardDrive, accent: "text-accent" },
+    { label: copy.metricApiReqs, value: String(summary?.developer.api_requests_14d ?? 0), icon: Key, accent: "text-accent" }
   ];
 
   return (
@@ -234,7 +234,7 @@ export function DashboardInsights() {
             <span
               className={cn(
                 "absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-white",
-                indexingHealth?.status === "attention" ? "bg-danger" : "animate-pulse-dot bg-accent"
+                indexingHealth?.status === "attention" ? "bg-accent" : "animate-pulse-dot bg-accent"
               )}
             />
           </div>
@@ -245,7 +245,7 @@ export function DashboardInsights() {
                 className={cn(
                   "rounded px-1.5 py-[1px] text-[10px] font-bold tracking-[0.06em]",
                   indexingHealth?.status === "attention"
-                    ? "bg-danger-soft text-danger"
+                    ? "bg-accent text-ink"
                     : "bg-accent text-ink"
                 )}
               >
@@ -271,7 +271,7 @@ export function DashboardInsights() {
       </section>
 
       {error ? (
-        <section className="rounded-card border border-danger-line bg-danger-soft px-5 py-4 text-[13.5px] text-danger">
+        <section className="rounded-card border border-[#8b8680]/30 bg-[#8b8680]/10 px-5 py-4 text-[13.5px] text-ink">
           {copy.errors[error as keyof DashboardCopy["errors"]] ?? serverError(error)}
         </section>
       ) : null}
@@ -307,7 +307,7 @@ export function DashboardInsights() {
                 {copy.activityUploads}
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-[#c8a84b]" />
+                <span className="h-2 w-2 rounded-full bg-[#f2fb48]" />
                 {copy.activityIndexed}
               </span>
             </div>
@@ -360,7 +360,7 @@ export function DashboardInsights() {
                       />
                       {/* Indexed area */}
                       <path
-                        fill="#c8a84b"
+                        fill="#f2fb48"
                         fillOpacity="0.1"
                         d={`${activityBuckets
                           .map((b, i) => {
@@ -393,7 +393,7 @@ export function DashboardInsights() {
                       {/* Indexed smooth line */}
                       <path
                         fill="none"
-                        stroke="#c8a84b"
+                        stroke="#f2fb48"
                         strokeWidth="2.5"
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -449,7 +449,7 @@ export function DashboardInsights() {
                             cx={x}
                             cy={y}
                             r="4"
-                            fill="#c8a84b"
+                            fill="#f2fb48"
                             className="pointer-events-none"
                           />
                         );
@@ -485,7 +485,7 @@ export function DashboardInsights() {
                         <span className="font-semibold nums">{activityBuckets[hoveredIndex].uploads}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full bg-[#c8a84b]" />
+                        <span className="h-2 w-2 rounded-full bg-[#f2fb48]" />
                         <span className="text-ink-muted">{copy.activityIndexed}:</span>
                         <span className="font-semibold nums">{activityBuckets[hoveredIndex].indexed}</span>
                       </div>
