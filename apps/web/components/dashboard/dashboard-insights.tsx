@@ -43,7 +43,7 @@ import { cn } from "@/lib/utils";
 type DashboardCopy = Dictionary["dashboard"];
 
 const STATUS_COLORS: Record<string, string> = {
-  ready: "#4f7e4d",
+  ready: "#c8a84b",
   processing: "#c8a84b",
   uploaded: "#8b8680",
   failed: "#b54a4a"
@@ -219,7 +219,7 @@ export function DashboardInsights() {
 
   const topMetrics = [
     { label: copy.stats.documents, value: String(documents.length), icon: Files, accent: "text-accent" },
-    { label: copy.stats.chunks, value: String(totals.chunks), icon: Layers, accent: "text-[#4f7e4d]" },
+    { label: copy.stats.chunks, value: String(totals.chunks), icon: Layers, accent: "text-[#c8a84b]" },
     { label: copy.stats.storage, value: formatBytes(totals.storage), icon: HardDrive, accent: "text-[#6b5b95]" },
     { label: copy.metricApiReqs, value: String(summary?.developer.api_requests_14d ?? 0), icon: Key, accent: "text-[#c8a84b]" }
   ];
