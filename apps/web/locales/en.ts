@@ -748,7 +748,8 @@ export const en = {
       "Unable to load API keys.": "Unable to load API keys.",
       "Unable to create an API key.": "Unable to create an API key.",
       "Unable to revoke this key.": "Unable to revoke this key.",
-      "Unable to load key usage.": "Unable to load the key usage."
+      "Unable to load key usage.": "Unable to load the key usage.",
+      "The uploaded file is corrupt or unreadable.": "The uploaded file is corrupt or unreadable."
     }
   },
   chat: {

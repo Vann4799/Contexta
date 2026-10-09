@@ -2,7 +2,9 @@ import asyncio
 import logging
 from time import perf_counter
 
-from fastapi import FastAPI, Request, Response, status
+from typing import Annotated
+
+from fastapi import Depends, FastAPI, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -12,6 +14,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.account.routes import router as account_router
 from app.apikeys.dependencies import finalize_api_request_log
 from app.apikeys.routes import router as api_keys_router
+from app.auth.dependencies import get_current_user
+from app.auth.supabase_jwt import CurrentUser
 from app.chat.retrieval import configured_vector_spaces
 from app.chat.routes import router as chat_router
 from app.convert.routes import router as convert_router
@@ -132,7 +136,9 @@ async def vector_health(response: Response) -> dict[str, object]:
 
 
 @app.get("/health/indexing")
-def indexing_health() -> IndexingHealthResponse:
+def indexing_health(
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+) -> IndexingHealthResponse:
     # Sync on purpose: the check blocks on httpx, and inside async def it would freeze
     # the event loop for every concurrent request, not just this one.
     return check_indexing_health(get_settings())

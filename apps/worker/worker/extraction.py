@@ -7,6 +7,8 @@ safe to show, so the mapping stays on this side.
 
 from __future__ import annotations
 
+import fitz
+
 from contexta_rag.extraction import (
     DocumentTextExtractor as SharedDocumentTextExtractor,
 )
@@ -34,3 +36,7 @@ class DocumentTextExtractor:
             return self._shared.extract(content, file_type)
         except UnsupportedDocumentTypeError as exc:
             raise UserVisibleError(str(exc)) from exc
+        except fitz.FileDataError as exc:
+            raise UserVisibleError(
+                "The uploaded file is corrupt or unreadable."
+            ) from exc

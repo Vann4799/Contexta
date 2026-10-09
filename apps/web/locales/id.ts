@@ -745,7 +745,8 @@ export const id: Dictionary = {
       "Unable to load API keys.": "Tidak bisa memuat API key.",
       "Unable to create an API key.": "Tidak bisa membuat API key.",
       "Unable to revoke this key.": "Tidak bisa mencabut key ini.",
-      "Unable to load key usage.": "Tidak bisa memuat pemakaian key."
+      "Unable to load key usage.": "Tidak bisa memuat pemakaian key.",
+      "The uploaded file is corrupt or unreadable.": "Berkas yang diunggah rusak atau tidak bisa dibaca."
     }
   },
   chat: {

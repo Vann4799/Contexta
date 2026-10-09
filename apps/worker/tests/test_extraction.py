@@ -1,9 +1,11 @@
 from io import BytesIO
 
 import fitz
+import pytest
 from docx import Document
 
 from worker.extraction import DocumentTextExtractor
+from worker.processor import UserVisibleError
 
 
 def test_extracts_pdf_text_by_page() -> None:
@@ -62,3 +64,25 @@ def test_docx_heading_styles_become_heading_markers() -> None:
     assert extracted["pages"][0]["text"] == (
         "# BAB I\n## 1.1 Latar Belakang\nParagraf biasa."
     )
+
+
+def test_corrupt_pdf_raises_user_visible_error() -> None:
+    with pytest.raises(UserVisibleError, match="corrupt or unreadable"):
+        DocumentTextExtractor().extract(b"not a pdf at all", "pdf")
+
+
+def test_pdf_lines_are_sorted_by_visual_position() -> None:
+    pdf = fitz.open()
+    page = pdf.new_page()
+    page.insert_text((72, 120), "bottom line")
+    page.insert_text((72, 72), "top line")
+    page.insert_text((200, 72), "top right line")
+    content = pdf.tobytes()
+    pdf.close()
+
+    extracted = DocumentTextExtractor().extract(content, "pdf")
+
+    lines = extracted["pages"][0]["text"].splitlines()
+    assert lines[0] == "top line"
+    assert lines[1] == "top right line"
+    assert lines[2] == "bottom line"

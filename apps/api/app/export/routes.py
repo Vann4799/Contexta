@@ -2,6 +2,7 @@ from collections.abc import Iterator
 from datetime import datetime, timezone
 from typing import Annotated
 import json
+import logging
 import zipfile
 from urllib.parse import quote
 
@@ -29,6 +30,7 @@ from app.export.builder import (
 router = APIRouter(tags=["export"])
 VALID_EXPORT_FORMATS = {"md", "jsonl"}
 ZIP_MEDIA_TYPE = "application/zip"
+logger = logging.getLogger(__name__)
 
 
 class _PushStream:
@@ -224,6 +226,9 @@ def _workspace_bytes(
                         json_line(conversation_record(session, message))
                     )
                 yield from sink.drain()
+    except Exception:
+        logger.exception("workspace export failed mid-stream for user %s", user_id)
+        raise
     finally:
         archive.close()
 

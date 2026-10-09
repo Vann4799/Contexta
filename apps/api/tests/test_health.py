@@ -6,6 +6,8 @@ from fastapi.testclient import TestClient
 import httpx
 import app.main as main
 
+from app.auth.dependencies import get_current_user
+from app.auth.supabase_jwt import CurrentUser
 from app.core.config import Settings
 from app.documents.repository import InMemoryDocumentRepository
 from app.main import app
@@ -89,6 +91,9 @@ def test_vector_health_returns_unavailable_status(monkeypatch) -> None:
 
 
 def test_indexing_health_returns_unknown_ok_without_repository_data(monkeypatch) -> None:
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(
+        id="health-test-user", email="health@test.com", role="authenticated"
+    )
     monkeypatch.setattr(
         main,
         "get_settings",
@@ -112,6 +117,9 @@ def test_indexing_health_returns_unknown_ok_without_repository_data(monkeypatch)
 
 
 def test_indexing_health_reports_attention_for_stale_processing_documents(monkeypatch) -> None:
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(
+        id="health-test-user", email="health@test.com", role="authenticated"
+    )
     now = datetime.now(timezone.utc)
     stale_started_at = (now - timedelta(minutes=20)).isoformat()
     fresh_updated_at = (now - timedelta(minutes=2)).isoformat()
@@ -166,6 +174,9 @@ def test_a_slow_indexing_health_check_leaves_the_event_loop_free(monkeypatch) ->
     """The health check blocks on httpx. A sync def route runs it in the threadpool;
     declared async def it would run on the event loop, and one slow Supabase answer
     would stall every concurrent request with it."""
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(
+        id="health-test-user", email="health@test.com", role="authenticated"
+    )
 
     entered = threading.Event()
     release = threading.Event()

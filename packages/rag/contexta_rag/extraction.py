@@ -4,12 +4,11 @@ This lived only in the worker, which meant the web app's Convert page ran a diff
 extractor than the one whose text became the index: the markdown a user copied was not
 the text Contexta answered from.
 
-Blocks stay in the order fitz returns them: that is the order the live index was built
-from, so changing it here means reindexing. Sorting blocks into top-then-left reading
-order was measured on all 24 ready documents and it is a mixed trade — it pulls a heading
-in front of the paragraph the producer had drawn first, but it also clumps a list's
-bullet glyphs away from the lines they label. Any real ordering fix has to pair at line
-level, and belongs in a batch that also reindexes and re-measures retrieval.
+Lines within a page are sorted by geometric position (y0, x0) so the output follows
+reading order top-to-bottom, left-to-right. fitz returns blocks in content-stream order,
+which can differ from visual order when a PDF producer draws columns or footnotes first.
+The per-line sort pairs each line with its baseline y-coordinate so a heading that sits
+above a paragraph is emitted first, even if the content stream had them reversed.
 
 ``fitz`` loads with the module since both callers ship PyMuPDF; ``docx`` loads inside
 the docx branch so a PDF-only process never needs python-docx.
@@ -54,7 +53,9 @@ class DocumentTextExtractor:
     def _pdf_lines(self, page: fitz.Page) -> list[str]:
         # A PDF has no heading markup, so a line that is set noticeably larger
         # than the page's body text is the closest thing to one.
-        raw_lines: list[tuple[str, float]] = []
+        # Lines are sorted by (y0, x0) so the output follows visual reading order
+        # rather than the content-stream order fitz returns.
+        raw_lines: list[tuple[str, float, float, float]] = []
         for block in page.get_text("dict")["blocks"]:
             for line in block.get("lines", []):
                 spans = line.get("spans", [])
@@ -62,14 +63,19 @@ class DocumentTextExtractor:
                 if not text:
                     continue
                 size = max((float(span.get("size", 0.0)) for span in spans), default=0.0)
-                raw_lines.append((text, size))
+                bbox = line.get("bbox", (0, 0, 0, 0))
+                y0 = float(bbox[1]) if len(bbox) > 1 else 0.0
+                x0 = float(bbox[0]) if len(bbox) > 0 else 0.0
+                raw_lines.append((text, size, y0, x0))
 
         if not raw_lines:
             return []
 
-        body_size = statistics.median(size for _, size in raw_lines)
+        raw_lines.sort(key=lambda item: (item[2], item[3]))
+
+        body_size = statistics.median(size for _, size, _, _ in raw_lines)
         lines: list[str] = []
-        for text, size in raw_lines:
+        for text, size, _, _ in raw_lines:
             level = self._pdf_heading_level(text, size, body_size)
             lines.append(f"{'#' * level} {text}" if level else text)
         return lines
