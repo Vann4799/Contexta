@@ -40,7 +40,8 @@ export const id: Dictionary = {
       pipeline: "Pipeline",
       documents: "Dokumen",
       chat: "Chat",
-      convert: "Konversi"
+      convert: "Konversi",
+      apiKeys: "Kunci API"
     }
   },
   auth: {

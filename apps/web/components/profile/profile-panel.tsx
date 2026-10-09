@@ -504,7 +504,7 @@ export function ProfilePanel() {
           </p>
           <Link
             className="focus-ring inline-flex h-10 items-center gap-2 rounded-control px-3 text-[13.5px] font-medium text-ink transition-colors hover:bg-paper-chip"
-            href="/settings/developer"
+            href="/api-keys"
           >
             {copy.manageKeys}
             <ArrowRight className="h-4 w-4" strokeWidth={2.1} aria-hidden="true" />

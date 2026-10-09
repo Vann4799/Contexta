@@ -40,7 +40,8 @@ export const en = {
       pipeline: "Pipeline",
       documents: "Documents",
       chat: "Chat",
-      convert: "Convert"
+      convert: "Convert",
+      apiKeys: "API keys"
     }
   },
   auth: {

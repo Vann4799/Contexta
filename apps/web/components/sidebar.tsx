@@ -7,6 +7,7 @@ import {
   FileCode,
   FileText,
   HelpCircle,
+  KeyRound,
   LayoutDashboard,
   Menu,
   MessageSquare,
@@ -28,7 +29,8 @@ const NAV_ICONS: Record<NavIcon, LucideIcon> = {
   pipeline: Waypoints,
   documents: FileText,
   chat: MessageSquare,
-  convert: FileCode
+  convert: FileCode,
+  apiKeys: KeyRound
 };
 
 function isActiveRoute(pathname: string, href: string) {
