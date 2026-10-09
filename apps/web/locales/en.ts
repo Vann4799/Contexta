@@ -24,6 +24,7 @@ export const en = {
     primaryNav: "Primary",
     mobileNav: "Mobile primary",
     openNav: "Open navigation",
+    closeNav: "Close navigation",
     accountMenu: "Account menu",
     signedIn: "Signed in",
     profile: "Profile",

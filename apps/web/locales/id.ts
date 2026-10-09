@@ -24,6 +24,7 @@ export const id: Dictionary = {
     primaryNav: "Navigasi utama",
     mobileNav: "Navigasi utama seluler",
     openNav: "Buka navigasi",
+    closeNav: "Tutup navigasi",
     accountMenu: "Menu akun",
     signedIn: "Sudah masuk",
     profile: "Profil",
