@@ -182,6 +182,20 @@ export function DashboardInsights() {
     () => Math.max(...activityBuckets.map((d) => Math.max(d.uploads, d.indexed)), 1),
     [activityBuckets]
   );
+  const yAxisMax = useMemo(() => {
+    const tiers = [10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000];
+    for (const t of tiers) {
+      if (activityMax <= t) return t;
+    }
+    return Math.ceil(activityMax / 1000) * 1000;
+  }, [activityMax]);
+  const yAxisLabels = useMemo(() => {
+    const step = yAxisMax <= 10 ? 2 : yAxisMax <= 50 ? 10 : yAxisMax <= 200 ? 50 : Math.round(yAxisMax / 5);
+    const labels: number[] = [];
+    for (let v = yAxisMax; v >= 0; v -= step) labels.push(v);
+    if (labels[labels.length - 1] !== 0) labels.push(0);
+    return labels;
+  }, [yAxisMax]);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   const statusData = useMemo(() => {
@@ -306,7 +320,7 @@ export function DashboardInsights() {
                 <div className="relative h-[190px] w-full">
                   {/* Y-axis labels */}
                   <div className="absolute left-0 top-0 flex h-full flex-col justify-between pr-2 text-[10px] text-ink-muted nums">
-                    {[4, 3, 2, 1, 0].map((n) => (
+                    {yAxisLabels.map((n) => (
                       <span key={n}>{n}</span>
                     ))}
                   </div>
@@ -317,8 +331,8 @@ export function DashboardInsights() {
                       preserveAspectRatio="none"
                     >
                       {/* Grid lines */}
-                      {[0, 1, 2, 3, 4].map((n) => {
-                        const y = (n / 4) * 180 + 5;
+                      {yAxisLabels.map((n) => {
+                        const y = 185 - (n / yAxisMax) * 180;
                         return (
                           <line
                             key={`grid-${n}`}
@@ -339,7 +353,7 @@ export function DashboardInsights() {
                         d={`${activityBuckets
                           .map((b, i) => {
                             const x = i * 40 + 20;
-                            const y = 185 - (b.uploads / 4) * 180;
+                            const y = 185 - (b.uploads / yAxisMax) * 180;
                             return `${i === 0 ? "M" : "L"} ${x},${y}`;
                           })
                           .join(" ")} L ${(activityBuckets.length - 1) * 40 + 20},185 L 20,185 Z`}
@@ -351,7 +365,7 @@ export function DashboardInsights() {
                         d={`${activityBuckets
                           .map((b, i) => {
                             const x = i * 40 + 20;
-                            const y = 185 - (b.indexed / 4) * 180;
+                            const y = 185 - (b.indexed / yAxisMax) * 180;
                             return `${i === 0 ? "M" : "L"} ${x},${y}`;
                           })
                           .join(" ")} L ${(activityBuckets.length - 1) * 40 + 20},185 L 20,185 Z`}
@@ -366,10 +380,10 @@ export function DashboardInsights() {
                         d={activityBuckets
                           .map((b, i) => {
                             const x = i * 40 + 20;
-                            const y = 185 - (b.uploads / 4) * 180;
+                            const y = 185 - (b.uploads / yAxisMax) * 180;
                             if (i === 0) return `M ${x},${y}`;
                             const prevX = (i - 1) * 40 + 20;
-                            const prevY = 185 - (activityBuckets[i - 1].uploads / 4) * 180;
+                            const prevY = 185 - (activityBuckets[i - 1].uploads / yAxisMax) * 180;
                             const cpx1 = prevX + 13;
                             const cpx2 = x - 13;
                             return `C ${cpx1},${prevY} ${cpx2},${y} ${x},${y}`;
@@ -386,10 +400,10 @@ export function DashboardInsights() {
                         d={activityBuckets
                           .map((b, i) => {
                             const x = i * 40 + 20;
-                            const y = 185 - (b.indexed / 4) * 180;
+                            const y = 185 - (b.indexed / yAxisMax) * 180;
                             if (i === 0) return `M ${x},${y}`;
                             const prevX = (i - 1) * 40 + 20;
-                            const prevY = 185 - (activityBuckets[i - 1].indexed / 4) * 180;
+                            const prevY = 185 - (activityBuckets[i - 1].indexed / yAxisMax) * 180;
                             const cpx1 = prevX + 13;
                             const cpx2 = x - 13;
                             return `C ${cpx1},${prevY} ${cpx2},${y} ${x},${y}`;
@@ -413,7 +427,7 @@ export function DashboardInsights() {
                       {/* Data points for uploads */}
                       {activityBuckets.map((b, i) => {
                         const x = i * 40 + 20;
-                        const y = 185 - (b.uploads / 4) * 180;
+                        const y = 185 - (b.uploads / yAxisMax) * 180;
                         return (
                           <circle
                             key={`up-${i}`}
@@ -428,7 +442,7 @@ export function DashboardInsights() {
                       {/* Data points for indexed */}
                       {activityBuckets.map((b, i) => {
                         const x = i * 40 + 20;
-                        const y = 185 - (b.indexed / 4) * 180;
+                        const y = 185 - (b.indexed / yAxisMax) * 180;
                         return (
                           <circle
                             key={`idx-${i}`}
