@@ -280,7 +280,7 @@ export function DashboardInsights() {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {topMetrics.map((m) => (
           <article key={m.label} className="surface flex items-center gap-4 px-5 py-4">
-            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-paper-chip">
+            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-night">
               <m.icon className={cn("h-5 w-5", m.accent)} strokeWidth={2} aria-hidden="true" />
             </div>
             <div className="min-w-0">
