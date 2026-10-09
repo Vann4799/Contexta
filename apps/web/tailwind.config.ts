@@ -48,17 +48,6 @@ const v2 = {
     DEFAULT: withAlpha("#a3231b"),
     soft: withAlpha("#fadfd9"),
     line: "rgb(163 35 27 / 0.3)"
-  },
-  brand: {
-    orange: "#FF5B14",
-    "orange-hover": "#FF6E2E",
-    "orange-glow": "#FF7A1A",
-    dark: "#0C0C0E",
-    card: "#16161A",
-    cardLight: "#1C1C22",
-    cardBorder: "#26262E",
-    muted: "#7E7E8F",
-    subtle: "#2E2E38"
   }
 };
 
@@ -79,9 +68,7 @@ const config: Config = {
       boxShadow: {
         card: "0 1px 0 rgba(20,20,20,0.04), 0 8px 24px -12px rgba(20,20,20,0.12)",
         node: "0 1px 2px rgba(20,20,20,0.06), 0 4px 12px -6px rgba(20,20,20,0.12)",
-        root: "0 18px 40px -16px rgba(0,0,0,0.45)",
-        "orange-glow": "0 0 25px -4px rgba(255, 91, 20, 0.45)",
-        "orange-sm": "0 0 12px -2px rgba(255, 91, 20, 0.35)"
+        root: "0 18px 40px -16px rgba(0,0,0,0.45)"
       },
       keyframes: {
         dash: { to: { strokeDashoffset: "-24" } },
