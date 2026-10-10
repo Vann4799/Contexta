@@ -67,6 +67,7 @@ export default function AuthCallbackPage() {
             status: "success",
             message: "done"
           });
+          router.replace("/");
           return;
         }
 
@@ -93,6 +94,7 @@ export default function AuthCallbackPage() {
             status: "success",
             message: "done"
           });
+          router.replace("/");
           return;
         }
 
@@ -116,6 +118,7 @@ export default function AuthCallbackPage() {
           status: "success",
           message: "done"
         });
+        router.replace("/");
       } catch (error) {
         setCallbackState({
           status: "error",

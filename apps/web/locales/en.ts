@@ -6,7 +6,8 @@ export const en = {
     status: {
       ready: "Ready",
       processing: "Processing",
-      failed: "Failed"
+      failed: "Failed",
+      trashed: "Trashed"
     },
     docTypes: {
       unclassified: "Unclassified",
@@ -35,6 +36,16 @@ export const en = {
     signOutFailed: "Sign out failed.",
     checkingTitle: "Checking access",
     checkingBody: "Please sign in to open your Contexta workspace.",
+    searchPlaceholder: "Search pages...",
+    notifications: "Notifications",
+    noNotifications: "No new notifications",
+    recentDocs: "Recent documents",
+    noRecentDocs: "No recent documents",
+    viewAllDocs: "View all",
+    upgradeTitle: "Upgrade to Pro",
+    upgradeBody: "Unlock unlimited documents, priority indexing, and team workspaces.",
+    upgradeCta: "Upgrade now",
+    secondaryNav: "Secondary",
     nav: {
       dashboard: "Dashboard",
       pipeline: "Pipeline",
@@ -42,7 +53,11 @@ export const en = {
       chat: "Chat",
       convert: "Convert",
       apiKeys: "API keys",
-      usage: "Usage"
+      usage: "Usage",
+      billing: "Billing",
+      integrations: "Integrations",
+      activity: "Activity",
+      trash: "Trash"
     }
   },
   auth: {
@@ -59,6 +74,10 @@ export const en = {
     hidePassword: "Hide password",
     submitting: "Working...",
     fallbackError: "Something went wrong. Please try again.",
+    oauth: {
+      divider: "or",
+      google: "Continue with Google"
+    },
     login: {
       button: "Sign in to Contexta",
       error: "Enter your email and password.",
@@ -155,6 +174,7 @@ export const en = {
       uploading: "Uploading...",
       dropTitle: "Drag and drop files here",
       dropBody: "Files are uploaded to your workspace and indexed automatically for grounded answers.",
+      uploadingBody: "Your document is being uploaded and will be indexed automatically.",
       formatHint: "PDF or DOCX · max 50 MB",
       statusEyebrow: "System status",
       storageUsed: "Storage used",
@@ -177,14 +197,27 @@ export const en = {
       retry: "Retry",
       reindex: "Re-index",
       delete: "Delete",
+      trash: "Move to trash",
+      restore: "Restore",
+      permanentDelete: "Delete permanently",
+      trashTitle: "Trash",
+      trashDescription: "Documents in trash are kept for 30 days before permanent deletion.",
+      trashEmpty: "Trash is empty.",
+      backToDocuments: "Back to documents",
       emptyList: "No documents uploaded yet.",
       showing: (visible: number, total: number) =>
         `Showing ${visible} of ${total} ${total === 1 ? "document" : "documents"}.`,
       deleteConfirm: (name: string) => `Delete "${name}"? This removes its indexed chunks too.`,
+      trashConfirm: (name: string) => `Move "${name}" to trash?`,
+      restoreConfirm: (name: string) => `Restore "${name}"?`,
+      permanentDeleteConfirm: (name: string) => `Permanently delete "${name}"? This cannot be undone.`,
       messages: {
         uploaded: (name: string) => `${name} uploaded.`,
         classified: (name: string, type: string) => `${name} classified as ${type}.`,
         deleted: (name: string) => `${name} deleted.`,
+        trashed: (name: string) => `${name} moved to trash.`,
+        restored: (name: string) => `${name} restored.`,
+        permanentlyDeleted: (name: string) => `${name} permanently deleted.`,
         retried: (name: string) => `${name} queued for retry.`,
         reindexed: (name: string) => `${name} queued for re-indexing.`,
         exported: (name: string) => `Exported ${name}.`
@@ -207,6 +240,12 @@ export const en = {
         typeFailed: "Unable to update document type.",
         signInDelete: "Sign in to delete documents.",
         deleteFailed: "Unable to delete document.",
+        signInTrash: "Sign in to move documents to trash.",
+        trashFailed: "Unable to move document to trash.",
+        signInRestore: "Sign in to restore documents.",
+        restoreFailed: "Unable to restore document.",
+        signInPermanentDelete: "Sign in to permanently delete documents.",
+        permanentDeleteFailed: "Unable to permanently delete document.",
         signInRetry: "Sign in to retry documents.",
         retryFailed: "Unable to retry document.",
         signInReindex: "Sign in to re-index documents.",
@@ -430,16 +469,42 @@ export const en = {
     manageKeys: "Manage API keys",
     errors: {
       loadFailed: "Unable to load profile.",
-      saveFailed: "Unable to update profile."
+      saveFailed: "Unable to update profile.",
+      deleteFailed: "Unable to delete account.",
+      exportFailed: "Unable to export your data."
+    },
+    dangerZone: {
+      title: "Danger zone",
+      description: "These actions are permanent and cannot be undone.",
+      exportData: "Export my data",
+      exporting: "Exporting...",
+      exportHelper: "Download a JSON file with your documents, chats, and keys.",
+      deleteAccount: "Delete account",
+      deleting: "Deleting...",
+      deleteHelper: "Permanently delete your account and all associated data.",
+      confirmTitle: "Are you sure?",
+      confirmBody: "This will permanently delete your account, documents, chat history, API keys, and all other data. This cannot be undone.",
+      confirmAction: "Yes, delete my account",
+      cancel: "Cancel"
     }
   },
   settings: {
     eyebrow: "Workspace Settings",
-    title: "System controls",
+    title: "Settings",
     description:
-      "Read-only configuration for this workspace. Core secrets stay on the API server and are not exposed here.",
+      "Manage your preferences and workspace configuration.",
     apiKeys: "API keys",
     manageDocuments: "Manage documents",
+    profileSectionTitle: "Profile",
+    profileSectionDesc: "Update your display name and account details.",
+    displayName: "Display name",
+    displayNamePlaceholder: "Enter your display name",
+    save: "Save changes",
+    saving: "Saving",
+    saved: "Profile updated.",
+    saveFailed: "Failed to save profile.",
+    languageSectionTitle: "Language",
+    languageSectionDesc: "Choose your preferred language for the interface.",
     openChat: "Open chat",
     runtimeTitle: "Runtime Status",
     runtimeSubtitle: "Configuration currently used by the web app and API.",
@@ -906,6 +971,200 @@ export const en = {
       signIn: "Sign in to view API usage.",
       failed: "Unable to load usage data."
     }
+  },
+  activity: {
+    eyebrow: "Workspace Activity",
+    title: "Recent events",
+    refresh: "Refresh",
+    noActivity: "No activity yet"
+  },
+  billing: {
+    eyebrow: "Billing",
+    title: "Plans & billing",
+    subtitle: "Manage your subscription and track usage against your plan limits.",
+    refresh: "Refresh",
+    currentPlan: "Current plan",
+    freePlan: "Free",
+    subscriptionStatus: "Subscription",
+    noSubscription: "No active subscription — you are on the Free plan.",
+    periodStart: "Period start",
+    periodEnd: "Period end",
+    cancelAtPeriodEnd: "Cancels at end of period",
+    usageTitle: "Usage this period",
+    usageSubtitle: "How much of your plan limits you have used",
+    documents: "Documents",
+    storage: "Storage",
+    apiKeys: "API keys",
+    apiRequests: "API requests today",
+    chatMessages: "Chat messages today",
+    overLimit: "Over limit",
+    ofLimit: (used: number, max: number) => `${used} / ${max}`,
+    plansTitle: "Available plans",
+    plansSubtitle: "Upgrade anytime to increase your limits",
+    priceMonthly: (price: number) => price === 0 ? "Free" : `$${price}/mo`,
+    priceYearly: (price: number) => price === 0 ? "Free" : `$${price}/yr`,
+    perMonth: "/mo",
+    perYear: "/yr",
+    current: "Current",
+    upgrade: "Upgrade",
+    downgrade: "Switch",
+    features: "What's included",
+    limitDocuments: (n: number) => `${n} documents`,
+    limitStorage: (bytes: number) => {
+      if (bytes >= 1024 * 1024 * 1024) return `${Math.round(bytes / (1024 * 1024 * 1024))} GB storage`;
+      return `${Math.round(bytes / (1024 * 1024))} MB storage`;
+    },
+    limitApiKeys: (n: number) => `${n} API keys`,
+    limitApiRequests: (n: number) => `${n.toLocaleString()} API req/day`,
+    limitChatMessages: (n: number) => `${n.toLocaleString()} chat msgs/day`,
+    comingSoon: "Stripe checkout coming soon",
+    errors: {
+      signIn: "Sign in to view billing.",
+      loadFailed: "Unable to load billing status.",
+      plansFailed: "Unable to load plans."
+    }
+  },
+  integrations: {
+    eyebrow: "Integrations",
+    title: "Connected services",
+    subtitle: "Connect Contexta to your favourite tools to sync documents and receive notifications.",
+    refresh: "Refresh",
+    connected: "Connected",
+    disconnected: "Not connected",
+    error: "Error",
+    connect: "Connect",
+    disconnect: "Disconnect",
+    connecting: "Connecting...",
+    disconnecting: "Disconnecting...",
+    scopes: "Permissions",
+    connectedAs: (name: string) => `Connected as ${name}`,
+    lastSynced: (value: string) => `Last synced ${value}`,
+    oauthNote: "OAuth authorization will open a new window. Complete the flow in the popup.",
+    confirmDisconnect: (name: string) => `Disconnect ${name}? You will need to re-authorize to reconnect.`,
+    errors: {
+      signIn: "Sign in to manage integrations.",
+      loadFailed: "Unable to load integrations.",
+      connectFailed: "Unable to connect this integration.",
+      disconnectFailed: "Unable to disconnect this integration."
+    }
+  },
+  legal: {
+    terms: {
+      eyebrow: "Legal",
+      title: "Terms of Service",
+      effectiveDate: "Effective: October 10, 2026",
+      lastUpdated: "Last updated: October 10, 2026",
+      sections: {
+        acceptance: {
+          title: "1. Acceptance of Terms",
+          body: "By accessing or using Contexta (\"the Service\"), you agree to be bound by these Terms of Service. If you do not agree, do not use the Service. Contexta is provided by Contexta (\"we\", \"us\", \"our\")."
+        },
+        description: {
+          title: "2. Description of Service",
+          body: "Contexta is a Retrieval-Augmented Generation (RAG) platform that allows users to upload documents, index their content using vector embeddings, and interact with the indexed knowledge through natural language chat. The Service includes document storage, AI-powered question answering, API access, and document conversion tools."
+        },
+        accounts: {
+          title: "3. Accounts & Authentication",
+          body: "You are responsible for maintaining the security of your account credentials. You must not share your API keys or authentication tokens with unauthorized parties. You must provide accurate registration information. You may not create accounts for the purpose of violating these terms or applicable law."
+        },
+        acceptableUse: {
+          title: "4. Acceptable Use",
+          body: "You may not: upload documents containing illegal content or content that infringes third-party rights; use the Service to generate content that is defamatory, harassing, or otherwise harmful; attempt to gain unauthorized access to the Service or its related systems; use the Service for high-volume automated requests beyond your plan limits; reverse-engineer, decompile, or disassemble any part of the Service."
+        },
+        content: {
+          title: "5. Your Content",
+          body: "You retain ownership of documents you upload to Contexta. By uploading content, you grant us a limited license to store, process, and index your documents solely for the purpose of providing the Service. We do not use your uploaded content to train models or provide services to other users. You are responsible for ensuring you have the right to upload and process your documents."
+        },
+        aiGenerated: {
+          title: "6. AI-Generated Responses",
+          body: "Answers generated by Contexta are produced by large language models and may contain errors, omissions, or inaccuracies. AI-generated content should not be relied upon as professional advice. You are responsible for verifying any information before acting on it. We do not guarantee the accuracy, completeness, or fitness of AI-generated responses."
+        },
+        billing: {
+          title: "7. Billing & Plans",
+          body: "The Service offers free and paid plans. Paid plans are billed monthly or annually as displayed at the time of purchase. All fees are non-refundable unless required by law. We may change pricing with at least 30 days notice before the change takes effect. Failure to pay may result in suspension or termination of your account."
+        },
+        termination: {
+          title: "8. Termination",
+          body: "You may delete your account at any time through the Profile settings. We may suspend or terminate your account if you violate these terms, if required by law, or for extended non-payment. Upon termination, your right to use the Service ceases immediately. We will retain your data for 30 days after termination before permanent deletion, unless required by law to retain it longer."
+        },
+        liability: {
+          title: "9. Limitation of Liability",
+          body: "The Service is provided \"as is\" without warranties of any kind. To the maximum extent permitted by law, we shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including but not limited to loss of data, profits, or business opportunities, arising from your use of the Service."
+        },
+        changes: {
+          title: "10. Changes to Terms",
+          body: "We may update these Terms from time to time. Material changes will be notified via email or through the Service at least 14 days before taking effect. Continued use of the Service after changes take effect constitutes acceptance of the updated terms."
+        },
+        contact: {
+          title: "11. Contact",
+          body: "For questions about these Terms, please contact us through the Service or at the email address provided in the application."
+        }
+      }
+    },
+    privacy: {
+      eyebrow: "Legal",
+      title: "Privacy Policy",
+      effectiveDate: "Effective: October 10, 2026",
+      lastUpdated: "Last updated: October 10, 2026",
+      sections: {
+        overview: {
+          title: "1. Overview",
+          body: "This Privacy Policy describes how Contexta (\"we\", \"us\", \"our\") collects, uses, stores, and protects your personal data when you use our Service. We are committed to protecting your privacy and handling your data transparently."
+        },
+        dataCollected: {
+          title: "2. Data We Collect",
+          body: "Account data: email address, display name, authentication provider. Document data: files you upload (PDF, DOCX), extracted text, vector embeddings, and metadata. Usage data: chat messages, API requests, timestamps, and interaction logs. Technical data: IP address, browser type, device information, and cookies."
+        },
+        dataUse: {
+          title: "3. How We Use Your Data",
+          body: "We use your data to: provide and maintain the Service; index your documents and generate AI responses; process your API requests; send service-related notifications; detect and prevent abuse or security issues; improve the Service based on aggregated, anonymized usage patterns. We do not sell your personal data to third parties."
+        },
+        dataSharing: {
+          title: "4. Data Sharing & Third Parties",
+          body: "We share data only with: service providers who process data on our behalf (hosting, email delivery, payment processing); AI model providers (DeepSeek) for generating responses — your document content is sent as context for your queries; legal authorities when required by law or to protect our rights. All third-party processors are contractually bound to protect your data."
+        },
+        dataRetention: {
+          title: "5. Data Retention",
+          body: "Account data is retained for the lifetime of your account plus 30 days after deletion. Document data and vector embeddings are deleted within 30 days of account deletion or document removal. API request logs are retained for 90 days. Aggregated, anonymized analytics may be retained indefinitely."
+        },
+        yourRights: {
+          title: "6. Your Rights (GDPR)",
+          body: "If you are in the European Economic Area, you have the right to: access your personal data; rectify inaccurate data; request deletion of your data (\"right to be forgotten\"); restrict or object to processing; data portability — export your data in a machine-readable format; withdraw consent at any time. To exercise these rights, use the data export and account deletion features in your Profile settings, or contact us directly."
+        },
+        cookies: {
+          title: "7. Cookies",
+          body: "We use essential cookies and local storage to maintain your session, remember your preferences (such as language), and provide core functionality. We do not use tracking cookies or third-party advertising cookies. You can control cookies through your browser settings, but disabling them may affect Service functionality."
+        },
+        security: {
+          title: "8. Security",
+          body: "We implement industry-standard security measures including encryption in transit (TLS), encrypted storage, access controls, and regular security reviews. However, no system is completely secure, and we cannot guarantee absolute security of your data."
+        },
+        international: {
+          title: "9. International Data Transfers",
+          body: "Your data may be processed and stored in countries outside your residence. When data is transferred internationally, we ensure appropriate safeguards are in place, such as Standard Contractual Clauses or adequacy decisions."
+        },
+        children: {
+          title: "10. Children's Privacy",
+          body: "The Service is not intended for users under 16 years of age. We do not knowingly collect personal data from children. If you believe a child has provided us with personal data, please contact us and we will delete it."
+        },
+        changes: {
+          title: "11. Changes to This Policy",
+          body: "We may update this Privacy Policy periodically. Material changes will be communicated via email or in-app notification at least 14 days before taking effect."
+        },
+        contact: {
+          title: "12. Contact",
+          body: "For privacy-related inquiries or to exercise your data rights, contact us through the Service or at the email address provided in the application."
+        }
+      }
+    },
+    backToHome: "Back to home",
+    readTerms: "Terms of Service",
+    readPrivacy: "Privacy Policy"
+  },
+  cookieConsent: {
+    message: "We use essential cookies to keep you signed in and remember your preferences. No tracking or advertising cookies.",
+    accept: "Accept",
+    learnMore: "Learn more"
   }
 };
 

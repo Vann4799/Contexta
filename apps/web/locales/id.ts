@@ -6,7 +6,8 @@ export const id: Dictionary = {
     status: {
       ready: "Siap",
       processing: "Memproses",
-      failed: "Gagal"
+      failed: "Gagal",
+      trashed: "Sampah"
     },
     docTypes: {
       unclassified: "Belum diklasifikasi",
@@ -35,6 +36,16 @@ export const id: Dictionary = {
     signOutFailed: "Gagal keluar.",
     checkingTitle: "Memeriksa akses",
     checkingBody: "Masuk dulu untuk membuka workspace Contexta kamu.",
+    searchPlaceholder: "Cari halaman...",
+    notifications: "Notifikasi",
+    noNotifications: "Tidak ada notifikasi baru",
+    recentDocs: "Dokumen terbaru",
+    noRecentDocs: "Belum ada dokumen terbaru",
+    viewAllDocs: "Lihat semua",
+    upgradeTitle: "Upgrade ke Pro",
+    upgradeBody: "Buka dokumen tanpa batas, prioritas indeks, dan workspace tim.",
+    upgradeCta: "Upgrade sekarang",
+    secondaryNav: "Sekunder",
     nav: {
       dashboard: "Dashboard",
       pipeline: "Pipeline",
@@ -42,7 +53,11 @@ export const id: Dictionary = {
       chat: "Chat",
       convert: "Konversi",
       apiKeys: "Kunci API",
-      usage: "Pemakaian"
+      usage: "Pemakaian",
+      billing: "Penagihan",
+      integrations: "Integrasi",
+      activity: "Aktivitas",
+      trash: "Sampah"
     }
   },
   auth: {
@@ -59,6 +74,10 @@ export const id: Dictionary = {
     hidePassword: "Sembunyikan kata sandi",
     submitting: "Memproses...",
     fallbackError: "Terjadi kesalahan. Coba lagi.",
+    oauth: {
+      divider: "atau",
+      google: "Lanjut dengan Google"
+    },
     login: {
       button: "Masuk ke Contexta",
       error: "Isi email dan kata sandi kamu.",
@@ -155,6 +174,7 @@ export const id: Dictionary = {
       uploading: "Mengunggah...",
       dropTitle: "Tarik dan letakkan berkas di sini",
       dropBody: "Berkas diunggah ke workspace Anda dan diindeks otomatis untuk jawaban yang berdasar.",
+      uploadingBody: "Dokumen Anda sedang diunggah dan akan diindeks otomatis.",
       formatHint: "PDF atau DOCX · maks 50 MB",
       statusEyebrow: "Status sistem",
       storageUsed: "Penyimpanan terpakai",
@@ -177,13 +197,26 @@ export const id: Dictionary = {
       retry: "Coba lagi",
       reindex: "Re-indeks",
       delete: "Hapus",
+      trash: "Pindah ke sampah",
+      restore: "Pulihkan",
+      permanentDelete: "Hapus permanen",
+      trashTitle: "Sampah",
+      trashDescription: "Dokumen di sampah disimpan 30 hari sebelum dihapus permanen.",
+      trashEmpty: "Sampah kosong.",
+      backToDocuments: "Kembali ke dokumen",
       emptyList: "Belum ada dokumen yang diunggah.",
       showing: (visible: number, total: number) => `Menampilkan ${visible} dari ${total} dokumen.`,
       deleteConfirm: (name: string) => `Hapus "${name}"? Chunk hasil indeksnya ikut terhapus.`,
+      trashConfirm: (name: string) => `Pindahkan "${name}" ke sampah?`,
+      restoreConfirm: (name: string) => `Pulihkan "${name}"?`,
+      permanentDeleteConfirm: (name: string) => `Hapus permanen "${name}"? Tindakan ini tidak bisa dibatalkan.`,
       messages: {
         uploaded: (name: string) => `${name} diunggah.`,
         classified: (name: string, type: string) => `${name} diklasifikasi sebagai ${type}.`,
         deleted: (name: string) => `${name} dihapus.`,
+        trashed: (name: string) => `${name} dipindahkan ke sampah.`,
+        restored: (name: string) => `${name} dipulihkan.`,
+        permanentlyDeleted: (name: string) => `${name} dihapus permanen.`,
         retried: (name: string) => `${name} masuk antrean percobaan ulang.`,
         reindexed: (name: string) => `${name} masuk antrean re-indeks.`,
         exported: (name: string) => `Mengekspor ${name}.`
@@ -206,6 +239,12 @@ export const id: Dictionary = {
         typeFailed: "Tidak bisa memperbarui tipe dokumen.",
         signInDelete: "Masuk dulu untuk menghapus dokumen.",
         deleteFailed: "Tidak bisa menghapus dokumen.",
+        signInTrash: "Masuk dulu untuk memindahkan dokumen ke sampah.",
+        trashFailed: "Tidak bisa memindahkan dokumen ke sampah.",
+        signInRestore: "Masuk dulu untuk memulihkan dokumen.",
+        restoreFailed: "Tidak bisa memulihkan dokumen.",
+        signInPermanentDelete: "Masuk dulu untuk menghapus permanen dokumen.",
+        permanentDeleteFailed: "Tidak bisa menghapus permanen dokumen.",
         signInRetry: "Masuk dulu untuk mencoba ulang dokumen.",
         retryFailed: "Tidak bisa mencoba ulang dokumen.",
         signInReindex: "Masuk dulu untuk me-re-indeks dokumen.",
@@ -428,16 +467,42 @@ export const id: Dictionary = {
     manageKeys: "Kelola API key",
     errors: {
       loadFailed: "Tidak bisa memuat profil.",
-      saveFailed: "Tidak bisa memperbarui profil."
+      saveFailed: "Tidak bisa memperbarui profil.",
+      deleteFailed: "Tidak bisa menghapus akun.",
+      exportFailed: "Tidak bisa mengekspor data Anda."
+    },
+    dangerZone: {
+      title: "Zona bahaya",
+      description: "Tindakan ini permanen dan tidak bisa dibatalkan.",
+      exportData: "Ekspor data saya",
+      exporting: "Mengekspor...",
+      exportHelper: "Unduh berkas JSON berisi dokumen, chat, dan key Anda.",
+      deleteAccount: "Hapus akun",
+      deleting: "Menghapus...",
+      deleteHelper: "Hapus permanen akun Anda beserta semua data terkait.",
+      confirmTitle: "Anda yakin?",
+      confirmBody: "Ini akan menghapus permanen akun, dokumen, riwayat chat, API key, dan semua data lainnya. Tidak bisa dibatalkan.",
+      confirmAction: "Ya, hapus akun saya",
+      cancel: "Batal"
     }
   },
   settings: {
     eyebrow: "Pengaturan Workspace",
-    title: "Kontrol sistem",
+    title: "Pengaturan",
     description:
-      "Konfigurasi hanya-baca untuk workspace ini. Secrets inti tetap di server API dan tidak ditampilkan di sini.",
+      "Kelola preferensi dan konfigurasi workspace kamu.",
     apiKeys: "API key",
     manageDocuments: "Kelola dokumen",
+    profileSectionTitle: "Profil",
+    profileSectionDesc: "Perbarui nama tampilan dan detail akun kamu.",
+    displayName: "Nama tampilan",
+    displayNamePlaceholder: "Masukkan nama tampilan",
+    save: "Simpan perubahan",
+    saving: "Menyimpan",
+    saved: "Profil diperbarui.",
+    saveFailed: "Gagal menyimpan profil.",
+    languageSectionTitle: "Bahasa",
+    languageSectionDesc: "Pilih bahasa preferensi untuk antarmuka.",
     openChat: "Buka chat",
     runtimeTitle: "Status Runtime",
     runtimeSubtitle: "Konfigurasi yang sedang dipakai aplikasi web dan API.",
@@ -903,5 +968,199 @@ export const id: Dictionary = {
       signIn: "Masuk dulu untuk melihat pemakaian API.",
       failed: "Tidak bisa memuat data pemakaian."
     }
+  },
+  activity: {
+    eyebrow: "Aktivitas Workspace",
+    title: "Event terbaru",
+    refresh: "Segarkan",
+    noActivity: "Belum ada aktivitas"
+  },
+  billing: {
+    eyebrow: "Penagihan",
+    title: "Paket & penagihan",
+    subtitle: "Kelola langganan Anda dan pantau pemakaian terhadap batas paket.",
+    refresh: "Segarkan",
+    currentPlan: "Paket saat ini",
+    freePlan: "Gratis",
+    subscriptionStatus: "Langganan",
+    noSubscription: "Belum ada langganan aktif — Anda di paket Gratis.",
+    periodStart: "Awal periode",
+    periodEnd: "Akhir periode",
+    cancelAtPeriodEnd: "Berakhir di akhir periode",
+    usageTitle: "Pemakaian periode ini",
+    usageSubtitle: "Seberapa banyak batas paket yang sudah terpakai",
+    documents: "Dokumen",
+    storage: "Penyimpanan",
+    apiKeys: "Kunci API",
+    apiRequests: "Permintaan API hari ini",
+    chatMessages: "Pesan chat hari ini",
+    overLimit: "Melebihi batas",
+    ofLimit: (used: number, max: number) => `${used} / ${max}`,
+    plansTitle: "Paket tersedia",
+    plansSubtitle: "Upgrade kapan saja untuk menambah batas",
+    priceMonthly: (price: number) => price === 0 ? "Gratis" : `$${price}/bln`,
+    priceYearly: (price: number) => price === 0 ? "Gratis" : `$${price}/thn`,
+    perMonth: "/bln",
+    perYear: "/thn",
+    current: "Saat ini",
+    upgrade: "Upgrade",
+    downgrade: "Ganti",
+    features: "Yang termasuk",
+    limitDocuments: (n: number) => `${n} dokumen`,
+    limitStorage: (bytes: number) => {
+      if (bytes >= 1024 * 1024 * 1024) return `${Math.round(bytes / (1024 * 1024 * 1024))} GB penyimpanan`;
+      return `${Math.round(bytes / (1024 * 1024))} MB penyimpanan`;
+    },
+    limitApiKeys: (n: number) => `${n} kunci API`,
+    limitApiRequests: (n: number) => `${n.toLocaleString()} req API/hari`,
+    limitChatMessages: (n: number) => `${n.toLocaleString()} pesan chat/hari`,
+    comingSoon: "Stripe checkout segera hadir",
+    errors: {
+      signIn: "Masuk dulu untuk melihat penagihan.",
+      loadFailed: "Tidak bisa memuat status penagihan.",
+      plansFailed: "Tidak bisa memuat paket."
+    }
+  },
+  integrations: {
+    eyebrow: "Integrasi",
+    title: "Layanan terhubung",
+    subtitle: "Hubungkan Contexta ke alat favorit Anda untuk sinkronisasi dokumen dan notifikasi.",
+    refresh: "Segarkan",
+    connected: "Terhubung",
+    disconnected: "Belum terhubung",
+    error: "Error",
+    connect: "Hubungkan",
+    disconnect: "Putuskan",
+    connecting: "Menghubungkan...",
+    disconnecting: "Memutuskan...",
+    scopes: "Izin",
+    connectedAs: (name: string) => `Terhubung sebagai ${name}`,
+    lastSynced: (value: string) => `Terakhir sinkron ${value}`,
+    oauthNote: "Otorisasi OAuth akan membuka jendela baru. Selesaikan alur di popup.",
+    confirmDisconnect: (name: string) => `Putuskan ${name}? Anda perlu otorisasi ulang untuk menghubungkan kembali.`,
+    errors: {
+      signIn: "Masuk dulu untuk mengelola integrasi.",
+      loadFailed: "Tidak bisa memuat integrasi.",
+      connectFailed: "Tidak bisa menghubungkan integrasi ini.",
+      disconnectFailed: "Tidak bisa memutus integrasi ini."
+    }
+  },
+  legal: {
+    terms: {
+      eyebrow: "Legal",
+      title: "Syarat Layanan",
+      effectiveDate: "Berlaku: 10 Oktober 2026",
+      lastUpdated: "Terakhir diperbarui: 10 Oktober 2026",
+      sections: {
+        acceptance: {
+          title: "1. Penerimaan Syarat",
+          body: "Dengan mengakses atau menggunakan Contexta (\"Layanan\"), Anda menyetujui untuk terikat oleh Syarat Layanan ini. Jika tidak setuju, jangan gunakan Layanan. Contexta disediakan oleh Contexta (\"kami\")."
+        },
+        description: {
+          title: "2. Deskripsi Layanan",
+          body: "Contexta adalah platform Retrieval-Augmented Generation (RAG) yang memungkinkan pengguna mengunggah dokumen, mengindeks kontennya menggunakan vector embedding, dan berinteraksi dengan pengetahuan yang telah diindeks melalui chat bahasa alami. Layanan ini mencakup penyimpanan dokumen, tanya jawab berbasis AI, akses API, dan alat konversi dokumen."
+        },
+        accounts: {
+          title: "3. Akun & Autentikasi",
+          body: "Anda bertanggung jawab menjaga keamanan kredensial akun Anda. Anda tidak boleh membagikan API key atau token autentikasi kepada pihak yang tidak berwenang. Anda harus memberikan informasi pendaftaran yang akurat. Anda tidak boleh membuat akun untuk tujuan melanggar syarat ini atau hukum yang berlaku."
+        },
+        acceptableUse: {
+          title: "4. Penggunaan yang Dapat Diterima",
+          body: "Anda tidak boleh: mengunggah dokumen yang berisi konten ilegal atau konten yang melanggar hak pihak ketiga; menggunakan Layanan untuk menghasilkan konten yang fitnah, pelecehan, atau berbahaya; mencoba mendapatkan akses tidak sah ke Layanan atau sistem terkait; menggunakan Layanan untuk permintaan otomatis bervolume tinggi melebihi batas paket Anda; membalik rekayasa, dekompilasi, atau membongkar bagian manapun dari Layanan."
+        },
+        content: {
+          title: "5. Konten Anda",
+          body: "Anda mempertahankan kepemilikan dokumen yang Anda unggah ke Contexta. Dengan mengunggah konten, Anda memberikan kami lisensi terbatas untuk menyimpan, memproses, dan mengindeks dokumen Anda semata-mata untuk menyediakan Layanan. Kami tidak menggunakan konten yang Anda unggah untuk melatih model atau menyediakan layanan kepada pengguna lain. Anda bertanggung jawab untuk memastikan Anda memiliki hak untuk mengunggah dan memproses dokumen Anda."
+        },
+        aiGenerated: {
+          title: "6. Jawaban yang Dihasilkan AI",
+          body: "Jawaban yang dihasilkan oleh Contexta diproduksi oleh model bahasa besar dan mungkin mengandung kesalahan, kelalaian, atau ketidakakuratan. Konten yang dihasilkan AI tidak boleh diandalkan sebagai nasihat profesional. Anda bertanggung jawab untuk memverifikasi informasi sebelum menindaklanjutinya. Kami tidak menjamin keakuratan, kelengkapan, atau kesesuaian jawaban yang dihasilkan AI."
+        },
+        billing: {
+          title: "7. Penagihan & Paket",
+          body: "Layanan ini menawarkan paket gratis dan berbayar. Paket berbayar ditagihkan bulanan atau tahunan seperti yang ditampilkan pada saat pembelian. Semua biaya tidak dapat dikembalikan kecuali diwajibkan oleh hukum. Kami dapat mengubah harga dengan pemberitahuan minimal 30 hari sebelum perubahan berlaku. Kegagalan membayar dapat mengakibatkan penangguhan atau penghentian akun Anda."
+        },
+        termination: {
+          title: "8. Penghentian",
+          body: "Anda dapat menghapus akun Anda kapan saja melalui pengaturan Profil. Kami dapat menangguhkan atau menghentikan akun Anda jika Anda melanggar syarat ini, jika diwajibkan oleh hukum, atau karena tidak bayar berkepanjangan. Setelah penghentian, hak Anda untuk menggunakan Layanan segera berakhir. Kami akan menyimpan data Anda selama 30 hari setelah penghentian sebelum penghapusan permanen, kecuali diwajibkan oleh hukum untuk menyimpannya lebih lama."
+        },
+        liability: {
+          title: "9. Pembatasan Tanggung Jawab",
+          body: "Layanan ini disediakan \"sebagaimana adanya\" tanpa jaminan dalam bentuk apapun. Sepanjang diizinkan oleh hukum, kami tidak bertanggung jawab atas kerusakan tidak langsung, insidental, khusus, konsekuensial, atau punitif, termasuk namun tidak terbatas pada kehilangan data, keuntungan, atau peluang bisnis, yang timbul dari penggunaan Layanan."
+        },
+        changes: {
+          title: "10. Perubahan Syarat",
+          body: "Kami dapat memperbarui Syarat ini dari waktu ke waktu. Perubahan material akan diberitahukan melalui email atau melalui Layanan minimal 14 hari sebelum berlaku. Penggunaan Layanan yang berlanjut setelah perubahan berlaku merupakan penerimaan atas syarat yang diperbarui."
+        },
+        contact: {
+          title: "11. Kontak",
+          body: "Untuk pertanyaan tentang Syarat ini, silakan hubungi kami melalui Layanan atau di alamat email yang disediakan di aplikasi."
+        }
+      }
+    },
+    privacy: {
+      eyebrow: "Legal",
+      title: "Kebijakan Privasi",
+      effectiveDate: "Berlaku: 10 Oktober 2026",
+      lastUpdated: "Terakhir diperbarui: 10 Oktober 2026",
+      sections: {
+        overview: {
+          title: "1. Gambaran Umum",
+          body: "Kebijakan Privasi ini menjelaskan bagaimana Contexta (\"kami\") mengumpulkan, menggunakan, menyimpan, dan melindungi data pribadi Anda saat Anda menggunakan Layanan kami. Kami berkomitmen untuk melindungi privasi Anda dan menangani data Anda secara transparan."
+        },
+        dataCollected: {
+          title: "2. Data yang Kami Kumpulkan",
+          body: "Data akun: alamat email, nama tampilan, penyedia autentikasi. Data dokumen: file yang Anda unggah (PDF, DOCX), teks yang diekstrak, vector embedding, dan metadata. Data penggunaan: pesan chat, permintaan API, timestamp, dan log interaksi. Data teknis: alamat IP, jenis browser, informasi perangkat, dan cookie."
+        },
+        dataUse: {
+          title: "3. Bagaimana Kami Menggunakan Data Anda",
+          body: "Kami menggunakan data Anda untuk: menyediakan dan memelihara Layanan; mengindeks dokumen Anda dan menghasilkan jawaban AI; memproses permintaan API Anda; mengirimkan notifikasi terkait layanan; mendeteksi dan mencegah penyalahgunaan atau masalah keamanan; meningkatkan Layanan berdasarkan pola penggunaan agregat yang dianonimkan. Kami tidak menjual data pribadi Anda kepada pihak ketiga."
+        },
+        dataSharing: {
+          title: "4. Berbagi Data & Pihak Ketiga",
+          body: "Kami hanya berbagi data dengan: penyedia layanan yang memproses data atas nama kami (hosting, pengiriman email, pemrosesan pembayaran); penyedia model AI (DeepSeek) untuk menghasilkan jawaban — konten dokumen Anda dikirim sebagai konteks untuk kueri Anda; otoritas hukum ketika diwajibkan oleh hukum atau untuk melindungi hak kami. Semua pemroses pihak ketiga terikat secara kontraktual untuk melindungi data Anda."
+        },
+        dataRetention: {
+          title: "5. Retensi Data",
+          body: "Data akun disimpan selama masa aktif akun Anda ditambah 30 hari setelah penghapusan. Data dokumen dan vector embedding dihapus dalam waktu 30 hari setelah penghapusan akun atau penghapusan dokumen. Log permintaan API disimpan selama 90 hari. Analitik agregat yang dianonimkan dapat disimpan tanpa batas waktu."
+        },
+        yourRights: {
+          title: "6. Hak Anda (GDPR)",
+          body: "Jika Anda berada di European Economic Area, Anda memiliki hak untuk: mengakses data pribadi Anda; memperbaiki data yang tidak akurat; meminta penghapusan data Anda (\"hak untuk dilupakan\"); membatasi atau menolak pemrosesan; portabilitas data — mengekspor data Anda dalam format yang dapat dibaca mesin; menarik persetujuan kapan saja. Untuk menggunakan hak-hak ini, gunakan fitur ekspor data dan penghapusan akun di pengaturan Profil Anda, atau hubungi kami langsung."
+        },
+        cookies: {
+          title: "7. Cookie",
+          body: "Kami menggunakan cookie esensial dan penyimpanan lokal untuk mempertahankan sesi Anda, mengingat preferensi Anda (seperti bahasa), dan menyediakan fungs inti. Kami tidak menggunakan cookie pelacakan atau cookie iklan pihak ketiga. Anda dapat mengontrol cookie melalui pengaturan browser Anda, tetapi menonaktifkannya dapat memengaruhi fungsionalitas Layanan."
+        },
+        security: {
+          title: "8. Keamanan",
+          body: "Kami menerapkan langkah-langkah keamanan standar industri termasuk enkripsi dalam transmisi (TLS), penyimpanan terenkripsi, kontrol akses, dan tinjauan keamanan berkala. Namun, tidak ada sistem yang sepenuhnya aman, dan kami tidak dapat menjamin keamanan absolut data Anda."
+        },
+        international: {
+          title: "9. Transfer Data Internasional",
+          body: "Data Anda dapat diproses dan disimpan di negara di luar tempat tinggal Anda. Ketika data ditransfer secara internasional, kami memastikan perlindungan yang tepat sudah berlaku, seperti Klausul Kontraktual Standar atau keputusan kecukupan."
+        },
+        children: {
+          title: "10. Privasi Anak",
+          body: "Layanan ini tidak ditujukan untuk pengguna di bawah 16 tahun. Kami tidak dengan sengaja mengumpulkan data pribadi dari anak-anak. Jika Anda yakin seorang anak telah memberikan data pribadi kepada kami, silakan hubungi kami dan kami akan menghapusnya."
+        },
+        changes: {
+          title: "11. Perubahan Kebijakan Ini",
+          body: "Kami dapat memperbarui Kebijakan Privasi ini secara berkala. Perubahan material akan dikomunikasikan melalui email atau notifikasi dalam aplikasi minimal 14 hari sebelum berlaku."
+        },
+        contact: {
+          title: "12. Kontak",
+          body: "Untuk pertanyaan terkait privasi atau untuk menggunakan hak data Anda, hubungi kami melalui Layanan atau di alamat email yang disediakan di aplikasi."
+        }
+      }
+    },
+    backToHome: "Kembali ke beranda",
+    readTerms: "Syarat Layanan",
+    readPrivacy: "Kebijakan Privasi"
+  },
+  cookieConsent: {
+    message: "Kami menggunakan cookie esensial untuk menjaga Anda tetap masuk dan mengingat preferensi Anda. Tanpa cookie pelacakan atau iklan.",
+    accept: "Terima",
+    learnMore: "Pelajari lebih lanjut"
   }
 };
