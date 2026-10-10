@@ -39,6 +39,8 @@ models/
 .DS_Store
 Thumbs.db
 
-# build artifacts & local-only lockfiles
+# build artifacts
 *.tsbuildinfo
-pnpm-lock.yaml
+
+.vercel
+.env*
