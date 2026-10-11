@@ -1,15 +1,15 @@
 "use client";
 
 import { motion, useScroll, useTransform } from "motion/react";
-import { useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
   BookOpen,
   Brain,
+  Check,
   FileText,
   MessageSquare,
-  Sparkles,
   Zap,
 } from "lucide-react";
 import { ContextaLogo } from "@/components/contexta-logo";
@@ -78,6 +78,121 @@ function Navbar() {
   );
 }
 
+function HeroGrid() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const mouseRef = useRef({ x: 0.5, y: 0.5 });
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    mouseRef.current = {
+      x: (e.clientX - rect.left) / rect.width,
+      y: (e.clientY - rect.top) / rect.height,
+    };
+  }, []);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    let animId: number;
+    let time = 0;
+
+    function resize() {
+      if (!canvas) return;
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = canvas.offsetWidth * dpr;
+      canvas.height = canvas.offsetHeight * dpr;
+      if (ctx) ctx.scale(dpr, dpr);
+    }
+
+    resize();
+    window.addEventListener("resize", resize);
+    window.addEventListener("mousemove", handleMouseMove);
+
+    function draw() {
+      if (!canvas || !ctx) return;
+      const w = canvas.offsetWidth;
+      const h = canvas.offsetHeight;
+
+      ctx.clearRect(0, 0, w, h);
+
+      time += 0.003;
+      const mx = (mouseRef.current.x - 0.5) * 30;
+      const my = (mouseRef.current.y - 0.5) * 20;
+
+      const horizonY = h * 0.38;
+      const gridLines = 24;
+      const isMobile = w < 768;
+      const verticalCount = isMobile ? 12 : 20;
+
+      for (let i = 0; i <= gridLines; i++) {
+        const t = i / gridLines;
+        const perspective = Math.pow(t, 2.2);
+        const lineY = horizonY + (h - horizonY) * perspective;
+        const spread = 0.3 + perspective * 0.7;
+        const leftX = w / 2 - (w / 2) * spread + mx * (1 - t) * 0.5;
+        const rightX = w / 2 + (w / 2) * spread + mx * (1 - t) * 0.5;
+        const opacity = 0.04 + perspective * 0.14;
+        const pulse = Math.sin(time * 2 + i * 0.3) * 0.02;
+
+        ctx.beginPath();
+        ctx.moveTo(leftX, lineY + my * (1 - t));
+        ctx.lineTo(rightX, lineY + my * (1 - t));
+        ctx.strokeStyle = `rgba(19, 19, 21, ${Math.max(0, opacity + pulse)})`;
+        ctx.lineWidth = 0.5 + perspective * 0.5;
+        ctx.stroke();
+      }
+
+      for (let i = 0; i <= verticalCount; i++) {
+        const t = i / verticalCount;
+        const baseX = w * t;
+        const topX = w / 2 + (baseX - w / 2) * 0.05 + mx * 0.3;
+        const bottomX = baseX + mx * -0.1;
+        const distFromCenter = Math.abs(t - 0.5) * 2;
+        const opacity = 0.03 + (1 - distFromCenter) * 0.08;
+        const pulse = Math.sin(time * 1.5 + i * 0.5) * 0.015;
+
+        ctx.beginPath();
+        ctx.moveTo(topX, horizonY + my * 0.5);
+        ctx.lineTo(bottomX, h + my * -0.1);
+        ctx.strokeStyle = `rgba(19, 19, 21, ${Math.max(0, opacity + pulse)})`;
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
+
+      const glowX = w / 2 + mx * 0.5;
+      const glowY = horizonY + my * 0.3;
+      const gradient = ctx.createRadialGradient(glowX, glowY, 0, glowX, glowY, w * 0.3);
+      gradient.addColorStop(0, "rgba(242, 251, 72, 0.06)");
+      gradient.addColorStop(1, "rgba(242, 251, 72, 0)");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, w, h);
+
+      animId = requestAnimationFrame(draw);
+    }
+
+    draw();
+
+    return () => {
+      cancelAnimationFrame(animId);
+      window.removeEventListener("resize", resize);
+      window.removeEventListener("mousemove", handleMouseMove);
+    };
+  }, [handleMouseMove]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="absolute inset-0 h-full w-full"
+      style={{ pointerEvents: "none" }}
+    />
+  );
+}
+
 function Hero() {
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
@@ -85,58 +200,14 @@ function Hero() {
     offset: ["start start", "end start"],
   });
 
-  const y = useTransform(scrollYProgress, [0, 1], [0, 100]);
   const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
 
   return (
     <section ref={ref} className="relative overflow-hidden pt-32 pb-20 md:pt-40 md:pb-32">
-      {/* Animated background grid */}
-      <motion.div
-        style={{ y }}
-        className="absolute inset-0 opacity-30"
-      >
-        <div className="absolute inset-0 dot-grid" />
-      </motion.div>
-
-      {/* Floating accent elements */}
-      <motion.div
-        animate={{
-          y: [0, -20, 0],
-          rotate: [0, 5, 0],
-        }}
-        transition={{
-          duration: 8,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
-        className="absolute top-1/4 left-10 h-32 w-32 rounded-full bg-accent/20 blur-3xl"
-      />
-      <motion.div
-        animate={{
-          y: [0, 20, 0],
-          rotate: [0, -5, 0],
-        }}
-        transition={{
-          duration: 10,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
-        className="absolute bottom-1/4 right-10 h-40 w-40 rounded-full bg-accent/10 blur-3xl"
-      />
+      {/* Interactive 3D perspective grid */}
+      <HeroGrid />
 
       <motion.div style={{ opacity }} className="relative mx-auto max-w-5xl px-6 text-center">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="mb-6 inline-flex items-center gap-2 rounded-full border border-paper-line bg-paper-card px-4 py-1.5"
-        >
-          <Sparkles className="h-4 w-4 text-accent-deep" />
-          <span className="text-xs font-medium text-ink-muted">
-            AI-powered document intelligence
-          </span>
-        </motion.div>
-
         <motion.h1
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -320,6 +391,127 @@ function Stats() {
             <FadeIn key={stat.label} delay={i * 0.1} className="text-center">
               <div className="mb-2 text-5xl font-bold text-ink md:text-6xl">{stat.value}</div>
               <div className="text-sm text-ink-muted">{stat.label}</div>
+            </FadeIn>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+const pricingTiers = [
+  {
+    name: "Free",
+    price: "$0",
+    period: "forever",
+    description: "Perfect for trying out Contexta",
+    features: [
+      "10 documents",
+      "100 MB storage",
+      "2 API keys",
+      "100 API requests/day",
+      "50 chat messages/day",
+      "Community support",
+    ],
+    cta: "Get started free",
+    href: "/register",
+    popular: false,
+  },
+  {
+    name: "Pro",
+    price: "$29",
+    period: "/month",
+    description: "For professionals and growing teams",
+    features: [
+      "500 documents",
+      "10 GB storage",
+      "10 API keys",
+      "10,000 API requests/day",
+      "1,000 chat messages/day",
+      "Priority support",
+      "Advanced analytics",
+      "Custom integrations",
+    ],
+    cta: "Start Pro trial",
+    href: "/register?plan=pro",
+    popular: true,
+  },
+  {
+    name: "Enterprise",
+    price: "$99",
+    period: "/month",
+    description: "For organizations at scale",
+    features: [
+      "10,000 documents",
+      "100 GB storage",
+      "100 API keys",
+      "100,000 API requests/day",
+      "10,000 chat messages/day",
+      "Dedicated support",
+      "Advanced analytics",
+      "SSO & audit logs",
+    ],
+    cta: "Contact sales",
+    href: "/register?plan=enterprise",
+    popular: false,
+  },
+];
+
+function Pricing() {
+  return (
+    <section id="pricing" className="border-t border-paper-line bg-paper-soft py-20 md:py-32">
+      <div className="mx-auto max-w-7xl px-6">
+        <FadeIn className="mb-16 text-center">
+          <h2 className="mb-4 text-3xl font-bold text-ink md:text-5xl">
+            Simple, transparent pricing
+          </h2>
+          <p className="mx-auto max-w-2xl text-lg text-ink-muted">
+            Start free and scale as you grow. No hidden fees, no surprises.
+          </p>
+        </FadeIn>
+
+        <div className="grid gap-6 md:grid-cols-3">
+          {pricingTiers.map((tier, i) => (
+            <FadeIn key={tier.name} delay={i * 0.1}>
+              <div
+                className={`relative flex h-full flex-col rounded-card border p-8 transition-all ${
+                  tier.popular
+                    ? "border-ink bg-paper shadow-card"
+                    : "border-paper-line bg-paper-card hover:border-paper-edge hover:shadow-card"
+                }`}
+              >
+                {tier.popular && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-accent px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-accent-ink">
+                    Most popular
+                  </div>
+                )}
+                <div className="mb-6">
+                  <h3 className="mb-1 text-lg font-semibold text-ink">{tier.name}</h3>
+                  <p className="text-sm text-ink-muted">{tier.description}</p>
+                </div>
+                <div className="mb-6">
+                  <span className="text-4xl font-bold text-ink">{tier.price}</span>
+                  <span className="text-sm text-ink-muted">{tier.period}</span>
+                </div>
+                <ul className="mb-8 flex-1 space-y-3">
+                  {tier.features.map((feature) => (
+                    <li key={feature} className="flex items-start gap-2.5 text-sm text-ink-muted">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-ink" strokeWidth={2.5} />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  href={tier.href}
+                  className={`block rounded-control py-3 text-center text-sm font-semibold transition-all ${
+                    tier.popular
+                      ? "bg-accent text-accent-ink hover:bg-accent-deep"
+                      : "border border-paper-line bg-paper-soft text-ink hover:bg-paper-card"
+                  }`}
+                >
+                  {tier.cta}
+                </Link>
+              </div>
             </FadeIn>
           ))}
         </div>
@@ -528,6 +720,7 @@ export default function LandingPage() {
         <Features />
         <HowItWorks />
         <Stats />
+        <Pricing />
         <CTA />
       </main>
       <Footer />
