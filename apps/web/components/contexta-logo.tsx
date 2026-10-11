@@ -2,12 +2,12 @@ import Image from "next/image";
 
 type ContextaLogoProps = {
   compact?: boolean;
-  variant?: "light" | "dark";
+  variant?: "light" | "dark" | "login";
   size?: number;
 };
 
 export function ContextaLogo({ compact = false, variant = "light", size }: ContextaLogoProps) {
-  const src = variant === "dark" ? "/contexta-dark-logo.png" : "/contexta-neon-logo.png";
+  const src = variant === "dark" ? "/contexta-dark-logo.png" : variant === "login" ? "/contexta-login-logo.png" : "/contexta-neon-logo.png";
   const width = size ?? (compact ? 140 : 180);
 
   return (
