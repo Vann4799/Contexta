@@ -29,7 +29,7 @@ export default function LoginPage() {
           }}
         />
         <div className="relative w-fit rounded-control bg-paper-card p-3 shadow-node">
-          <ContextaLogo />
+          <ContextaLogo variant="login" />
         </div>
 
         <div className="relative max-w-xl">
@@ -58,7 +58,7 @@ export default function LoginPage() {
       <section className="flex min-h-[80vh] items-center justify-center lg:min-h-0">
         <div className="w-full max-w-md rounded-card border border-paper-line bg-paper-card p-6 shadow-card sm:p-8 lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none">
           <div className="mb-8 lg:hidden">
-            <ContextaLogo />
+            <ContextaLogo variant="login" />
           </div>
 
           <div>
