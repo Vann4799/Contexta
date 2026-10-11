@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { Inter, JetBrains_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import { AuthCallbackForwarder } from "@/components/auth/auth-callback-forwarder";
+import { CookieConsent } from "@/components/ui/cookie-consent";
 import { I18nProvider } from "@/lib/i18n";
 import "./globals.css";
 
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
         <I18nProvider>
           <AuthCallbackForwarder />
           {children}
+          <CookieConsent />
         </I18nProvider>
       </body>
     </html>

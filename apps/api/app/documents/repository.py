@@ -81,6 +81,20 @@ class DocumentRepository(Protocol):
     ) -> DocumentResponse | None:
         ...
 
+    def trash_document(
+        self,
+        user_id: str,
+        document_id: str,
+    ) -> DocumentResponse | None:
+        ...
+
+    def restore_document(
+        self,
+        user_id: str,
+        document_id: str,
+    ) -> DocumentResponse | None:
+        ...
+
 
 class InMemoryDocumentRepository:
     def __init__(self) -> None:
@@ -232,6 +246,40 @@ class InMemoryDocumentRepository:
                 )
                 self._documents[index] = updated
                 return updated
+        return None
+
+    def trash_document(
+        self,
+        user_id: str,
+        document_id: str,
+    ) -> DocumentResponse | None:
+        now = datetime.now(timezone.utc)
+        for index, document in enumerate(self._documents):
+            if document.user_id == user_id and document.id == document_id:
+                trashed = document.model_copy(
+                    update={"status": "trashed", "updated_at": now}
+                )
+                self._documents[index] = trashed
+                return trashed
+        return None
+
+    def restore_document(
+        self,
+        user_id: str,
+        document_id: str,
+    ) -> DocumentResponse | None:
+        now = datetime.now(timezone.utc)
+        for index, document in enumerate(self._documents):
+            if (
+                document.user_id == user_id
+                and document.id == document_id
+                and document.status == "trashed"
+            ):
+                restored = document.model_copy(
+                    update={"status": "uploaded", "updated_at": now}
+                )
+                self._documents[index] = restored
+                return restored
         return None
 
 
@@ -478,6 +526,59 @@ class SupabaseDocumentRepository:
                 "user_id": f"eq.{user_id}",
             },
             json=changes,
+        )
+        response.raise_for_status()
+        documents = response.json()
+        if not documents:
+            return None
+        return DocumentResponse.model_validate(documents[0])
+
+    def trash_document(
+        self,
+        user_id: str,
+        document_id: str,
+    ) -> DocumentResponse | None:
+        if not is_uuid(document_id):
+            return None
+        response = httpx.patch(
+            f"{self._supabase_url}/rest/v1/documents",
+            headers={
+                **self._headers,
+                "Content-Type": "application/json",
+                "Prefer": "return=representation",
+            },
+            params={
+                "id": f"eq.{document_id}",
+                "user_id": f"eq.{user_id}",
+            },
+            json={"status": "trashed"},
+        )
+        response.raise_for_status()
+        documents = response.json()
+        if not documents:
+            return None
+        return DocumentResponse.model_validate(documents[0])
+
+    def restore_document(
+        self,
+        user_id: str,
+        document_id: str,
+    ) -> DocumentResponse | None:
+        if not is_uuid(document_id):
+            return None
+        response = httpx.patch(
+            f"{self._supabase_url}/rest/v1/documents",
+            headers={
+                **self._headers,
+                "Content-Type": "application/json",
+                "Prefer": "return=representation",
+            },
+            params={
+                "id": f"eq.{document_id}",
+                "user_id": f"eq.{user_id}",
+                "status": "eq.trashed",
+            },
+            json={"status": "uploaded"},
         )
         response.raise_for_status()
         documents = response.json()

@@ -3,8 +3,8 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Database } from "lucide-react";
 import { Sidebar } from "@/components/sidebar";
+import { LayerStackLoader } from "@/components/ui/layer-stack-loader";
 import { useT } from "@/lib/i18n";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 
@@ -65,7 +65,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <main className="grid min-h-screen place-items-center bg-paper px-4 text-ink">
         <section className="surface w-full max-w-sm px-6 py-8 text-center">
           <div className="mx-auto grid h-14 w-14 place-items-center rounded-card bg-night shadow-root">
-            <Database className="h-6 w-6 text-accent" strokeWidth={2.2} aria-hidden="true" />
+            <LayerStackLoader />
           </div>
           <h1 className="mt-4 text-[22px] font-semibold tracking-tight">{t.shell.checkingTitle}</h1>
           <p className="mt-1 text-[13.5px] text-ink-muted">{t.shell.checkingBody}</p>

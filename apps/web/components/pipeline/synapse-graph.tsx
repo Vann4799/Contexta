@@ -54,6 +54,7 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(true);
   const [openDocs, setOpenDocs] = useState<Set<string>>(new Set());
 
   const realLeaves = clusters.flatMap((cluster) => cluster.items.filter((item) => item.id !== OVERFLOW_LEAF_ID));
@@ -166,6 +167,20 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
     setOpenDocs(new Set());
   }, [clusters.length]);
 
+  useEffect(() => {
+    const query = window.matchMedia("(min-width: 1024px)");
+    const sync = () => {
+      setIsDesktop(query.matches);
+      if (!query.matches) {
+        setZoom(1);
+        setPan({ x: 0, y: 0 });
+      }
+    };
+    sync();
+    query.addEventListener("change", sync);
+    return () => query.removeEventListener("change", sync);
+  }, []);
+
   function toggleDocument(leafId: string) {
     setOpenDocs((current) => {
       const next = new Set(current);
@@ -233,24 +248,26 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
           <Waypoints className="h-4 w-4 text-ink" aria-hidden="true" />
           <span className="hidden sm:inline">{copy.graph.title}</span>
         </span>
-        <span className="mx-1 h-5 w-px bg-paper-line" />
-        <ToolButton label={copy.graph.zoomOut} onClick={() => setZoom((z) => Math.max(MIN_ZOOM, +(z - 0.1).toFixed(2)))}>
-          <Minus className="h-3.5 w-3.5" aria-hidden="true" />
-        </ToolButton>
-        <ToolButton label={copy.graph.zoomIn} onClick={() => setZoom((z) => Math.min(MAX_ZOOM, +(z + 0.1).toFixed(2)))}>
-          <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-        </ToolButton>
-        <button
-          className="focus-ring ml-1 inline-flex h-7 items-center gap-1 rounded-control bg-paper-chip px-2 text-[12px] font-medium text-ink-muted transition-colors hover:text-ink"
-          type="button"
-          onClick={() => {
-            setZoom(1);
-            setPan({ x: 0, y: 0 });
-            setOpenDocs(new Set());
-          }}
-        >
-          <RotateCcw className="h-3 w-3" aria-hidden="true" /> {copy.graph.reset}
-        </button>
+        <div className="hidden items-center gap-1 lg:flex">
+          <span className="mx-1 h-5 w-px bg-paper-line" />
+          <ToolButton label={copy.graph.zoomOut} onClick={() => setZoom((z) => Math.max(MIN_ZOOM, +(z - 0.1).toFixed(2)))}>
+            <Minus className="h-3.5 w-3.5" aria-hidden="true" />
+          </ToolButton>
+          <ToolButton label={copy.graph.zoomIn} onClick={() => setZoom((z) => Math.min(MAX_ZOOM, +(z + 0.1).toFixed(2)))}>
+            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+          </ToolButton>
+          <button
+            className="focus-ring ml-1 inline-flex h-7 items-center gap-1 rounded-control bg-paper-chip px-2 text-[12px] font-medium text-ink-muted transition-colors hover:text-ink"
+            type="button"
+            onClick={() => {
+              setZoom(1);
+              setPan({ x: 0, y: 0 });
+              setOpenDocs(new Set());
+            }}
+          >
+            <RotateCcw className="h-3 w-3" aria-hidden="true" /> {copy.graph.reset}
+          </button>
+        </div>
         <span className="nums px-2.5 font-mono text-[12.5px] font-medium text-ink">{copy.graph.nodes(nodeCount)}</span>
       </div>
 
@@ -267,11 +284,15 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
         <div
           ref={stageRef}
           className="relative px-5 pb-12 pt-24 lg:min-w-[1180px] lg:px-14 lg:pb-12 lg:pt-[112px]"
-          style={{
-            transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${zoom})`,
-            transformOrigin: "top center",
-            transition: isPanning ? "none" : "transform 300ms ease"
-          }}
+          style={
+            isDesktop
+              ? {
+                  transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${zoom})`,
+                  transformOrigin: "top center",
+                  transition: isPanning ? "none" : "transform 300ms ease"
+                }
+              : undefined
+          }
           onTransitionEnd={measure}
         >
           {size.w > 0 ? (
@@ -330,7 +351,7 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
               <RootCard root={root} />
             </div>
 
-            <div className="flex min-w-0 flex-1 flex-col gap-8">
+            <div className="ml-3 flex min-w-0 flex-1 flex-col gap-8 border-l border-dashed border-paper-edge pl-5 lg:ml-0 lg:border-0 lg:pl-0">
               {clusters.length === 0 ? (
                 <p className="text-[13px] text-ink-muted">{copy.graph.empty}</p>
               ) : null}
@@ -342,6 +363,10 @@ export function SynapseGraph({ root, clusters }: SynapseGraphProps) {
                   onMouseEnter={() => setHover(cluster.id)}
                   onMouseLeave={() => setHover(null)}
                 >
+                  <span
+                    aria-hidden="true"
+                    className="absolute -left-[25px] top-6 z-10 h-2.5 w-2.5 rounded-full bg-accent ring-2 ring-paper-deep lg:hidden"
+                  />
                   <ClusterCard
                     cluster={cluster}
                     active={hover === cluster.id}

@@ -5,7 +5,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Bar,
   BarChart,
-  Cell,
   ResponsiveContainer,
   Tooltip,
   XAxis,

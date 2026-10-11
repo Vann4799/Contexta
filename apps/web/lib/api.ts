@@ -1,4 +1,4 @@
-export type DocumentStatus = "uploaded" | "processing" | "ready" | "failed";
+export type DocumentStatus = "uploaded" | "processing" | "ready" | "failed" | "trashed";
 
 export type DocumentType =
   | "unclassified"
@@ -457,6 +457,36 @@ export async function deleteDocument(accessToken: string, documentId: string) {
   }
 }
 
+export async function trashDocument(accessToken: string, documentId: string) {
+  const response = await fetchApi(`/documents/${documentId}/trash`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to move document to trash."));
+  }
+
+  return (await response.json()) as DocumentItem;
+}
+
+export async function restoreDocument(accessToken: string, documentId: string) {
+  const response = await fetchApi(`/documents/${documentId}/restore`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to restore document."));
+  }
+
+  return (await response.json()) as DocumentItem;
+}
+
 export async function retryDocument(accessToken: string, documentId: string) {
   const response = await fetchApi(`/documents/${documentId}/retry`, {
     method: "POST",
@@ -747,6 +777,261 @@ export async function getAccountSummary(accessToken: string): Promise<AccountSum
   }
 
   return (await response.json()) as AccountSummary;
+}
+
+export async function deleteAccount(accessToken: string): Promise<void> {
+  const response = await fetchApi("/account", {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${accessToken}` }
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to delete account."));
+  }
+}
+
+export type ActivityEventType =
+  | "document_uploaded"
+  | "document_processing"
+  | "document_ready"
+  | "document_failed"
+  | "document_trashed"
+  | "chat_message"
+  | "api_request";
+
+export type ActivityEvent = {
+  id: string;
+  event_type: ActivityEventType;
+  user_id: string;
+  title: string;
+  description: string | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+};
+
+export type ActivityFeed = {
+  events: ActivityEvent[];
+  total: number;
+  has_more: boolean;
+};
+
+export async function getActivityEvents(
+  accessToken: string,
+  limit = 50,
+  offset = 0
+): Promise<ActivityFeed> {
+  const response = await fetchApi(`/activity?limit=${limit}&offset=${offset}`, {
+    cache: "no-store",
+    headers: { Authorization: `Bearer ${accessToken}` }
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to load activity feed."));
+  }
+
+  return (await response.json()) as ActivityFeed;
+}
+
+export type NotificationType = "document_ready" | "document_failed" | "quota_warning" | "system";
+
+export type NotificationItem = {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  title: string;
+  message: string | null;
+  metadata: Record<string, unknown> | null;
+  read: boolean;
+  created_at: string;
+};
+
+export type NotificationList = {
+  notifications: NotificationItem[];
+  unread_count: number;
+};
+
+export async function getNotifications(accessToken: string, limit = 20): Promise<NotificationList> {
+  const response = await fetchApi(`/notifications?limit=${limit}`, {
+    cache: "no-store",
+    headers: { Authorization: `Bearer ${accessToken}` }
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to load notifications."));
+  }
+
+  return (await response.json()) as NotificationList;
+}
+
+export async function markNotificationRead(accessToken: string, notificationId: string): Promise<NotificationItem> {
+  const response = await fetchApi(`/notifications/${notificationId}/read`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}` }
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to mark notification as read."));
+  }
+
+  return (await response.json()) as NotificationItem;
+}
+
+export async function markAllNotificationsRead(accessToken: string): Promise<void> {
+  const response = await fetchApi("/notifications/read-all", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}` }
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to mark all notifications as read."));
+  }
+}
+
+export type PlanTier = "free" | "pro" | "enterprise";
+
+export type PlanLimits = {
+  max_documents: number;
+  max_storage_bytes: number;
+  max_api_keys: number;
+  max_api_requests_per_day: number;
+  max_chat_messages_per_day: number;
+};
+
+export type Plan = {
+  tier: PlanTier;
+  name: string;
+  price_monthly: number;
+  price_yearly: number;
+  limits: PlanLimits;
+};
+
+export type Subscription = {
+  id: string;
+  user_id: string;
+  plan_tier: PlanTier;
+  status: "active" | "cancelled" | "past_due" | "trialing";
+  current_period_start: string;
+  current_period_end: string;
+  cancel_at_period_end: boolean;
+  created_at: string;
+};
+
+export type UsageSummary = {
+  documents_count: number;
+  storage_bytes: number;
+  api_keys_count: number;
+  api_requests_today: number;
+  chat_messages_today: number;
+};
+
+export type BillingStatus = {
+  subscription: Subscription | null;
+  plan: Plan;
+  usage: UsageSummary;
+  overages: Record<string, boolean>;
+};
+
+export async function getBillingPlans(): Promise<Plan[]> {
+  const response = await fetchApi("/billing/plans", { cache: "no-store" });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to load plans."));
+  }
+
+  return (await response.json()) as Plan[];
+}
+
+export async function getBillingStatus(accessToken: string): Promise<BillingStatus> {
+  const response = await fetchApi("/billing/status", {
+    cache: "no-store",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to load billing status."));
+  }
+
+  return (await response.json()) as BillingStatus;
+}
+
+export type IntegrationProvider = "slack" | "notion" | "google_drive" | "github";
+export type IntegrationStatus = "connected" | "disconnected" | "error";
+
+export type IntegrationDefinition = {
+  provider: IntegrationProvider;
+  name: string;
+  description: string;
+  icon: string;
+  scopes: string[];
+  oauth_supported: boolean;
+};
+
+export type IntegrationConnection = {
+  id: string;
+  user_id: string;
+  provider: IntegrationProvider;
+  status: IntegrationStatus;
+  external_user_id: string | null;
+  external_user_name: string | null;
+  external_user_email: string | null;
+  scopes: string[];
+  metadata: Record<string, unknown> | null;
+  connected_at: string | null;
+  last_synced_at: string | null;
+  error_message: string | null;
+};
+
+export type IntegrationListResponse = {
+  definitions: IntegrationDefinition[];
+  connections: IntegrationConnection[];
+};
+
+export async function getIntegrations(accessToken: string): Promise<IntegrationListResponse> {
+  const response = await fetchApi("/integrations", {
+    cache: "no-store",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to load integrations."));
+  }
+
+  return (await response.json()) as IntegrationListResponse;
+}
+
+export async function connectIntegration(
+  accessToken: string,
+  provider: IntegrationProvider,
+  oauthCode?: string
+): Promise<IntegrationConnection> {
+  const response = await fetchApi("/integrations/connect", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ provider, oauth_code: oauthCode ?? null }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to connect integration."));
+  }
+
+  return (await response.json()) as IntegrationConnection;
+}
+
+export async function disconnectIntegration(
+  accessToken: string,
+  provider: IntegrationProvider
+): Promise<void> {
+  const response = await fetchApi(`/integrations/${provider}/disconnect`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to disconnect integration."));
+  }
 }
 
 /**

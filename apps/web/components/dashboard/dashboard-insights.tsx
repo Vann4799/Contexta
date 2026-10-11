@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Cell,
@@ -11,6 +12,7 @@ import {
 } from "recharts";
 import {
   ArrowRight,
+  Bell,
   Clock,
   Database,
   Files,
@@ -27,10 +29,14 @@ import {
   getAccountSummary,
   getIndexingHealth,
   listDocuments,
+  markAllNotificationsRead,
+  markNotificationRead,
+  getNotifications,
   type AccountSummary,
   type DocumentItem,
   type DocumentStatus,
-  type IndexingHealth
+  type IndexingHealth,
+  type NotificationItem
 } from "@/lib/api";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { useLocale, useT } from "@/lib/i18n";
@@ -116,6 +122,163 @@ function buildActivityBuckets(documents: DocumentItem[]): DayBucket[] {
   }
 
   return days;
+}
+
+function relativeTime(dateString: string): string {
+  const minutes = Math.max(0, Math.round((Date.now() - new Date(dateString).getTime()) / 60000));
+  if (minutes < 1) return "now";
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  return `${Math.round(hours / 24)}d`;
+}
+
+function notificationHref(notification: NotificationItem): string | null {
+  if (notification.type !== "document_ready" && notification.type !== "document_failed") {
+    return null;
+  }
+  const documentId = (notification.metadata as { document_id?: string } | null)?.document_id;
+  return documentId ? `/documents/${documentId}` : null;
+}
+
+function DashboardNotifications() {
+  const t = useT();
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const getAccessToken = useCallback(async () => {
+    const supabase = getSupabaseBrowserClient();
+    const { data } = await supabase.auth.getSession();
+    return data.session?.access_token ?? null;
+  }, []);
+
+  const loadNotifications = useCallback(async () => {
+    try {
+      const token = await getAccessToken();
+      if (!token) return;
+      const result = await getNotifications(token, 10);
+      setNotifications(result.notifications);
+      setUnreadCount(result.unread_count);
+    } catch {
+      // Notifications are not critical; fail silently.
+    }
+  }, [getAccessToken]);
+
+  useEffect(() => {
+    void loadNotifications();
+  }, [loadNotifications]);
+
+  useEffect(() => {
+    function onClickOutside(event: MouseEvent) {
+      if (!(event.target as HTMLElement).closest("[data-notification]")) {
+        setOpen(false);
+      }
+    }
+    if (open) {
+      document.addEventListener("mousedown", onClickOutside);
+      return () => document.removeEventListener("mousedown", onClickOutside);
+    }
+  }, [open]);
+
+  const handleMarkAllRead = async () => {
+    try {
+      const token = await getAccessToken();
+      if (!token) return;
+      await markAllNotificationsRead(token);
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      setUnreadCount(0);
+    } catch {
+      // Fail silently.
+    }
+  };
+
+  const handleOpenNotification = async (notification: NotificationItem) => {
+    const href = notificationHref(notification);
+    if (!notification.read) {
+      try {
+        const token = await getAccessToken();
+        if (token) {
+          await markNotificationRead(token, notification.id);
+          setNotifications((prev) =>
+            prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n))
+          );
+          setUnreadCount((count) => Math.max(0, count - 1));
+        }
+      } catch {
+        // Fail silently.
+      }
+    }
+    setOpen(false);
+    if (href) router.push(href);
+  };
+
+  return (
+    <div className="relative" data-notification>
+      <button
+        type="button"
+        aria-label={t.shell.notifications}
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className="focus-ring relative grid h-9 w-9 place-items-center rounded-control border border-paper-line bg-paper-card text-ink-muted transition-colors hover:bg-paper-soft hover:text-ink"
+      >
+        <Bell className="h-4 w-4" strokeWidth={2} aria-hidden="true" />
+        {unreadCount > 0 ? (
+          <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-accent px-1 text-[10px] font-semibold text-night">
+            {unreadCount > 9 ? "9+" : unreadCount}
+          </span>
+        ) : null}
+      </button>
+
+      {open ? (
+        <div className="surface absolute right-0 top-full z-50 mt-2 w-[min(20rem,calc(100vw-2rem))] p-2">
+          <div className="flex items-center justify-between px-2 py-1.5">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+              {t.shell.notifications}
+            </p>
+            {unreadCount > 0 ? (
+              <button
+                type="button"
+                onClick={() => void handleMarkAllRead()}
+                className="text-[10px] font-medium text-ink-muted hover:text-ink"
+              >
+                Mark all read
+              </button>
+            ) : null}
+          </div>
+          <div className="flex max-h-[22rem] flex-col gap-0.5 overflow-y-auto">
+            {notifications.length === 0 ? (
+              <p className="px-2.5 py-2 text-[12px] text-ink-muted">{t.shell.noNotifications}</p>
+            ) : (
+              notifications.map((notification) => {
+                const href = notificationHref(notification);
+                return (
+                  <button
+                    key={notification.id}
+                    type="button"
+                    onClick={() => void handleOpenNotification(notification)}
+                    className={`rounded-control px-2.5 py-2 text-left text-[12px] transition-colors hover:bg-paper-soft ${
+                      notification.read ? "text-ink-muted" : "text-ink"
+                    }`}
+                  >
+                    <p className="font-medium">{notification.title}</p>
+                    {notification.message ? (
+                      <p className="mt-0.5 text-[11px]">{notification.message}</p>
+                    ) : null}
+                    <p className="mt-1 text-[10px] text-ink-muted">
+                      {relativeTime(notification.created_at)}
+                      {href ? " · →" : ""}
+                    </p>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 export function DashboardInsights() {
@@ -217,11 +380,10 @@ export function DashboardInsights() {
     : documents;
   const libraryDocuments = filteredDocuments.slice(0, 8);
 
-  const topMetrics = [
-    { label: copy.stats.documents, value: String(documents.length), icon: Files, accent: "text-accent" },
-    { label: copy.stats.chunks, value: String(totals.chunks), icon: Layers, accent: "text-accent" },
-    { label: copy.stats.storage, value: formatBytes(totals.storage), icon: HardDrive, accent: "text-accent" },
-    { label: copy.metricApiReqs, value: String(summary?.developer.api_requests_14d ?? 0), icon: Key, accent: "text-accent" }
+  const sideMetrics = [
+    { label: copy.stats.chunks, value: String(totals.chunks), icon: Layers },
+    { label: copy.stats.storage, value: formatBytes(totals.storage), icon: HardDrive },
+    { label: copy.metricApiReqs, value: String(summary?.developer.api_requests_14d ?? 0), icon: Key }
   ];
 
   return (
@@ -241,14 +403,7 @@ export function DashboardInsights() {
           <div>
             <div className="flex items-center gap-2">
               <span className="eyebrow">{copy.indexEyebrow}</span>
-              <span
-                className={cn(
-                  "rounded px-1.5 py-[1px] text-[10px] font-bold tracking-[0.06em]",
-                  indexingHealth?.status === "attention"
-                    ? "bg-accent text-ink"
-                    : "bg-accent text-ink"
-                )}
-              >
+              <span className="rounded bg-accent px-1.5 py-[1px] text-[10px] font-bold tracking-[0.06em] text-ink">
                 {indexingHealth?.status === "attention" ? copy.badgeAttention : copy.badgeSynced}
               </span>
             </div>
@@ -256,6 +411,7 @@ export function DashboardInsights() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <DashboardNotifications />
           <Button disabled={isLoading} onClick={() => void loadData()} variant="secondary">
             <RefreshCw className="h-4 w-4" aria-hidden="true" />
             {copy.refresh}
@@ -276,241 +432,45 @@ export function DashboardInsights() {
         </section>
       ) : null}
 
-      {/* Metric cards row */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {topMetrics.map((m) => (
-          <article key={m.label} className="surface flex items-center gap-4 px-5 py-4">
-            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-night">
-              <m.icon className={cn("h-5 w-5", m.accent)} strokeWidth={2} aria-hidden="true" />
-            </div>
-            <div className="min-w-0">
-              <dt className="eyebrow text-[10.5px]">{m.label}</dt>
-              <dd className="mt-0.5 nums text-[26px] font-semibold leading-none tracking-tight">
-                {isLoading ? "—" : m.value}
-              </dd>
-            </div>
-          </article>
-        ))}
-      </div>
-
-      {/* Charts row: Activity + Status donut */}
+      {/* Bento row 1: Hero stat + Donut + Stacked metrics */}
       <div className="grid gap-3 lg:grid-cols-12">
-        <article className="surface min-w-0 p-5 lg:col-span-8">
-          <div className="mb-4 flex items-start justify-between">
-            <div>
-              <h3 className="text-[15px] font-semibold tracking-tight">{copy.activityTitle}</h3>
-              <p className="mt-0.5 text-[12px] text-ink-muted">{copy.activitySubtitle}</p>
-            </div>
-            <div className="flex items-center gap-3 text-[11px] text-ink-muted">
-              <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-accent" />
-                {copy.activityUploads}
+        {/* Hero stat card — dark bg */}
+        <article className="relative flex min-w-0 flex-col justify-between overflow-hidden rounded-[var(--radius-card)] bg-night p-6 text-white shadow-root lg:col-span-5">
+          <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-accent/10" aria-hidden="true" />
+          <div className="absolute -right-2 top-12 h-20 w-20 rounded-full bg-accent/5" aria-hidden="true" />
+          <div className="relative z-10">
+            <span className="eyebrow text-[10.5px] text-white/50">{copy.stats.documents}</span>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="nums text-[56px] font-semibold leading-none tracking-tighter text-accent">
+                {isLoading ? "—" : documents.length}
               </span>
-              <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-[#f2fb48]" />
-                {copy.activityIndexed}
-              </span>
+              <span className="text-[13px] text-white/40">files</span>
             </div>
           </div>
-          <div className="relative h-[220px] w-full">
-            {isLoading ? (
-              <div className="flex h-full items-center justify-center text-[13px] text-ink-muted">Loading...</div>
-            ) : (
-              <>
-                <div className="relative h-[190px] w-full">
-                  {/* Y-axis labels */}
-                  <div className="absolute left-0 top-0 flex h-full flex-col justify-between pr-2 text-[10px] text-ink-muted nums">
-                    {yAxisLabels.map((n) => (
-                      <span key={n}>{n}</span>
-                    ))}
-                  </div>
-                  <div className="ml-6 h-full">
-                    <svg
-                      className="h-full w-full"
-                      viewBox={`0 0 ${activityBuckets.length * 40} 190`}
-                      preserveAspectRatio="none"
-                    >
-                      {/* Grid lines */}
-                      {yAxisLabels.map((n) => {
-                        const y = 185 - (n / yAxisMax) * 180;
-                        return (
-                          <line
-                            key={`grid-${n}`}
-                            x1="0"
-                            y1={y}
-                            x2={activityBuckets.length * 40}
-                            y2={y}
-                            stroke="currentColor"
-                            className="text-paper-line/40"
-                            strokeWidth="1"
-                          />
-                        );
-                      })}
-                      {/* Uploads area */}
-                      <path
-                        fill="#f2fb48"
-                        fillOpacity="0.1"
-                        d={`${activityBuckets
-                          .map((b, i) => {
-                            const x = i * 40 + 20;
-                            const y = 185 - (b.uploads / yAxisMax) * 180;
-                            return `${i === 0 ? "M" : "L"} ${x},${y}`;
-                          })
-                          .join(" ")} L ${(activityBuckets.length - 1) * 40 + 20},185 L 20,185 Z`}
-                      />
-                      {/* Indexed area */}
-                      <path
-                        fill="#f2fb48"
-                        fillOpacity="0.1"
-                        d={`${activityBuckets
-                          .map((b, i) => {
-                            const x = i * 40 + 20;
-                            const y = 185 - (b.indexed / yAxisMax) * 180;
-                            return `${i === 0 ? "M" : "L"} ${x},${y}`;
-                          })
-                          .join(" ")} L ${(activityBuckets.length - 1) * 40 + 20},185 L 20,185 Z`}
-                      />
-                      {/* Uploads smooth line */}
-                      <path
-                        fill="none"
-                        stroke="#f2fb48"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d={activityBuckets
-                          .map((b, i) => {
-                            const x = i * 40 + 20;
-                            const y = 185 - (b.uploads / yAxisMax) * 180;
-                            if (i === 0) return `M ${x},${y}`;
-                            const prevX = (i - 1) * 40 + 20;
-                            const prevY = 185 - (activityBuckets[i - 1].uploads / yAxisMax) * 180;
-                            const cpx1 = prevX + 13;
-                            const cpx2 = x - 13;
-                            return `C ${cpx1},${prevY} ${cpx2},${y} ${x},${y}`;
-                          })
-                          .join(" ")}
-                      />
-                      {/* Indexed smooth line */}
-                      <path
-                        fill="none"
-                        stroke="#f2fb48"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d={activityBuckets
-                          .map((b, i) => {
-                            const x = i * 40 + 20;
-                            const y = 185 - (b.indexed / yAxisMax) * 180;
-                            if (i === 0) return `M ${x},${y}`;
-                            const prevX = (i - 1) * 40 + 20;
-                            const prevY = 185 - (activityBuckets[i - 1].indexed / yAxisMax) * 180;
-                            const cpx1 = prevX + 13;
-                            const cpx2 = x - 13;
-                            return `C ${cpx1},${prevY} ${cpx2},${y} ${x},${y}`;
-                          })
-                          .join(" ")}
-                      />
-                      {/* Hover zones */}
-                      {activityBuckets.map((b, i) => (
-                        <rect
-                          key={`hover-${i}`}
-                          x={i * 40}
-                          y="0"
-                          width="40"
-                          height="190"
-                          fill="transparent"
-                          className="cursor-pointer"
-                          onMouseEnter={() => setHoveredIndex(i)}
-                          onMouseLeave={() => setHoveredIndex(null)}
-                        />
-                      ))}
-                      {/* Data points for uploads */}
-                      {activityBuckets.map((b, i) => {
-                        const x = i * 40 + 20;
-                        const y = 185 - (b.uploads / yAxisMax) * 180;
-                        return (
-                          <circle
-                            key={`up-${i}`}
-                            cx={x}
-                            cy={y}
-                            r="4"
-                            fill="#f2fb48"
-                            className="pointer-events-none"
-                          />
-                        );
-                      })}
-                      {/* Data points for indexed */}
-                      {activityBuckets.map((b, i) => {
-                        const x = i * 40 + 20;
-                        const y = 185 - (b.indexed / yAxisMax) * 180;
-                        return (
-                          <circle
-                            key={`idx-${i}`}
-                            cx={x}
-                            cy={y}
-                            r="4"
-                            fill="#f2fb48"
-                            className="pointer-events-none"
-                          />
-                        );
-                      })}
-                      {/* Hover line */}
-                      {hoveredIndex !== null && (
-                        <line
-                          x1={hoveredIndex * 40 + 20}
-                          y1="5"
-                          x2={hoveredIndex * 40 + 20}
-                          y2="185"
-                          stroke="currentColor"
-                          className="text-paper-line"
-                          strokeWidth="1"
-                          strokeDasharray="4 2"
-                        />
-                      )}
-                    </svg>
-                  </div>
-                  {/* Tooltip */}
-                  {hoveredIndex !== null && (
-                    <div
-                      className="absolute z-20 -translate-x-1/2 whitespace-nowrap rounded-lg border border-paper-line bg-paper-card px-3 py-2 text-[12px] shadow-node"
-                      style={{
-                        left: `calc(${(hoveredIndex * 40 + 20) / (activityBuckets.length * 40) * 100}% + 24px)`,
-                        top: "10px"
-                      }}
-                    >
-                      <p className="mb-1 font-medium text-ink-muted">{activityBuckets[hoveredIndex].date}</p>
-                      <div className="flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full bg-accent" />
-                        <span className="text-ink-muted">{copy.activityUploads}:</span>
-                        <span className="font-semibold nums">{activityBuckets[hoveredIndex].uploads}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full bg-[#f2fb48]" />
-                        <span className="text-ink-muted">{copy.activityIndexed}:</span>
-                        <span className="font-semibold nums">{activityBuckets[hoveredIndex].indexed}</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <div className="ml-6 flex gap-[6px] px-1 pt-1.5">
-                  {activityBuckets.map((b) => (
-                    <div key={b.date} className="flex-1 text-center text-[10px] text-ink-muted nums">
-                      {b.label}
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
+          <div className="relative z-10 mt-6 flex items-center gap-6 border-t border-white/10 pt-4">
+            <div>
+              <span className="block text-[10.5px] text-white/40">{copy.stats.chunks}</span>
+              <span className="nums text-[18px] font-semibold leading-tight">{isLoading ? "—" : totals.chunks}</span>
+            </div>
+            <div className="h-6 w-px bg-white/10" aria-hidden="true" />
+            <div>
+              <span className="block text-[10.5px] text-white/40">{copy.stats.storage}</span>
+              <span className="nums text-[18px] font-semibold leading-tight">{isLoading ? "—" : formatBytes(totals.storage)}</span>
+            </div>
+            <div className="h-6 w-px bg-white/10" aria-hidden="true" />
+            <div>
+              <span className="block text-[10.5px] text-white/40">{copy.statusReady}</span>
+              <span className="nums text-[18px] font-semibold leading-tight text-accent">{isLoading ? "—" : totals.ready}</span>
+            </div>
           </div>
         </article>
 
-        <article className="surface flex min-w-0 flex-col p-5 lg:col-span-4">
-          <div>
-            <h3 className="text-[15px] font-semibold tracking-tight">{copy.statusTitle}</h3>
-            <p className="mt-0.5 text-[12px] text-ink-muted">{copy.statusSubtitle}</p>
-          </div>
-          <div className="flex flex-1 items-center gap-4">
-            <div className="h-[180px] w-[180px] shrink-0">
+        {/* Donut chart — compact */}
+        <article className="surface flex min-w-0 flex-col p-5 lg:col-span-3">
+          <h3 className="text-[14px] font-semibold tracking-tight">{copy.statusTitle}</h3>
+          <p className="mt-0.5 text-[11px] text-ink-muted">{copy.statusSubtitle}</p>
+          <div className="mt-3 flex flex-1 items-center justify-center">
+            <div className="h-[130px] w-[130px]">
               {isLoading ? (
                 <div className="flex h-full items-center justify-center text-[13px] text-ink-muted">—</div>
               ) : (
@@ -521,8 +481,8 @@ export function DashboardInsights() {
                       dataKey="value"
                       cx="50%"
                       cy="50%"
-                      innerRadius={52}
-                      outerRadius={78}
+                      innerRadius={40}
+                      outerRadius={58}
                       paddingAngle={3}
                       strokeWidth={0}
                     >
@@ -546,20 +506,251 @@ export function DashboardInsights() {
                 </ResponsiveContainer>
               )}
             </div>
-            <div className="flex flex-col gap-2 text-[12.5px]">
-              {statusData.map((s) => (
-                <div key={s.name} className="flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-sm" style={{ background: s.color }} />
-                  <span className="text-ink-muted">{s.name}</span>
-                  <span className="nums ml-auto font-semibold">{s.value}</span>
-                </div>
-              ))}
-            </div>
+          </div>
+          <div className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1 text-[11px]">
+            {statusData.map((s) => (
+              <span key={s.name} className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-sm" style={{ background: s.color }} />
+                <span className="text-ink-muted">{s.name}</span>
+                <span className="nums font-semibold">{s.value}</span>
+              </span>
+            ))}
           </div>
         </article>
+
+        {/* Stacked mini metrics */}
+        <div className="flex min-w-0 flex-col gap-3 lg:col-span-4">
+          {sideMetrics.map((m) => (
+            <article key={m.label} className="surface flex flex-1 items-center gap-4 px-5 py-4">
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-night">
+                <m.icon className="h-5 w-5 text-accent" strokeWidth={2} aria-hidden="true" />
+              </div>
+              <div className="min-w-0">
+                <dt className="eyebrow text-[10.5px]">{m.label}</dt>
+                <dd className="mt-0.5 nums text-[22px] font-semibold leading-none tracking-tight">
+                  {isLoading ? "—" : m.value}
+                </dd>
+              </div>
+              <ArrowRight className="ml-auto h-4 w-4 text-ink-faint" aria-hidden="true" />
+            </article>
+          ))}
+        </div>
       </div>
 
-      {/* Document library table */}
+      {/* Bento row 2: Full-width activity chart */}
+      <article className="surface min-w-0 p-5">
+        <div className="mb-4 flex items-start justify-between">
+          <div>
+            <h3 className="text-[15px] font-semibold tracking-tight">{copy.activityTitle}</h3>
+            <p className="mt-0.5 text-[12px] text-ink-muted">{copy.activitySubtitle}</p>
+          </div>
+          <div className="flex items-center gap-3 text-[11px] text-ink-muted">
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-accent" />
+              {copy.activityUploads}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-accent opacity-40" />
+              {copy.activityIndexed}
+            </span>
+          </div>
+        </div>
+        <div className="relative h-[220px] w-full">
+          {isLoading ? (
+            <div className="flex h-full items-center justify-center text-[13px] text-ink-muted">Loading...</div>
+          ) : (
+            <>
+              <div className="relative h-[190px] w-full">
+                {/* Y-axis labels */}
+                <div className="absolute left-0 top-0 flex h-full flex-col justify-between pr-2 text-[10px] text-ink-muted nums">
+                  {yAxisLabels.map((n) => (
+                    <span key={n}>{n}</span>
+                  ))}
+                </div>
+                <div className="ml-6 h-full">
+                  <svg
+                    className="h-full w-full"
+                    viewBox={`0 0 ${activityBuckets.length * 40} 190`}
+                    preserveAspectRatio="none"
+                  >
+                    {/* Grid lines */}
+                    {yAxisLabels.map((n) => {
+                      const y = 185 - (n / yAxisMax) * 180;
+                      return (
+                        <line
+                          key={`grid-${n}`}
+                          x1="0"
+                          y1={y}
+                          x2={activityBuckets.length * 40}
+                          y2={y}
+                          stroke="currentColor"
+                          className="text-paper-line/40"
+                          strokeWidth="1"
+                        />
+                      );
+                    })}
+                    {/* Uploads area */}
+                    <path
+                      fill="#f2fb48"
+                      fillOpacity="0.1"
+                      d={`${activityBuckets
+                        .map((b, i) => {
+                          const x = i * 40 + 20;
+                          const y = 185 - (b.uploads / yAxisMax) * 180;
+                          return `${i === 0 ? "M" : "L"} ${x},${y}`;
+                        })
+                        .join(" ")} L ${(activityBuckets.length - 1) * 40 + 20},185 L 20,185 Z`}
+                    />
+                    {/* Indexed area */}
+                    <path
+                      fill="#f2fb48"
+                      fillOpacity="0.05"
+                      d={`${activityBuckets
+                        .map((b, i) => {
+                          const x = i * 40 + 20;
+                          const y = 185 - (b.indexed / yAxisMax) * 180;
+                          return `${i === 0 ? "M" : "L"} ${x},${y}`;
+                        })
+                        .join(" ")} L ${(activityBuckets.length - 1) * 40 + 20},185 L 20,185 Z`}
+                    />
+                    {/* Uploads smooth line */}
+                    <path
+                      fill="none"
+                      stroke="#f2fb48"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d={activityBuckets
+                        .map((b, i) => {
+                          const x = i * 40 + 20;
+                          const y = 185 - (b.uploads / yAxisMax) * 180;
+                          if (i === 0) return `M ${x},${y}`;
+                          const prevX = (i - 1) * 40 + 20;
+                          const prevY = 185 - (activityBuckets[i - 1].uploads / yAxisMax) * 180;
+                          const cpx1 = prevX + 13;
+                          const cpx2 = x - 13;
+                          return `C ${cpx1},${prevY} ${cpx2},${y} ${x},${y}`;
+                        })
+                        .join(" ")}
+                    />
+                    {/* Indexed smooth line — dashed */}
+                    <path
+                      fill="none"
+                      stroke="#f2fb48"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeDasharray="6 4"
+                      strokeOpacity="0.4"
+                      d={activityBuckets
+                        .map((b, i) => {
+                          const x = i * 40 + 20;
+                          const y = 185 - (b.indexed / yAxisMax) * 180;
+                          if (i === 0) return `M ${x},${y}`;
+                          const prevX = (i - 1) * 40 + 20;
+                          const prevY = 185 - (activityBuckets[i - 1].indexed / yAxisMax) * 180;
+                          const cpx1 = prevX + 13;
+                          const cpx2 = x - 13;
+                          return `C ${cpx1},${prevY} ${cpx2},${y} ${x},${y}`;
+                        })
+                        .join(" ")}
+                    />
+                    {/* Hover zones */}
+                    {activityBuckets.map((b, i) => (
+                      <rect
+                        key={`hover-${i}`}
+                        x={i * 40}
+                        y="0"
+                        width="40"
+                        height="190"
+                        fill="transparent"
+                        className="cursor-pointer"
+                        onMouseEnter={() => setHoveredIndex(i)}
+                        onMouseLeave={() => setHoveredIndex(null)}
+                      />
+                    ))}
+                    {/* Data points for uploads */}
+                    {activityBuckets.map((b, i) => {
+                      const x = i * 40 + 20;
+                      const y = 185 - (b.uploads / yAxisMax) * 180;
+                      return (
+                        <circle
+                          key={`up-${i}`}
+                          cx={x}
+                          cy={y}
+                          r="4"
+                          fill="#f2fb48"
+                          className="pointer-events-none"
+                        />
+                      );
+                    })}
+                    {/* Data points for indexed */}
+                    {activityBuckets.map((b, i) => {
+                      const x = i * 40 + 20;
+                      const y = 185 - (b.indexed / yAxisMax) * 180;
+                      return (
+                        <circle
+                          key={`idx-${i}`}
+                          cx={x}
+                          cy={y}
+                          r="3"
+                          fill="#f2fb48"
+                          fillOpacity="0.4"
+                          className="pointer-events-none"
+                        />
+                      );
+                    })}
+                    {/* Hover line */}
+                    {hoveredIndex !== null && (
+                      <line
+                        x1={hoveredIndex * 40 + 20}
+                        y1="5"
+                        x2={hoveredIndex * 40 + 20}
+                        y2="185"
+                        stroke="currentColor"
+                        className="text-paper-line"
+                        strokeWidth="1"
+                        strokeDasharray="4 2"
+                      />
+                    )}
+                  </svg>
+                </div>
+                {/* Tooltip */}
+                {hoveredIndex !== null && (
+                  <div
+                    className="absolute z-20 -translate-x-1/2 whitespace-nowrap rounded-lg border border-paper-line bg-paper-card px-3 py-2 text-[12px] shadow-node"
+                    style={{
+                      left: `calc(${(hoveredIndex * 40 + 20) / (activityBuckets.length * 40) * 100}% + 24px)`,
+                      top: "10px"
+                    }}
+                  >
+                    <p className="mb-1 font-medium text-ink-muted">{activityBuckets[hoveredIndex].date}</p>
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-accent" />
+                      <span className="text-ink-muted">{copy.activityUploads}:</span>
+                      <span className="font-semibold nums">{activityBuckets[hoveredIndex].uploads}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-accent opacity-40" />
+                      <span className="text-ink-muted">{copy.activityIndexed}:</span>
+                      <span className="font-semibold nums">{activityBuckets[hoveredIndex].indexed}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="ml-6 flex gap-[6px] px-1 pt-1.5">
+                {activityBuckets.map((b) => (
+                  <div key={b.date} className="flex-1 text-center text-[10px] text-ink-muted nums">
+                    {b.label}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </article>
+
+      {/* Bento row 3: Library + Side panels */}
       <section className="grid gap-3 lg:grid-cols-12">
         <article className="surface min-w-0 p-5 lg:col-span-8">
           <div className="flex flex-wrap items-center justify-between gap-3">

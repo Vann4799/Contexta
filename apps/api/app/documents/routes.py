@@ -477,6 +477,52 @@ def reindex_document(
     return reindexed_document
 
 
+@router.post("/{document_id}/trash", response_model=DocumentResponse)
+def trash_document(
+    document_id: str,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    repository: Annotated[DocumentRepository, Depends(get_document_repository)],
+) -> DocumentResponse:
+    document = repository.get_document(current_user.id, document_id)
+    if not document:
+        raise HTTPException(status_code=404, detail="document not found")
+    if document.status == "trashed":
+        raise HTTPException(status_code=409, detail="document is already in trash")
+
+    try:
+        trashed_document = repository.trash_document(current_user.id, document_id)
+    except Exception as exc:
+        logger.exception("could not move document %s to trash", document_id)
+        raise HTTPException(status_code=502, detail="Unable to move document to trash.") from exc
+
+    if not trashed_document:
+        raise HTTPException(status_code=404, detail="document not found")
+    return trashed_document
+
+
+@router.post("/{document_id}/restore", response_model=DocumentResponse)
+def restore_document(
+    document_id: str,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    repository: Annotated[DocumentRepository, Depends(get_document_repository)],
+) -> DocumentResponse:
+    document = repository.get_document(current_user.id, document_id)
+    if not document:
+        raise HTTPException(status_code=404, detail="document not found")
+    if document.status != "trashed":
+        raise HTTPException(status_code=409, detail="only trashed documents can be restored")
+
+    try:
+        restored_document = repository.restore_document(current_user.id, document_id)
+    except Exception as exc:
+        logger.exception("could not restore document %s", document_id)
+        raise HTTPException(status_code=502, detail="Unable to restore document.") from exc
+
+    if not restored_document:
+        raise HTTPException(status_code=404, detail="document not found")
+    return restored_document
+
+
 @router.patch("/{document_id}/metadata", response_model=DocumentResponse)
 def update_document_metadata(
     document_id: str,

@@ -72,3 +72,12 @@ def account_summary(
                 "message": "Account summary returned an unexpected shape. Retry shortly.",
             },
         ) from exc
+
+
+@router.delete("", status_code=status.HTTP_204_NO_CONTENT)
+def delete_account(
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    repository: Annotated[AccountRepository, Depends(get_account_repository)],
+) -> None:
+    with account_store():
+        repository.delete_user(current_user.id)

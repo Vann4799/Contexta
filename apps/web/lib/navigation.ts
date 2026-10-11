@@ -1,6 +1,17 @@
 import type { Dictionary } from "@/locales/en";
 
-export type NavIcon = "dashboard" | "pipeline" | "documents" | "chat" | "convert" | "apiKeys" | "usage";
+export type NavIcon =
+  | "dashboard"
+  | "pipeline"
+  | "documents"
+  | "chat"
+  | "convert"
+  | "apiKeys"
+  | "usage"
+  | "billing"
+  | "integrations"
+  | "activity"
+  | "trash";
 
 export type NavLabelKey = keyof Dictionary["shell"]["nav"];
 
@@ -12,5 +23,12 @@ export const navigationItems: { href: string; labelKey: NavLabelKey; icon: NavIc
   { href: "/chat", labelKey: "chat", icon: "chat" },
   { href: "/convert", labelKey: "convert", icon: "convert" },
   { href: "/api-keys", labelKey: "apiKeys", icon: "apiKeys" },
-  { href: "/usage", labelKey: "usage", icon: "usage" }
+  { href: "/usage", labelKey: "usage", icon: "usage" },
+  { href: "/billing", labelKey: "billing", icon: "billing" },
+  { href: "/integrations", labelKey: "integrations", icon: "integrations" },
+  { href: "/activity", labelKey: "activity", icon: "activity" }
+];
+
+export const secondaryNavItems: { href: string; labelKey: NavLabelKey; icon: NavIcon }[] = [
+  { href: "/documents?filter=trash", labelKey: "trash", icon: "trash" }
 ];

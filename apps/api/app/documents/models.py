@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 DocumentFileType = Literal["pdf", "docx"]
-DocumentStatus = Literal["uploaded", "processing", "ready", "failed"]
+DocumentStatus = Literal["uploaded", "processing", "ready", "failed", "trashed"]
 DocumentType = Literal[
     "unclassified",
     "sop",

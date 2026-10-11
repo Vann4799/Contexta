@@ -3,12 +3,13 @@
 import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
-type Status = "ready" | "processing" | "failed";
+type Status = "ready" | "processing" | "failed" | "trashed";
 
 const styles: Record<Status, string> = {
   ready: "border-transparent bg-accent text-ink",
   processing: "border-transparent bg-night text-accent",
-  failed: "border-transparent bg-[#8b8680]/20 text-[#8b8680]"
+  failed: "border-transparent bg-[#8b8680]/20 text-[#8b8680]",
+  trashed: "border-transparent bg-[#8b8680]/10 text-[#8b8680]"
 };
 
 export function StatusPill({ status, className = "" }: { status: Status; className?: string }) {

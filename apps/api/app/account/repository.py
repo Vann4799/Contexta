@@ -18,6 +18,9 @@ class AccountRepository(Protocol):
     def summary(self, user_id: str) -> dict[str, object]:
         ...
 
+    def delete_user(self, user_id: str) -> None:
+        ...
+
 
 class InMemoryAccountRepository:
     """Re-implements the account_summary RPC in Python over plain row lists.
@@ -138,6 +141,14 @@ class InMemoryAccountRepository:
             },
         }
 
+    def delete_user(self, user_id: str) -> None:
+        self._documents = [r for r in self._documents if r["user_id"] != user_id]
+        self._chunks = [r for r in self._chunks if r["user_id"] != user_id]
+        self._sessions = [r for r in self._sessions if r["user_id"] != user_id]
+        self._messages = [r for r in self._messages if r["user_id"] != user_id]
+        self._keys = [r for r in self._keys if r["user_id"] != user_id]
+        self._logs = [r for r in self._logs if r["user_id"] != user_id]
+
 
 def _stamp(rows: list[dict[str, object]], field: str) -> str | None:
     values = [row[field] for row in rows if row.get(field) is not None]
@@ -169,6 +180,39 @@ class SupabaseAccountRepository:
         )
         response.raise_for_status()
         return dict(response.json())
+
+    def delete_user(self, user_id: str) -> None:
+        """Delete every row that belongs to this user, then the auth account.
+
+        The calls are sequential and ordered to respect foreign-key constraints:
+        child rows first, then parents.  A failure partway through is surfaced
+        to the caller; the route turns it into a 503 rather than a half-deleted
+        account the user can still log into.
+        """
+        h = self._headers
+        base = f"{self._supabase_url}/rest/v1"
+
+        def _delete(table: str, eq: str = f"user_id.eq.{user_id}") -> None:
+            r = httpx.delete(f"{base}/{table}?{eq}", headers=h)
+            if r.status_code not in (200, 204, 406):
+                r.raise_for_status()
+
+        _delete("chunks")
+        _delete("documents")
+        _delete("chat_messages")
+        _delete("chat_sessions")
+        _delete("api_keys")
+        _delete("notifications")
+        _delete("subscriptions")
+        _delete("integration_connections")
+        _delete("profiles", f"id.eq.{user_id}")
+
+        auth_r = httpx.delete(
+            f"{self._supabase_url}/auth/v1/admin/users/{user_id}",
+            headers=h,
+        )
+        if auth_r.status_code not in (200, 204, 404):
+            auth_r.raise_for_status()
 
 
 account_repository = InMemoryAccountRepository()

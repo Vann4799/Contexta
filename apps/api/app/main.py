@@ -12,16 +12,20 @@ from starlette.concurrency import run_in_threadpool
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.account.routes import router as account_router
+from app.activity.routes import router as activity_router
 from app.apikeys.dependencies import finalize_api_request_log
 from app.apikeys.routes import router as api_keys_router
 from app.auth.dependencies import get_current_user
 from app.auth.supabase_jwt import CurrentUser
+from app.billing.routes import router as billing_router
 from app.chat.retrieval import configured_vector_spaces
 from app.chat.routes import router as chat_router
 from app.convert.routes import router as convert_router
 from app.core.config import get_settings
 from app.documents.routes import router as documents_router
 from app.export.routes import router as export_router
+from app.integrations.routes import router as integrations_router
+from app.notifications.routes import router as notifications_router
 from app.services.indexing_health import IndexingHealthResponse, check_indexing_health
 from app.services.qdrant_health import check_qdrant_health
 from app.v1.routes import router as v1_router
@@ -66,11 +70,15 @@ app.add_middleware(
     ],
 )
 app.include_router(account_router)
+app.include_router(activity_router)
+app.include_router(billing_router)
 app.include_router(documents_router)
 app.include_router(chat_router)
 app.include_router(convert_router)
 app.include_router(export_router)
 app.include_router(api_keys_router)
+app.include_router(integrations_router)
+app.include_router(notifications_router)
 app.include_router(v1_router)
 app.add_exception_handler(RequestValidationError, v1_aware_validation_error)
 
