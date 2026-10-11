@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUpRight, ExternalLink } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { publicApiBaseUrl } from "@/lib/api";

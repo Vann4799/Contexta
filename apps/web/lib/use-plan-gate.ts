@@ -51,7 +51,6 @@ export type PlanGate = {
 };
 
 export function usePlanGate(): PlanGate {
-  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const billing = useSyncExternalStore(
@@ -70,7 +69,6 @@ export function usePlanGate(): PlanGate {
       const { data } = await supabase.auth.getSession();
       const accessToken = data.session?.access_token ?? null;
       if (cancelled) return;
-      setToken(accessToken);
       if (accessToken) {
         try {
           await fetchOnce(accessToken);
