@@ -312,7 +312,7 @@ export function Sidebar({ email }: { email: string }) {
     <>
       <aside className="fixed left-0 top-0 z-40 hidden h-screen w-64 flex-col border-r border-paper-line bg-paper-card lg:flex">
         <div className="flex h-14 items-center border-b border-paper-line px-3">
-          <Link href="/" aria-label={t.shell.home} className="focus-ring flex items-center rounded-control">
+          <Link href="/dashboard" aria-label={t.shell.home} className="focus-ring flex items-center rounded-control">
             <ContextaLogo />
           </Link>
         </div>
@@ -457,7 +457,7 @@ export function Sidebar({ email }: { email: string }) {
           />
           <aside className="surface absolute left-0 top-0 flex h-full w-72 flex-col">
             <div className="flex h-14 items-center justify-between border-b border-paper-line px-3">
-              <Link href="/" aria-label={t.shell.home} className="focus-ring flex items-center rounded-control">
+              <Link href="/dashboard" aria-label={t.shell.home} className="focus-ring flex items-center rounded-control">
                 <ContextaLogo />
               </Link>
               <button
