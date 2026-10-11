@@ -2,17 +2,22 @@ import Image from "next/image";
 
 type ContextaLogoProps = {
   compact?: boolean;
+  variant?: "light" | "dark";
 };
 
-export function ContextaLogo({ compact = false }: ContextaLogoProps) {
+export function ContextaLogo({ compact = false, variant = "light" }: ContextaLogoProps) {
+  const src = variant === "dark" ? "/contexta-dark-logo.png" : "/contexta-neon-logo.png";
+  const width = compact ? 140 : 180;
+
   return (
     <Image
-      src="/contexta-neon-logo.png"
+      src={src}
       alt="Contexta"
-      width={1064}
-      height={337}
+      width={2172}
+      height={724}
       priority
-      className={compact ? "h-auto w-[104px] object-contain" : "h-auto w-[142px] object-contain"}
+      className="h-auto object-contain"
+      style={{ width: `${width}px` }}
     />
   );
 }
