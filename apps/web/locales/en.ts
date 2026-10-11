@@ -159,6 +159,43 @@ export const en = {
         noActiveSession: "No active sign-in session was found.",
         failed: "Unable to complete authentication."
       }
+    },
+    verifyEmail: {
+      eyebrow: "Email verification",
+      title: "Check your inbox",
+      description: (email: string) => `We sent a confirmation link to ${email}. Click the link to activate your account.`,
+      resend: "Resend verification email",
+      resending: "Sending...",
+      resent: "Verification email sent. Check your inbox.",
+      resendFailed: "Could not resend verification email.",
+      verified: "Email verified! Taking you to your dashboard.",
+      backToLogin: "Back to sign in",
+      wrongEmail: "Wrong email? Sign in with a different account."
+    },
+    onboarding: {
+      welcome: {
+        eyebrow: "Welcome",
+        title: (name: string) => `Let's get you started, ${name}`,
+        description: "Set up your workspace in under a minute.",
+        skip: "Skip for now"
+      },
+      steps: {
+        upload: {
+          title: "Upload your first document",
+          description: "Drag and drop a PDF or DOCX file. Contexta will extract text, build a search index, and prepare it for AI chat."
+        },
+        chat: {
+          title: "Ask questions",
+          description: "Chat with your documents using natural language. Every answer comes with page-level citations."
+        },
+        explore: {
+          title: "Explore intelligence",
+          description: "Get automatic briefs, key points, and field detection for every document you upload."
+        }
+      },
+      continue: "Continue",
+      finish: "Go to dashboard",
+      step: (current: number, total: number) => `Step ${current} of ${total}`
     }
   },
   documents: {
@@ -1045,6 +1082,12 @@ export const en = {
     chatTitle: "Daily chat limit reached",
     chatBody: "You've reached your daily chat message limit. Upgrade for unlimited access.",
     cta: "Upgrade plan",
+    currentPlan: "Current plan",
+    usage: "Usage",
+    close: "Close",
+    documentsUsage: (used: number, max: number) => `${used} of ${max} documents`,
+    apiKeysUsage: (used: number, max: number) => `${used} of ${max} API keys`,
+    chatUsage: (used: number, max: number) => `${used} of ${max} messages today`,
   },
   integrations: {
     eyebrow: "Integrations",

@@ -20,6 +20,7 @@ import { useServerError } from "@/lib/server-errors";
 import { usePlanGate } from "@/lib/use-plan-gate";
 import type { Dictionary } from "@/locales/en";
 import { Button } from "@/components/ui/button";
+import { PaywallModal } from "@/components/ui/paywall-modal";
 import { cn } from "@/lib/utils";
 
 const CHIP_CLASS = {
@@ -63,6 +64,7 @@ export function DeveloperPanel() {
   const copy = t.developer;
   const serverError = useServerError();
   const planGate = usePlanGate();
+  const [paywallOpen, setPaywallOpen] = useState(false);
   const [keys, setKeys] = useState<ApiKey[]>([]);
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -254,7 +256,17 @@ export function DeveloperPanel() {
               className="mt-2 h-10 w-full rounded-control border border-paper-line bg-paper px-3 text-[13px] text-ink outline-none focus:border-ink"
             />
           </label>
-          <Button disabled={isCreating || !planGate.canCreateApiKey} onClick={() => void handleCreate()} variant="primary" title={!planGate.canCreateApiKey ? t.paywall.apiKeysTitle : undefined}>
+          <Button
+            disabled={isCreating}
+            onClick={() => {
+              if (!planGate.canCreateApiKey) {
+                setPaywallOpen(true);
+                return;
+              }
+              void handleCreate();
+            }}
+            variant="primary"
+          >
             <KeyRound className="h-4 w-4" aria-hidden="true" />
             {isCreating ? copy.creating : copy.createKey}
           </Button>
@@ -417,6 +429,12 @@ export function DeveloperPanel() {
   -d '{"query": "refund policy", "top_k": 5}'`}
         </pre>
       </section>
+      <PaywallModal
+        open={paywallOpen}
+        onClose={() => setPaywallOpen(false)}
+        reason="api_keys"
+        planGate={planGate}
+      />
     </div>
   );
 }

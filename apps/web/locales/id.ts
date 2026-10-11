@@ -159,6 +159,43 @@ export const id: Dictionary = {
         noActiveSession: "Sesi masuk yang aktif tidak ditemukan.",
         failed: "Tidak bisa menyelesaikan autentikasi."
       }
+    },
+    verifyEmail: {
+      eyebrow: "Verifikasi email",
+      title: "Cek kotak masuk kamu",
+      description: (email: string) => `Kami mengirim tautan konfirmasi ke ${email}. Klik tautan untuk mengaktifkan akun kamu.`,
+      resend: "Kirim ulang email verifikasi",
+      resending: "Mengirim...",
+      resent: "Email verifikasi dikirim. Cek kotak masuk kamu.",
+      resendFailed: "Tidak bisa mengirim ulang email verifikasi.",
+      verified: "Email terverifikasi! Mengarahkan ke dashboard kamu.",
+      backToLogin: "Kembali ke halaman masuk",
+      wrongEmail: "Email salah? Masuk dengan akun lain."
+    },
+    onboarding: {
+      welcome: {
+        eyebrow: "Selamat datang",
+        title: (name: string) => `Mari mulai, ${name}`,
+        description: "Siapkan workspace kamu dalam kurang dari satu menit.",
+        skip: "Lewati dulu"
+      },
+      steps: {
+        upload: {
+          title: "Unggah dokumen pertama",
+          description: "Seret dan lepas file PDF atau DOCX. Contexta akan mengekstrak teks, membuat indeks pencarian, dan menyiapkannya untuk chat AI."
+        },
+        chat: {
+          title: "Tanyakan pertanyaan",
+          description: "Chat dengan dokumen kamu menggunakan bahasa alami. Setiap jawaban dilengkapi sitasi per halaman."
+        },
+        explore: {
+          title: "Jelajahi kecerdasan",
+          description: "Dapatkan ringkasan otomatis, poin penting, dan deteksi field untuk setiap dokumen yang kamu unggah."
+        }
+      },
+      continue: "Lanjut",
+      finish: "Ke dashboard",
+      step: (current: number, total: number) => `Langkah ${current} dari ${total}`
     }
   },
   documents: {
@@ -1036,12 +1073,18 @@ export const id: Dictionary = {
   },
   paywall: {
     documentsTitle: "Batas dokumen tercapai",
-    documentsBody: "Upgrade paket untuk menambah lebih banyak dokumen.",
+    documentsBody: "Upgrade paket untuk menambah lebih banyak dokumen ke workspace kamu.",
     apiKeysTitle: "Batas API key tercapai",
     apiKeysBody: "Upgrade paket untuk membuat lebih banyak API key.",
     chatTitle: "Batas chat harian tercapai",
-    chatBody: "Batas chat harian Anda sudah tercapai. Upgrade untuk akses tanpa batas.",
+    chatBody: "Batas chat harian kamu sudah tercapai. Upgrade untuk akses lebih banyak.",
     cta: "Upgrade paket",
+    currentPlan: "Paket saat ini",
+    usage: "Pemakaian",
+    close: "Tutup",
+    documentsUsage: (used: number, max: number) => `${used} dari ${max} dokumen`,
+    apiKeysUsage: (used: number, max: number) => `${used} dari ${max} API key`,
+    chatUsage: (used: number, max: number) => `${used} dari ${max} pesan hari ini`,
   },
   integrations: {
     eyebrow: "Integrasi",

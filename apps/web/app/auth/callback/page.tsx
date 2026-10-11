@@ -67,7 +67,10 @@ export default function AuthCallbackPage() {
             status: "success",
             message: "done"
           });
-          router.replace("/");
+          const destination = authParams.type === "signup" && !localStorage.getItem("contexta.onboarding-done")
+            ? "/onboarding"
+            : "/dashboard";
+          router.replace(destination);
           return;
         }
 
@@ -94,7 +97,10 @@ export default function AuthCallbackPage() {
             status: "success",
             message: "done"
           });
-          router.replace("/");
+          const destination = authParams.type === "signup" && !localStorage.getItem("contexta.onboarding-done")
+            ? "/onboarding"
+            : "/dashboard";
+          router.replace(destination);
           return;
         }
 
@@ -118,7 +124,7 @@ export default function AuthCallbackPage() {
           status: "success",
           message: "done"
         });
-        router.replace("/");
+        router.replace("/dashboard");
       } catch (error) {
         setCallbackState({
           status: "error",
@@ -145,7 +151,7 @@ export default function AuthCallbackPage() {
           className={`focus-ring inline-flex h-10 max-w-full flex-1 items-center justify-center rounded-control px-4 text-[13.5px] font-medium leading-none transition-colors ${
             isSuccess ? "bg-night text-white shadow-node hover:bg-night-raised" : "border border-paper-line bg-paper-soft text-ink hover:bg-paper-card"
           }`}
-          href="/"
+          href="/dashboard"
         >
           {t.auth.callback.dashboard}
         </Link>

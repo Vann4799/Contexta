@@ -28,6 +28,7 @@ import { usePlanGate } from "@/lib/use-plan-gate";
 import type { Dictionary } from "@/locales/en";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/status-pill";
+import { PaywallModal } from "@/components/ui/paywall-modal";
 import { cn } from "@/lib/utils";
 
 type UploadCopy = Dictionary["documents"]["upload"];
@@ -116,6 +117,7 @@ export function DocumentUploadPanel() {
   const serverError = useServerError();
   const searchParams = useSearchParams();
   const planGate = usePlanGate();
+  const [paywallOpen, setPaywallOpen] = useState(false);
   const isTrashMode = searchParams.get("filter") === "trash";
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
@@ -477,7 +479,16 @@ export function DocumentUploadPanel() {
               <Download className="h-4 w-4" aria-hidden="true" />
               {isExporting ? copy.exporting : copy.exportWorkspace}
             </Button>
-            <Button disabled={isUploading || !planGate.canUpload} onClick={() => fileInputRef.current?.click()} title={!planGate.canUpload ? t.paywall.documentsTitle : undefined}>
+            <Button
+              disabled={isUploading}
+              onClick={() => {
+                if (!planGate.canUpload) {
+                  setPaywallOpen(true);
+                  return;
+                }
+                fileInputRef.current?.click();
+              }}
+            >
               <Upload className="h-4 w-4" aria-hidden="true" />
               {isUploading ? copy.uploading : copy.browse}
             </Button>
@@ -800,6 +811,12 @@ export function DocumentUploadPanel() {
           </p>
         ) : null}
       </section>
+      <PaywallModal
+        open={paywallOpen}
+        onClose={() => setPaywallOpen(false)}
+        reason="documents"
+        planGate={planGate}
+      />
     </section>
   );
 }

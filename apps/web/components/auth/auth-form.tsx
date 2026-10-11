@@ -105,6 +105,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         }
 
         setMessage({ type: "success", kind: "success" });
+        router.push("/verify-email");
         return;
       }
 
