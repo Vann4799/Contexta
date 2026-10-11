@@ -264,6 +264,7 @@ function RecentDocsSection() {
 
 function UpgradeBanner() {
   const t = useT();
+  const router = useRouter();
 
   return (
     <div className="px-3 pb-3">
@@ -272,6 +273,7 @@ function UpgradeBanner() {
         <p className="mt-0.5 text-[11px] leading-relaxed text-ink-muted">{t.shell.upgradeBody}</p>
         <button
           type="button"
+          onClick={() => router.push("/billing")}
           className="focus-ring mt-2 flex items-center gap-1.5 rounded-control bg-night px-3 py-1.5 text-[11.5px] font-semibold text-white shadow-node transition-colors hover:bg-night/90"
         >
           {t.shell.upgradeCta}

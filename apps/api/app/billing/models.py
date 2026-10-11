@@ -48,3 +48,12 @@ class BillingStatus(BaseModel):
     plan: Plan
     usage: UsageSummary
     overages: dict[str, bool]
+
+
+class CheckoutRequest(BaseModel):
+    plan_tier: PlanTier
+    interval: BillingInterval = "monthly"
+
+
+class CheckoutResponse(BaseModel):
+    checkout_url: str

@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     api_key_day_limit: int = 5000
     llm_day_limit: int = 200
     api_log_retention_days: int = 90
+    stripe_secret_key: str = ""
+    stripe_webhook_secret: str = ""
+    app_base_url: str = "https://contexta.my.id"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

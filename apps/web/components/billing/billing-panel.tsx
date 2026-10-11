@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import type { BillingStatus, Plan, PlanTier } from "@/lib/api";
-import { getBillingPlans, getBillingStatus } from "@/lib/api";
+import { getBillingPlans, getBillingStatus, getBillingCheckoutUrl } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 
 function formatBytes(bytes: number): string {
@@ -84,7 +84,7 @@ function PlanCard({
 }: {
   plan: Plan;
   isCurrent: boolean;
-  onSelect: () => void;
+  onSelect: (plan: Plan) => void;
 }) {
   const t = useT();
   const isFree = plan.tier === "free";
@@ -142,7 +142,7 @@ function PlanCard({
 
       <button
         type="button"
-        onClick={onSelect}
+        onClick={() => onSelect(plan)}
         disabled={isCurrent}
         className={`focus-ring w-full rounded-control px-3 py-2 text-[13px] font-medium transition-colors ${
           isCurrent
@@ -199,8 +199,16 @@ export function BillingPanel() {
     void load();
   }, [load]);
 
-  const handlePlanSelect = () => {
-    // Stripe checkout not wired yet — placeholder
+  const handlePlanSelect = async (plan: Plan) => {
+    if (plan.tier === "free") return;
+    try {
+      const token = await getAccessToken();
+      if (!token) return;
+      const checkoutUrl = await getBillingCheckoutUrl(token, plan.tier, "monthly");
+      window.location.href = checkoutUrl;
+    } catch {
+      setError(t.billing.errors.loadFailed);
+    }
   };
 
   if (loading && !billing) {

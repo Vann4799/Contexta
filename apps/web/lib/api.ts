@@ -954,6 +954,28 @@ export async function getBillingStatus(accessToken: string): Promise<BillingStat
   return (await response.json()) as BillingStatus;
 }
 
+export async function getBillingCheckoutUrl(
+  accessToken: string,
+  planTier: PlanTier,
+  interval: "monthly" | "yearly" = "monthly"
+): Promise<string> {
+  const response = await fetchApi("/billing/checkout", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ plan_tier: planTier, interval }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to create checkout session."));
+  }
+
+  const data = (await response.json()) as { checkout_url: string };
+  return data.checkout_url;
+}
+
 export type IntegrationProvider = "slack" | "notion" | "google_drive" | "github";
 export type IntegrationStatus = "connected" | "disconnected" | "error";
 
