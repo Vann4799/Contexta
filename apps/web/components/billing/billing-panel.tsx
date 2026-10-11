@@ -386,7 +386,7 @@ export function BillingPanel() {
           ))}
         </div>
 
-        <p className="mt-4 text-center text-[11px] text-ink-muted">{t.billing.comingSoon}</p>
+        <p className="mt-4 text-center text-[11px] text-ink-muted">{t.billing.securePayment}</p>
       </section>
     </div>
   );

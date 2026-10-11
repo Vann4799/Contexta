@@ -1030,11 +1030,21 @@ export const en = {
     limitApiRequests: (n: number) => `${n.toLocaleString()} API req/day`,
     limitChatMessages: (n: number) => `${n.toLocaleString()} chat msgs/day`,
     comingSoon: "Stripe checkout coming soon",
+    securePayment: "Secure payment powered by Stripe",
     errors: {
       signIn: "Sign in to view billing.",
       loadFailed: "Unable to load billing status.",
       plansFailed: "Unable to load plans."
     }
+  },
+  paywall: {
+    documentsTitle: "Document limit reached",
+    documentsBody: "Upgrade your plan to add more documents to your workspace.",
+    apiKeysTitle: "API key limit reached",
+    apiKeysBody: "Upgrade your plan to create more API keys.",
+    chatTitle: "Daily chat limit reached",
+    chatBody: "You've reached your daily chat message limit. Upgrade for unlimited access.",
+    cta: "Upgrade plan",
   },
   integrations: {
     eyebrow: "Integrations",

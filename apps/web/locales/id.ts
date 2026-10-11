@@ -1027,11 +1027,21 @@ export const id: Dictionary = {
     limitApiRequests: (n: number) => `${n.toLocaleString()} req API/hari`,
     limitChatMessages: (n: number) => `${n.toLocaleString()} pesan chat/hari`,
     comingSoon: "Stripe checkout segera hadir",
+    securePayment: "Pembayaran aman melalui Stripe",
     errors: {
       signIn: "Masuk dulu untuk melihat penagihan.",
       loadFailed: "Tidak bisa memuat status penagihan.",
       plansFailed: "Tidak bisa memuat paket."
     }
+  },
+  paywall: {
+    documentsTitle: "Batas dokumen tercapai",
+    documentsBody: "Upgrade paket untuk menambah lebih banyak dokumen.",
+    apiKeysTitle: "Batas API key tercapai",
+    apiKeysBody: "Upgrade paket untuk membuat lebih banyak API key.",
+    chatTitle: "Batas chat harian tercapai",
+    chatBody: "Batas chat harian Anda sudah tercapai. Upgrade untuk akses tanpa batas.",
+    cta: "Upgrade paket",
   },
   integrations: {
     eyebrow: "Integrasi",

@@ -24,6 +24,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { saveBlobAsFile } from "@/lib/download";
 import { useT } from "@/lib/i18n";
 import { useServerError } from "@/lib/server-errors";
+import { usePlanGate } from "@/lib/use-plan-gate";
 import type { Dictionary } from "@/locales/en";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/status-pill";
@@ -114,6 +115,7 @@ export function DocumentUploadPanel() {
   const copy = t.documents.upload;
   const serverError = useServerError();
   const searchParams = useSearchParams();
+  const planGate = usePlanGate();
   const isTrashMode = searchParams.get("filter") === "trash";
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
@@ -475,7 +477,7 @@ export function DocumentUploadPanel() {
               <Download className="h-4 w-4" aria-hidden="true" />
               {isExporting ? copy.exporting : copy.exportWorkspace}
             </Button>
-            <Button disabled={isUploading} onClick={() => fileInputRef.current?.click()}>
+            <Button disabled={isUploading || !planGate.canUpload} onClick={() => fileInputRef.current?.click()} title={!planGate.canUpload ? t.paywall.documentsTitle : undefined}>
               <Upload className="h-4 w-4" aria-hidden="true" />
               {isUploading ? copy.uploading : copy.browse}
             </Button>
