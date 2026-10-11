@@ -3,11 +3,12 @@ import Image from "next/image";
 type ContextaLogoProps = {
   compact?: boolean;
   variant?: "light" | "dark";
+  size?: number;
 };
 
-export function ContextaLogo({ compact = false, variant = "light" }: ContextaLogoProps) {
+export function ContextaLogo({ compact = false, variant = "light", size }: ContextaLogoProps) {
   const src = variant === "dark" ? "/contexta-dark-logo.png" : "/contexta-neon-logo.png";
-  const width = compact ? 140 : 180;
+  const width = size ?? (compact ? 140 : 180);
 
   return (
     <Image
