@@ -1058,7 +1058,8 @@ export const id: Dictionary = {
     scopes: "Izin",
     connectedAs: (name: string) => `Terhubung sebagai ${name}`,
     lastSynced: (value: string) => `Terakhir sinkron ${value}`,
-    oauthNote: "Otorisasi OAuth akan membuka jendela baru. Selesaikan alur di popup.",
+    connectedSuccess: "Integrasi berhasil dihubungkan.",
+    connectedError: "Gagal menghubungkan integrasi. Coba lagi.",
     confirmDisconnect: (name: string) => `Putuskan ${name}? Anda perlu otorisasi ulang untuk menghubungkan kembali.`,
     errors: {
       signIn: "Masuk dulu untuk mengelola integrasi.",

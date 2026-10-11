@@ -1061,7 +1061,8 @@ export const en = {
     scopes: "Permissions",
     connectedAs: (name: string) => `Connected as ${name}`,
     lastSynced: (value: string) => `Last synced ${value}`,
-    oauthNote: "OAuth authorization will open a new window. Complete the flow in the popup.",
+    connectedSuccess: "Integration connected successfully.",
+    connectedError: "Could not connect integration. Please try again.",
     confirmDisconnect: (name: string) => `Disconnect ${name}? You will need to re-authorize to reconnect.`,
     errors: {
       signIn: "Sign in to manage integrations.",

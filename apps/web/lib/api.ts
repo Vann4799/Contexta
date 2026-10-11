@@ -1056,6 +1056,22 @@ export async function disconnectIntegration(
   }
 }
 
+export async function getIntegrationAuthUrl(
+  accessToken: string,
+  provider: IntegrationProvider
+): Promise<string> {
+  const response = await fetchApi(`/integrations/${provider}/authorize`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Unable to start OAuth flow."));
+  }
+
+  const data = (await response.json()) as { authorize_url: string };
+  return data.authorize_url;
+}
+
 /**
  * The origin a machine caller reaches. The browser itself talks to a same-origin proxy,
  * so apiBaseUrl() is the wrong thing to print inside a curl example.

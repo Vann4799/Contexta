@@ -43,6 +43,14 @@ class Settings(BaseSettings):
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
     app_base_url: str = "https://contexta.my.id"
+    github_client_id: str = ""
+    github_client_secret: str = ""
+    slack_client_id: str = ""
+    slack_client_secret: str = ""
+    notion_client_id: str = ""
+    notion_client_secret: str = ""
+    google_client_id: str = ""
+    google_client_secret: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
@@ -99,6 +107,24 @@ class Settings(BaseSettings):
             for origin in self.api_cors_origins.split(",")
             if origin.strip()
         ]
+
+    def oauth_credentials(self, provider: str) -> tuple[str, str]:
+        mapping = {
+            "github": (self.github_client_id, self.github_client_secret),
+            "slack": (self.slack_client_id, self.slack_client_secret),
+            "notion": (self.notion_client_id, self.notion_client_secret),
+            "google_drive": (self.google_client_id, self.google_client_secret),
+        }
+        return mapping.get(provider, ("", ""))
+
+    @property
+    def oauth_callback_url(self) -> str:
+        base = self.app_base_url.rstrip("/")
+        if "://" in base:
+            scheme, rest = base.split("://", 1)
+            if rest.startswith("contexta"):
+                return f"{scheme}://api.{rest}/integrations/callback"
+        return f"{base}/integrations/callback"
 
 
 @lru_cache

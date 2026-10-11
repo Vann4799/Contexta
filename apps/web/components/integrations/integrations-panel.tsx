@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
   AlertCircle,
   CheckCircle2,
@@ -18,8 +19,8 @@ import type {
   IntegrationProvider,
 } from "@/lib/api";
 import {
-  connectIntegration,
   disconnectIntegration,
+  getIntegrationAuthUrl,
   getIntegrations,
 } from "@/lib/api";
 import { useT } from "@/lib/i18n";
@@ -179,11 +180,14 @@ function IntegrationCard({
 
 export function IntegrationsPanel() {
   const t = useT();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [definitions, setDefinitions] = useState<IntegrationDefinition[]>([]);
   const [connections, setConnections] = useState<IntegrationConnection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyProvider, setBusyProvider] = useState<IntegrationProvider | null>(null);
+  const [notice, setNotice] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   const getAccessToken = useCallback(async () => {
     const supabase = getSupabaseBrowserClient();
@@ -214,6 +218,22 @@ export function IntegrationsPanel() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    const success = searchParams.get("success");
+    const oauthError = searchParams.get("error");
+    if (success === "true") {
+      setNotice({ type: "success", message: t.integrations.connectedSuccess });
+      void load();
+    } else if (oauthError) {
+      setNotice({ type: "error", message: t.integrations.connectedError });
+    }
+    const clean = new URLSearchParams(searchParams.toString());
+    clean.delete("success");
+    clean.delete("error");
+    const qs = clean.toString();
+    router.replace(qs ? `/integrations?${qs}` : "/integrations");
+  }, [searchParams, router, load, t.integrations.connectedSuccess, t.integrations.connectedError]);
+
   const getConnectionFor = (provider: IntegrationProvider) =>
     connections.find((c) => c.provider === provider);
 
@@ -222,14 +242,9 @@ export function IntegrationsPanel() {
     try {
       const token = await getAccessToken();
       if (!token) return;
-      const connection = await connectIntegration(token, provider);
-      setConnections((prev) => {
-        const filtered = prev.filter((c) => c.provider !== provider);
-        return [...filtered, connection];
-      });
+      const authUrl = await getIntegrationAuthUrl(token, provider);
+      window.location.href = authUrl;
     } catch {
-      // Error shown via toast in future; for now just reset
-    } finally {
       setBusyProvider(null);
     }
   };
@@ -280,28 +295,46 @@ export function IntegrationsPanel() {
           </button>
         </div>
 
+        {notice ? (
+          <div
+            className={`mb-5 flex items-center gap-3 rounded-control border p-3 ${
+              notice.type === "success"
+                ? "border-amber-300 bg-amber-50"
+                : "border-red-200 bg-red-50"
+            }`}
+          >
+            {notice.type === "success" ? (
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-amber-600" strokeWidth={2} />
+            ) : (
+              <AlertCircle className="h-4 w-4 shrink-0 text-red-600" strokeWidth={2} />
+            )}
+            <p
+              className={`text-[12px] ${
+                notice.type === "success" ? "text-amber-900" : "text-red-900"
+              }`}
+            >
+              {notice.message}
+            </p>
+          </div>
+        ) : null}
+
         {error && definitions.length === 0 ? (
           <div className="rounded-control border border-amber-200 bg-amber-50 p-4 text-center">
             <p className="text-[13px] text-amber-900">{error}</p>
           </div>
         ) : (
-          <>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {definitions.map((def) => (
-                <IntegrationCard
-                  key={def.provider}
-                  definition={def}
-                  connection={getConnectionFor(def.provider)}
-                  onConnect={() => void handleConnect(def.provider)}
-                  onDisconnect={() => void handleDisconnect(def.provider)}
-                  busy={busyProvider === def.provider}
-                />
-              ))}
-            </div>
-            <p className="mt-4 text-center text-[11px] text-ink-muted">
-              {t.integrations.oauthNote}
-            </p>
-          </>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {definitions.map((def) => (
+              <IntegrationCard
+                key={def.provider}
+                definition={def}
+                connection={getConnectionFor(def.provider)}
+                onConnect={() => void handleConnect(def.provider)}
+                onDisconnect={() => void handleDisconnect(def.provider)}
+                busy={busyProvider === def.provider}
+              />
+            ))}
+          </div>
         )}
       </section>
     </div>
