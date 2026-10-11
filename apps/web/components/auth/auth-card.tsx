@@ -18,7 +18,7 @@ export function AuthCard({ eyebrow, title, description, children }: AuthCardProp
   return (
     <main className="flex min-h-screen items-center justify-center bg-paper px-4 py-8">
       <section className="surface w-full max-w-md p-6 sm:p-8">
-        <ContextaLogo variant="dark" size={220} />
+        <ContextaLogo size={220} />
         <div className="mt-8">
           <p className="eyebrow">{eyebrow}</p>
           <h1 className="mt-1.5 text-[22px] font-semibold tracking-tight text-ink">{title}</h1>
