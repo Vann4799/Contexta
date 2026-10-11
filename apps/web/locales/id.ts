@@ -465,6 +465,18 @@ export const id: Dictionary = {
       error: "Pemakaian API key tidak bisa dimuat."
     },
     manageKeys: "Kelola API key",
+    security: {
+      title: "Kata sandi & keamanan",
+      addPasswordTitle: "Tambah kata sandi",
+      addPasswordBody: "Buat kata sandi agar bisa login dengan email dan kata sandi — selain Google.",
+      addPasswordButton: "Tambah kata sandi",
+      changePasswordTitle: "Ubah kata sandi",
+      changePasswordBody: "Tautan reset akan dikirim ke email Anda. Ikuti tautan untuk memilih kata sandi baru.",
+      changePasswordButton: "Ubah kata sandi",
+      sending: "Mengirim...",
+      sent: "Tautan reset terkirim. Cek inbox Anda.",
+      sendFailed: "Tidak bisa mengirim tautan reset."
+    },
     errors: {
       loadFailed: "Tidak bisa memuat profil.",
       saveFailed: "Tidak bisa memperbarui profil.",

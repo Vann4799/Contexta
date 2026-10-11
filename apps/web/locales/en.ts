@@ -467,6 +467,18 @@ export const en = {
       error: "API key usage could not be loaded."
     },
     manageKeys: "Manage API keys",
+    security: {
+      title: "Password & security",
+      addPasswordTitle: "Add a password",
+      addPasswordBody: "Set a password so you can also sign in with your email and password — alongside Google.",
+      addPasswordButton: "Add password",
+      changePasswordTitle: "Change password",
+      changePasswordBody: "A reset link will be sent to your email. Follow it to choose a new password.",
+      changePasswordButton: "Change password",
+      sending: "Sending...",
+      sent: "Reset link sent. Check your inbox.",
+      sendFailed: "Unable to send the reset link."
+    },
     errors: {
       loadFailed: "Unable to load profile.",
       saveFailed: "Unable to update profile.",

@@ -9,16 +9,27 @@ import {
   BadgeCheck,
   CalendarDays,
   Database,
+  Download,
   FileText,
   KeyRound,
+  Lock,
   LogIn,
   Mail,
   MessageSquare,
   Save,
+  Trash2,
   UserRound,
   type LucideIcon
 } from "lucide-react";
-import { getAccountSummary, type AccountSummary } from "@/lib/api";
+import {
+  deleteAccount,
+  getAccountSummary,
+  listApiKeys,
+  listChatMessages,
+  listChatSessions,
+  listDocuments,
+  type AccountSummary
+} from "@/lib/api";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { useLocale, useT } from "@/lib/i18n";
 import { useServerError } from "@/lib/server-errors";
@@ -40,6 +51,7 @@ type UserProfile = {
   fullName: string;
   createdAt: string | null;
   provider: string;
+  providers: string[];
   emailConfirmedAt: string | null;
   profile: ProfileRow | null;
 };
@@ -189,6 +201,11 @@ export function ProfilePanel() {
   const [isSaving, setIsSaving] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [message, setMessage] = useState<ProfileMessage | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isSendingPassword, setIsSendingPassword] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState<"sent" | "error" | null>(null);
 
   const loadProfile = useCallback(async () => {
     setIsLoading(true);
@@ -217,6 +234,9 @@ export function ProfilePanel() {
       const nameFromMetadata = typeof session.user.user_metadata?.full_name === "string" ? session.user.user_metadata.full_name : "";
       const resolvedName = profileRow?.display_name || nameFromMetadata || "";
       const provider = typeof session.user.app_metadata?.provider === "string" ? session.user.app_metadata.provider : "";
+      const providers = Array.isArray(session.user.app_metadata?.providers)
+        ? session.user.app_metadata.providers.filter((p: unknown) => typeof p === "string") as string[]
+        : [];
 
       setProfile({
         id: session.user.id,
@@ -224,6 +244,7 @@ export function ProfilePanel() {
         fullName: resolvedName,
         createdAt: session.user.created_at ?? null,
         provider,
+        providers,
         emailConfirmedAt: session.user.email_confirmed_at ?? null,
         profile: profileRow ?? null
       });
@@ -336,6 +357,108 @@ export function ProfilePanel() {
     }
   }
 
+  async function handleExportData() {
+    if (!profile) return;
+    setIsExporting(true);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data: session } = await supabase.auth.getSession();
+      const token = session?.session?.access_token;
+      if (!token) throw new Error("No session");
+
+      const [docs, keys, sessionsData, accountData] = await Promise.all([
+        listDocuments(token),
+        listApiKeys(token),
+        listChatSessions(token),
+        getAccountSummary(token)
+      ]);
+
+      const messagesBySession: Record<string, unknown[]> = {};
+      await Promise.all(
+        sessionsData.map(async (s) => {
+          try {
+            messagesBySession[s.id] = await listChatMessages(token, s.id);
+          } catch { /* skip failed session */ }
+        })
+      );
+
+      const data = {
+        exported_at: new Date().toISOString(),
+        account: accountData,
+        documents: docs,
+        chat_sessions: sessionsData.map((s) => ({
+          ...s,
+          messages: messagesBySession[s.id] ?? []
+        })),
+        api_keys: keys
+      };
+
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `contexta-export-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      setMessage({ type: "error", key: "exportFailed" });
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
+  async function handleDeleteAccount() {
+    setIsDeleting(true);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data: session } = await supabase.auth.getSession();
+      const token = session?.session?.access_token;
+      if (!token) throw new Error("No session");
+
+      await deleteAccount(token);
+      try { await supabase.auth.signOut(); } catch { /* user may already be gone */ }
+      router.push("/login");
+      router.refresh();
+    } catch (error) {
+      setMessage({ type: "error", key: profileErrorKey(error, "deleteFailed") });
+      setShowDeleteConfirm(false);
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
+  async function handleSendPasswordReset() {
+    if (!profile?.email) return;
+    setIsSendingPassword(true);
+    setPasswordMessage(null);
+
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const callbackUrl = typeof window !== "undefined"
+        ? `${window.location.origin}/auth/callback`
+        : undefined;
+      const { error } = await supabase.auth.resetPasswordForEmail(profile.email, {
+        redirectTo: callbackUrl
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      setPasswordMessage("sent");
+    } catch {
+      setPasswordMessage("error");
+    } finally {
+      setIsSendingPassword(false);
+    }
+  }
+
+  const hasPasswordProvider = profile?.providers?.some(
+    (p) => EMAIL_SIGN_IN_PROVIDERS.includes(p.toLowerCase())
+  ) ?? false;
+
   const accountItems = [
     { label: copy.emailLabel, value: profile?.email || copy.loading, icon: Mail },
     { label: copy.userIdLabel, value: profile?.id || copy.loading, icon: KeyRound },
@@ -445,6 +568,39 @@ export function ProfilePanel() {
         </aside>
       </section>
 
+      <section className="rounded-card border border-paper-line bg-paper-card p-6">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-card bg-paper-chip text-ink">
+            <Lock className="h-5 w-5" strokeWidth={2.2} aria-hidden="true" />
+          </div>
+          <h3 className="text-[17px] font-semibold text-ink">{copy.security.title}</h3>
+        </div>
+
+        <div className="mt-5 rounded-control border border-paper-line bg-paper p-4">
+          <p className="text-[13px] font-semibold text-ink">
+            {hasPasswordProvider ? copy.security.changePasswordTitle : copy.security.addPasswordTitle}
+          </p>
+          <p className="mt-1 text-[11.5px] text-ink-muted">
+            {hasPasswordProvider ? copy.security.changePasswordBody : copy.security.addPasswordBody}
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <Button
+              disabled={isLoading || isSendingPassword}
+              onClick={handleSendPasswordReset}
+              variant="secondary"
+            >
+              {isSendingPassword ? copy.security.sending : hasPasswordProvider ? copy.security.changePasswordButton : copy.security.addPasswordButton}
+            </Button>
+            {passwordMessage === "sent" ? (
+              <p className="text-[12px] font-medium text-success-ink">{copy.security.sent}</p>
+            ) : null}
+            {passwordMessage === "error" ? (
+              <p className="text-[12px] font-medium text-danger">{copy.security.sendFailed}</p>
+            ) : null}
+          </div>
+        </div>
+      </section>
+
       <section aria-busy={isLoading} className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {isLoading
           ? Array.from({ length: 4 }, (_, index) => (
@@ -509,6 +665,65 @@ export function ProfilePanel() {
             {copy.manageKeys}
             <ArrowRight className="h-4 w-4" strokeWidth={2.1} aria-hidden="true" />
           </Link>
+        </div>
+      </section>
+
+      <section className="rounded-card border border-danger-line bg-paper-card p-6">
+        <h3 className="text-[17px] font-semibold text-danger">{copy.dangerZone.title}</h3>
+        <p className="mt-1 text-[13px] text-ink-muted">{copy.dangerZone.description}</p>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-control border border-paper-line bg-paper p-4">
+            <div className="flex items-center gap-2 text-[13px] font-semibold text-ink">
+              <Download className="h-4 w-4" strokeWidth={2.1} aria-hidden="true" />
+              {copy.dangerZone.exportData}
+            </div>
+            <p className="mt-1 text-[11.5px] text-ink-muted">{copy.dangerZone.exportHelper}</p>
+            <Button
+              className="mt-3"
+              disabled={isLoading || isExporting}
+              onClick={handleExportData}
+              variant="secondary"
+            >
+              {isExporting ? copy.dangerZone.exporting : copy.dangerZone.exportData}
+            </Button>
+          </div>
+
+          <div className="rounded-control border border-danger-line bg-danger-soft p-4">
+            <div className="flex items-center gap-2 text-[13px] font-semibold text-danger">
+              <Trash2 className="h-4 w-4" strokeWidth={2.1} aria-hidden="true" />
+              {copy.dangerZone.deleteAccount}
+            </div>
+            <p className="mt-1 text-[11.5px] text-ink-muted">{copy.dangerZone.deleteHelper}</p>
+            {!showDeleteConfirm ? (
+              <Button
+                className="mt-3"
+                disabled={isLoading || isDeleting}
+                onClick={() => setShowDeleteConfirm(true)}
+                variant="secondary"
+              >
+                {copy.dangerZone.deleteAccount}
+              </Button>
+            ) : (
+              <div className="mt-3 space-y-2">
+                <p className="text-[12px] leading-5 text-danger">
+                  {copy.dangerZone.confirmBody}
+                </p>
+                <div className="flex gap-2">
+                  <Button disabled={isDeleting} onClick={handleDeleteAccount}>
+                    {isDeleting ? copy.dangerZone.deleting : copy.dangerZone.confirmAction}
+                  </Button>
+                  <Button
+                    disabled={isDeleting}
+                    onClick={() => setShowDeleteConfirm(false)}
+                    variant="secondary"
+                  >
+                    {copy.dangerZone.cancel}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </section>
     </div>
