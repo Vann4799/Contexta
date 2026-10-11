@@ -8,7 +8,6 @@ import {
   ExternalLink,
   Loader2,
   Link2,
-  MessageSquare,
   RefreshCw,
   Unlink,
 } from "lucide-react";

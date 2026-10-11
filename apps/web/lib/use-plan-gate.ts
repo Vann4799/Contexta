@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import type { BillingStatus } from "@/lib/api";
 import { getBillingStatus } from "@/lib/api";
@@ -84,19 +84,6 @@ export function usePlanGate(): PlanGate {
       cancelled = true;
     };
   }, []);
-
-  const refresh = useCallback(async () => {
-    if (!token) return;
-    invalidatePlanCache();
-    setLoading(true);
-    try {
-      await fetchOnce(token);
-    } catch {
-      // non-fatal
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
 
   if (!billing || loading) {
     return {

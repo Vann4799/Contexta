@@ -30,7 +30,8 @@ import { ContextaLogo } from "@/components/contexta-logo";
 import { listDocuments, type DocumentItem } from "@/lib/api";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { useT } from "@/lib/i18n";
-import { navigationItems, secondaryNavItems, type NavIcon } from "@/lib/navigation";
+import type { Dictionary } from "@/locales/en";
+import { navigationItems, secondaryNavItems, type NavIcon, type NavLabelKey } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 
 const NAV_ICONS: Record<NavIcon, LucideIcon> = {
@@ -47,21 +48,28 @@ const NAV_ICONS: Record<NavIcon, LucideIcon> = {
   trash: Trash2
 };
 
-const SEARCHABLE_PAGES = [
-  { href: "/", labelKey: "dashboard" as const },
-  { href: "/pipeline", labelKey: "pipeline" as const },
-  { href: "/documents", labelKey: "documents" as const },
-  { href: "/chat", labelKey: "chat" as const },
-  { href: "/convert", labelKey: "convert" as const },
-  { href: "/api-keys", labelKey: "apiKeys" as const },
-  { href: "/usage", labelKey: "usage" as const },
-  { href: "/billing", labelKey: "billing" as const },
-  { href: "/integrations", labelKey: "integrations" as const },
-  { href: "/activity", labelKey: "activity" as const },
-  { href: "/profile", labelKey: "dashboard" as const },
-  { href: "/settings", labelKey: "dashboard" as const },
-  { href: "/help", labelKey: "dashboard" as const }
+type SearchLabelKey = NavLabelKey | "profile" | "settings" | "help";
+
+const SEARCHABLE_PAGES: { href: string; labelKey: SearchLabelKey }[] = [
+  { href: "/", labelKey: "dashboard" },
+  { href: "/pipeline", labelKey: "pipeline" },
+  { href: "/documents", labelKey: "documents" },
+  { href: "/chat", labelKey: "chat" },
+  { href: "/convert", labelKey: "convert" },
+  { href: "/api-keys", labelKey: "apiKeys" },
+  { href: "/usage", labelKey: "usage" },
+  { href: "/billing", labelKey: "billing" },
+  { href: "/integrations", labelKey: "integrations" },
+  { href: "/activity", labelKey: "activity" },
+  { href: "/profile", labelKey: "profile" },
+  { href: "/settings", labelKey: "settings" },
+  { href: "/help", labelKey: "help" }
 ];
+
+function resolveSearchLabel(shell: Dictionary["shell"], key: SearchLabelKey): string {
+  if (key === "profile" || key === "settings" || key === "help") return shell[key];
+  return shell.nav[key];
+}
 
 function formatRelativeTime(dateString: string): string {
   const now = Date.now();
@@ -117,9 +125,9 @@ function SidebarSearch() {
     const q = query.toLowerCase();
 
     const pageResults = SEARCHABLE_PAGES
-      .filter((p) => t.shell.nav[p.labelKey].toLowerCase().includes(q))
+      .filter((p) => resolveSearchLabel(t.shell, p.labelKey).toLowerCase().includes(q))
       .slice(0, 3)
-      .map((p) => ({ type: "page" as const, href: p.href, label: t.shell.nav[p.labelKey] }));
+      .map((p) => ({ type: "page" as const, href: p.href, label: resolveSearchLabel(t.shell, p.labelKey) }));
 
     const docResults = docs
       .filter((d) => d.filename.toLowerCase().includes(q))
