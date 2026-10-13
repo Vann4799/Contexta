@@ -33,7 +33,7 @@ import {
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { fetchDocuments } from "@/lib/document-store";
 
-import dynamic from "next/dynamic";
+import StatusDonut from "@/components/dashboard/status-donut";
 import { useLocale, useT } from "@/lib/i18n";
 import { useServerError } from "@/lib/server-errors";
 import type { Dictionary } from "@/locales/en";
@@ -41,15 +41,14 @@ import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/status-pill";
 import { cn } from "@/lib/utils";
 
-const StatusDonut = dynamic(() => import("@/components/dashboard/status-donut"), { ssr: false });
-
 type DashboardCopy = Dictionary["dashboard"];
 
+// Same yellow family, but each status has to read apart from the others in the ring.
 const STATUS_COLORS: Record<string, string> = {
   ready: "#f2fb48",
-  processing: "#f2fb48",
+  processing: "#e0a92e",
   uploaded: "#8b8680",
-  failed: "#8b8680"
+  failed: "#b54a4a"
 };
 
 function statusForPill(status: DocumentStatus) {
@@ -356,12 +355,11 @@ export function DashboardInsights() {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   const statusData = useMemo(() => {
-    const items = [
+    return [
       { name: copy.statusReady, value: totals.ready, color: STATUS_COLORS.ready },
       { name: copy.statusProcessing, value: totals.processing, color: STATUS_COLORS.processing },
       { name: copy.statusFailed, value: totals.failed, color: STATUS_COLORS.failed }
     ].filter((i) => i.value > 0);
-    return items.length > 0 ? items : [{ name: copy.statusReady, value: 1, color: "#d4d0c8" }];
   }, [totals, copy]);
 
   const normalizedLibraryFilter = libraryFilter.trim().toLowerCase();

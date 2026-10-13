@@ -17,13 +17,11 @@ import {
   type ApiKeyUsage
 } from "@/lib/api";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
-import dynamic from "next/dynamic";
-import { useT } from "@/lib/i18n";
+import { useLocale, useT } from "@/lib/i18n";
 import { useServerError } from "@/lib/server-errors";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-
-const ApiActivityChart = dynamic(() => import("@/components/usage/api-activity-chart"), { ssr: false });
+import ApiActivityChart from "@/components/usage/api-activity-chart";
 
 const USAGE_DAYS = 14;
 
@@ -39,6 +37,7 @@ function usageErrorMessage(error: unknown) {
 
 export function UsagePanel() {
   const t = useT();
+  const locale = useLocale();
   const copy = t.usage;
   const serverError = useServerError();
   const [keysWithUsage, setKeysWithUsage] = useState<KeyWithUsage[]>([]);
@@ -105,11 +104,11 @@ export function UsagePanel() {
   const chartData = useMemo(() => {
     return aggregated.map((day) => ({
       date: day.date,
-      label: new Intl.DateTimeFormat("en", { day: "numeric", month: "short" }).format(new Date(day.date)),
+      label: new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" }).format(new Date(day.date)),
       allowed: day.allowed,
       rejected: day.rejected
     }));
-  }, [aggregated]);
+  }, [aggregated, locale]);
 
   const totals = useMemo(() => {
     let total = 0;
@@ -217,9 +216,10 @@ export function UsagePanel() {
                   data={chartData}
                   allowedLabel={t.usage.allowed}
                   rejectedLabel={t.usage.rejected}
+                  tapHint={copy.tapHint}
                 />
               ) : (
-                <div className="flex h-full items-center justify-center text-[13px] text-ink-muted">{copy.loading}</div>
+                <div className="flex h-full items-center justify-center text-[13px] text-ink-muted">{copy.noData}</div>
               )}
             </div>
           </article>
@@ -237,7 +237,7 @@ export function UsagePanel() {
                     <th className="eyebrow px-3 py-2 text-right font-semibold">{copy.keyRequests}</th>
                     <th className="eyebrow px-3 py-2 text-right font-semibold">{copy.keyAllowed}</th>
                     <th className="eyebrow px-3 py-2 text-right font-semibold">{copy.keyRejected}</th>
-                    <th className="eyebrow px-3 py-2 font-semibold">14d trend</th>
+                    <th className="eyebrow px-3 py-2 font-semibold">{copy.keyTrend}</th>
                     <th className="eyebrow px-3 py-2 text-right font-semibold">{copy.keyLastUsed}</th>
                   </tr>
                 </thead>
@@ -304,7 +304,7 @@ export function UsagePanel() {
                           </td>
                           <td className="nums px-3 py-3 text-right text-[12.5px] text-ink-muted">
                             {key.last_used_at
-                              ? new Intl.DateTimeFormat("en", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(key.last_used_at))
+                              ? new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(key.last_used_at))
                               : copy.never}
                           </td>
                         </tr>

@@ -1,45 +1,55 @@
 "use client";
 
-import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
-
 export type DonutSlice = { name: string; value: number; color: string };
 
+const R = 47;
+const CIRC = 2 * Math.PI * R;
+const GAP = 4;
+
 export default function StatusDonut({ items }: { items: DonutSlice[] }) {
-  // Mounted before data arrives so its lazy chunk downloads in parallel with the fetch.
   if (items.length === 0) {
     return <div className="flex h-full items-center justify-center text-[13px] text-ink-muted">—</div>;
   }
 
+  const total = items.reduce((sum, item) => sum + item.value, 0);
+  // A single slice must close the ring: a gap on a full circle reads as a notch.
+  const gap = items.length > 1 ? GAP : 0;
+  let cursor = 0;
+
   return (
-    <ResponsiveContainer width="100%" height="100%">
-      <PieChart>
-        <Pie
-          data={items}
-          dataKey="value"
-          cx="50%"
-          cy="50%"
-          innerRadius={40}
-          outerRadius={58}
-          paddingAngle={3}
-          strokeWidth={0}
-        >
-          {items.map((entry) => (
-            <Cell key={entry.name} fill={entry.color} />
-          ))}
-        </Pie>
-        <Tooltip
-          content={({ active, payload }) => {
-            if (!active || !payload?.[0]) return null;
-            const d = payload[0].payload as { name: string; value: number };
+    <div className="relative h-full w-full">
+      <svg
+        viewBox="0 0 120 120"
+        className="h-full w-full"
+        role="img"
+        aria-label={items.map((i) => `${i.name}: ${i.value}`).join(", ")}
+      >
+        <g transform="rotate(-90 60 60)">
+          {items.map((item) => {
+            const arc = (item.value / (total || 1)) * CIRC;
+            // Shortening each arc by the gap keeps segments in order without rotating them individually.
+            const dash = Math.max(arc - gap, 0.5);
+            const offset = -cursor;
+            cursor += arc;
             return (
-              <div className="rounded-lg border border-paper-line bg-paper-card px-3 py-1.5 text-[12px] shadow-node">
-                <span className="font-medium">{d.name}:</span>{" "}
-                <span className="nums font-semibold">{d.value}</span>
-              </div>
+              <circle
+                key={item.name}
+                cx="60"
+                cy="60"
+                r={R}
+                fill="none"
+                stroke={item.color}
+                strokeWidth={15}
+                strokeDasharray={`${dash} ${CIRC - dash}`}
+                strokeDashoffset={offset}
+              />
             );
-          }}
-        />
-      </PieChart>
-    </ResponsiveContainer>
+          })}
+        </g>
+      </svg>
+      <span className="pointer-events-none absolute inset-0 grid place-items-center">
+        <span className="nums text-[20px] font-semibold leading-none tracking-tight">{total}</span>
+      </span>
+    </div>
   );
 }
