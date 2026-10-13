@@ -348,9 +348,17 @@ export const en = {
       names: "Names",
       emails: "Emails",
       links: "Links",
+      dates: "Dates",
+      money: "Amounts",
       noNames: "No names detected yet.",
       noEmails: "No emails detected yet.",
       noLinks: "No links detected yet.",
+      noDates: "No dates detected yet.",
+      noMoney: "No amounts detected yet.",
+      extractiveNote:
+        "This summary is still raw text from the opening of the document. Generate an AI brief to read the whole thing.",
+      modelNote: (coverage: number) => `The AI brief read ${Math.round(coverage * 100)}% of the document.`,
+      truncatedNote: "The brief was cut off at the model's token limit.",
       askEyebrow: "Ask",
       suggestedTitle: "Suggested questions",
       notices: {
@@ -919,6 +927,8 @@ export const en = {
         "The model returned an empty answer. Try again.",
       "DEEPSEEK_API_KEY is not configured": "The answer service is not configured.",
       "Unable to generate AI brief.": "The AI brief could not be generated.",
+      "The AI answer was not a readable brief. Try again.":
+        "The AI answer was not a readable brief. Try again.",
       "Unable to load chat sessions.": "Unable to load chat sessions.",
       "Unable to load chat messages.": "Unable to load the chat messages.",
       "Unable to create chat session.": "Unable to start a chat session.",

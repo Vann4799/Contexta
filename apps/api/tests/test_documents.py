@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
@@ -33,12 +34,29 @@ client = TestClient(app)
 
 
 class FakeAnswerGenerator:
+    """Answers with the structured JSON the brief route now asks for."""
+
     def __init__(self) -> None:
         self.prompt = ""
+        self.calls = 0
 
     def generate_answer(self, prompt: str) -> AnswerResult:
+        self.calls += 1
         self.prompt = prompt
-        return AnswerResult("AI brief: creator responses are dominated by X/Twitter content.")
+        return AnswerResult(
+            json.dumps(
+                {
+                    "summary": "Creator responses are dominated by X/Twitter content.",
+                    "key_points": ["X/Twitter brings the most creator responses"],
+                    "entities": {
+                        "persons": ["Rifki Mardiyanto"],
+                        "dates": [],
+                        "money": ["3000 views"],
+                    },
+                    "questions": ["Which platform grows fastest?"],
+                }
+            )
+        )
 
 
 def test_document_answer_generator_uses_configured_token_limit() -> None:
@@ -334,13 +352,40 @@ def test_generate_document_ai_brief_uses_document_chunks() -> None:
 
     assert response.status_code == 200
     body = response.json()
-    assert body == {
-        "document_id": created.id,
-        "brief": "AI brief: creator responses are dominated by X/Twitter content.",
+    assert body["document_id"] == created.id
+    assert body["summary"] == "Creator responses are dominated by X/Twitter content."
+    assert body["key_points"] == ["X/Twitter brings the most creator responses"]
+    assert body["entities"] == {
+        "persons": ["Rifki Mardiyanto"],
+        "dates": [],
+        "money": ["3000 views"],
     }
+    assert body["questions"] == ["Which platform grows fastest?"]
+    assert body["language"] == "English"
+    assert body["coverage"] == 1.0
+    assert body["truncated"] is False
+    assert body["model"]
+    assert body["brief"].startswith("**1. Summary**")
+    assert "Rifki Mardiyanto" in body["brief"]
     assert "creator.pdf" in answer_generator.prompt
     assert "Rifki Mardiyanto uploaded X Twitter content" in answer_generator.prompt
-    assert "Brief selesai" in answer_generator.prompt
+
+    intelligence = client.get(
+        f"/documents/{created.id}/intelligence", headers=auth_headers()
+    )
+
+    assert intelligence.status_code == 200
+    served = intelligence.json()
+    assert served["insight_source"] == "model"
+    assert served["summary"] == "Creator responses are dominated by X/Twitter content."
+    assert served["key_points"] == ["X/Twitter brings the most creator responses"]
+    assert served["candidate_names"] == ["Rifki Mardiyanto"]
+    assert served["money"] == ["3000 views"]
+    assert served["suggested_questions"] == ["Which platform grows fastest?"]
+    assert served["brief"] == body["brief"]
+    assert served["brief_coverage"] == 1.0
+    assert served["brief_model"] == body["model"]
+    assert answer_generator.calls == 1
 
 
 def test_create_document_with_unsupported_file_type_returns_422() -> None:

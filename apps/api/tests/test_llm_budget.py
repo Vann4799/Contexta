@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
@@ -28,6 +30,7 @@ from app.services.llm_budget import (
     BudgetedAnswerGenerator,
     BudgetedQueryRewriter,
     LlmDayBudget,
+    brief_day_budget,
     llm_day_budget,
 )
 
@@ -45,6 +48,26 @@ class CountingGenerator:
     def generate_answer(self, prompt: str) -> AnswerResult:
         self.calls += 1
         return AnswerResult("Grounded answer. [Source 1]")
+
+
+class BriefGenerator:
+    """Counts calls and answers with the JSON shape the brief route requires."""
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def generate_answer(self, prompt: str) -> AnswerResult:
+        self.calls += 1
+        return AnswerResult(
+            json.dumps(
+                {
+                    "summary": "Creator responses are dominated by X/Twitter content.",
+                    "key_points": ["X/Twitter leads"],
+                    "entities": {"persons": [], "dates": [], "money": []},
+                    "questions": ["Which platform grows fastest?"],
+                }
+            )
+        )
 
 
 class CountingRewriter:
@@ -92,8 +115,10 @@ def context() -> RetrievedContext:
 def isolate_app() -> None:
     """The shared budget is process state; a suite must not inherit yesterday's count."""
     llm_day_budget.reset()
+    brief_day_budget.reset()
     yield
     llm_day_budget.reset()
+    brief_day_budget.reset()
     app.dependency_overrides.clear()
 
 
@@ -255,7 +280,7 @@ def test_a_session_message_is_refused_once_the_allowance_is_spent() -> None:
     ] == ["user", "assistant"]
 
 
-def test_a_brief_is_refused_once_the_allowance_is_spent() -> None:
+def test_briefs_run_out_on_their_own_allowance_not_chats() -> None:
     documents = InMemoryDocumentRepository()
     document = documents.create_document(
         USER_ID,
@@ -278,18 +303,25 @@ def test_a_brief_is_refused_once_the_allowance_is_spent() -> None:
             }
         ]
     )
-    generator = CountingGenerator()
+    generator = BriefGenerator()
     app.dependency_overrides[get_current_user] = user
     app.dependency_overrides[get_settings] = lambda: Settings(
-        llm_day_limit=1, environment="test"
+        llm_day_limit=1, brief_day_limit=2, environment="test"
     )
     app.dependency_overrides[build_document_answer_generator] = lambda: generator
     app.dependency_overrides[get_brief_document_repository] = lambda: documents
 
     first = client.post(f"/documents/{document.id}/brief")
     second = client.post(f"/documents/{document.id}/brief")
+    third = client.post(f"/documents/{document.id}/brief")
 
+    # Chat's allowance is already spent, yet briefs keep working until their own runs out.
     assert first.status_code == 200
-    assert second.status_code == 429
-    assert second.json()["detail"]["code"] == "llm_day_limit_exceeded"
-    assert generator.calls == 1
+    assert second.status_code == 200
+    assert third.status_code == 429
+    assert third.json()["detail"]["code"] == "llm_day_limit_exceeded"
+    assert generator.calls == 2
+    assert llm_day_budget.used_today(USER_ID) == 0
+    assert documents.get_ai_brief(USER_ID, document.id)["summary"] == (
+        "Creator responses are dominated by X/Twitter content."
+    )

@@ -117,19 +117,26 @@ above plus an existing `DEEPSEEK_API_KEY` means the rewrite is live as soon as t
 rebuilt. To switch it off without a code change, set `DEEPSEEK_REWRITE_MODEL=` to an empty value and
 restart the api service; follow-ups then search with the raw question.
 
-Optional api quota:
+Optional api quotas:
 
 ```text
 LLM_DAY_LIMIT=200
+BRIEF_DAY_LIMIT=100
 ```
 
-`LLM_DAY_LIMIT` caps the paid DeepSeek calls one user can trigger per UTC day across chat answers
-and document briefs; past the cap the endpoints answer `429 llm_day_limit_exceeded` with a
+`LLM_DAY_LIMIT` caps the paid DeepSeek calls one user can trigger per UTC day through chat;
+past the cap the endpoints answer `429 llm_day_limit_exceeded` with a
 `Retry-After` until midnight UTC. Questions served without a model call (exact-count and
 highest-metric answers, insufficient-context replies) cost nothing, and a declined rewrite never
-reaches the model. The counter is in-process and approximate: it is per worker process, reset by a
-restart or scale change, and is a cost brake rather than billing. Set it to `0` to meter nothing at
-all. The only durable quota stays the per-key daily limit behind `/v1`.
+reaches the model.
+
+`BRIEF_DAY_LIMIT` is the same cap for `POST /documents/{id}/brief`, counted separately so a few
+briefs can never lock a user out of chatting. One brief costs one call per sampled section plus one
+merge call, so a long document can spend up to five units; it is a call allowance, not a click one.
+
+Both counters are in-process and approximate: per worker process, reset by a restart or scale
+change, and a cost brake rather than billing. Set either to `0` to meter nothing there.
+The only durable quota stays the per-key daily limit behind `/v1`.
 
 Optional worker setting:
 
@@ -158,7 +165,10 @@ http://localhost:3000/auth/callback
 ## Supabase Setup
 
 1. Create a Supabase project.
-2. Apply `infra/supabase/migrations/0001_initial_schema.sql`.
+2. Apply every file in `infra/supabase/migrations` in numeric order (`0001` .. `0011`). A
+   migration must land before the code that reads its column is deployed: `0011_document_brief.sql`
+   adds `documents.ai_brief`, and `GET /documents/{id}/intelligence` selects that column, so an
+   un-migrated database returns 500 for every document.
 3. Confirm the private storage bucket `contexta-documents` exists.
 4. Confirm RLS is enabled on public tables and storage policies are present.
 5. Create a normal user through the app or Supabase Auth.

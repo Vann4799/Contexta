@@ -148,6 +148,7 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
 
         setDocument(loadedDocument);
         setIntelligence(loadedIntelligence);
+        setAIBrief(loadedIntelligence?.brief ?? null);
       } catch (loadError) {
         if (isMounted) {
           setError(loadError instanceof Error ? loadError.message : "loadFailed");
@@ -204,6 +205,7 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
 
       const generated = await generateDocumentAIBrief(accessToken, documentId);
       setAIBrief(generated.brief);
+      setIntelligence(await getDocumentIntelligence(accessToken, documentId));
     } catch (generateError) {
       setBriefError(generateError instanceof Error ? generateError.message : "briefFailed");
     } finally {
@@ -363,6 +365,11 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
               </Button>
             </div>
             <p className="mt-3 max-w-[950px] text-[13.5px] leading-6 text-ink">{intelligence.summary}</p>
+            <p className="mt-2 text-[12px] leading-5 text-ink-muted">
+              {intelligence.insight_source === "model" && intelligence.brief_coverage !== null
+                ? t.modelNote(intelligence.brief_coverage)
+                : t.extractiveNote}
+            </p>
             {briefError ? (
               <p className="mt-3 text-[13px] text-danger">
                 {t.errors[briefError as keyof typeof t.errors] ?? serverError(briefError)}
@@ -378,6 +385,9 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
                   </Button>
                 </div>
                 <FormattedBrief text={aiBrief} />
+                {intelligence.brief_truncated ? (
+                  <p className="mt-3 text-[12px] text-warning">{t.truncatedNote}</p>
+                ) : null}
                 {copyMessage ? <p className="mt-3 text-[12px] text-ink-muted">{t.notices[copyMessage]}</p> : null}
               </div>
             ) : null}
@@ -415,6 +425,14 @@ export function DocumentIntelligencePanel({ documentId }: DocumentIntelligencePa
                 <div className="min-w-0">
                   <p className="mb-2 text-[12px] font-medium text-ink-muted">{t.links}</p>
                   <FieldList empty={t.noLinks} items={intelligence.links} />
+                </div>
+                <div className="min-w-0">
+                  <p className="mb-2 text-[12px] font-medium text-ink-muted">{t.dates}</p>
+                  <FieldList empty={t.noDates} items={intelligence.dates} />
+                </div>
+                <div className="min-w-0">
+                  <p className="mb-2 text-[12px] font-medium text-ink-muted">{t.money}</p>
+                  <FieldList empty={t.noMoney} items={intelligence.money} />
                 </div>
               </div>
             </div>

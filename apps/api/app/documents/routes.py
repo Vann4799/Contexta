@@ -1,6 +1,7 @@
 import logging
 import re
 from collections import Counter
+from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID, uuid4
 
@@ -19,11 +20,13 @@ from app.auth.dependencies import get_current_user
 from app.auth.supabase_jwt import CurrentUser
 from app.chat.llm import AnswerGenerator, DeepSeekAnswerGenerator
 from app.core.config import Settings, get_settings
-from app.services.llm_budget import budgeted_answer_generator
+from app.services.llm_budget import budgeted_brief_generator
+from app.documents.brief import BriefModelError, generate_brief
 from app.documents.models import (
     DEFAULT_CHUNK_PAGE_SIZE,
     MAX_CHUNK_PAGE_SIZE,
     CHUNK_PREVIEW_MAX_CHARS,
+    BriefEntities,
     DocumentAIBriefResponse,
     DocumentChunkResponse,
     DocumentChunksPage,
@@ -58,7 +61,6 @@ UPLOAD_READ_CHUNK_SIZE = 1024 * 1024
 EMAIL_PATTERN = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
 LINK_PATTERN = re.compile(r"https?://[^\s,)]+")
 NAME_PATTERN = re.compile(r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3}\b")
-MAX_AI_BRIEF_CONTEXT_CHARS = 14000
 _PAYLOAD_SYNCED_FIELDS = frozenset({"doc_type", "doc_version"})
 
 
@@ -121,7 +123,7 @@ def get_document_answer_generator(
     inner: Annotated[AnswerGenerator, Depends(build_document_answer_generator)],
 ) -> AnswerGenerator:
     """The metered surface: a brief is a paid completion per click."""
-    return budgeted_answer_generator(inner, current_user, settings)
+    return budgeted_brief_generator(inner, current_user, settings)
 
 
 def infer_upload_file_type(filename: str, content_type: str | None) -> str:
@@ -202,16 +204,57 @@ def split_sentences(text: str) -> list[str]:
 def build_document_intelligence(
     document: DocumentResponse,
     chunks: list[DocumentChunkResponse],
+    brief: dict[str, object] | None = None,
 ) -> DocumentIntelligenceResponse:
     combined_text = "\n".join(chunk.text for chunk in chunks)
     sentences = split_sentences(combined_text)
-    key_points = [sentence[:260] for sentence in sentences[:5]]
-    summary = " ".join(key_points[:3]) if key_points else "No processed text is available for this document yet."
+    extractive_points = [sentence[:260] for sentence in sentences[:5]]
     page_counts = Counter(
         chunk.page_number
         for chunk in chunks
         if chunk.page_number is not None
     )
+
+    # A brief is only honest while it describes the text it was built from. Re-indexing
+    # rewrites the chunks, so a count mismatch means these fields are stale.
+    model_brief = brief if brief and brief.get("chunk_count") == len(chunks) else None
+    entities: dict[str, object] = {}
+    if model_brief:
+        raw_entities = model_brief.get("entities")
+        if isinstance(raw_entities, dict):
+            entities = raw_entities
+
+    def string_list(value: object) -> list[str]:
+        return [str(item) for item in value] if isinstance(value, list) else []
+
+    if model_brief:
+        summary = str(model_brief.get("summary") or "").strip()
+        key_points = string_list(model_brief.get("key_points"))
+        names = string_list(entities.get("persons"))
+        questions = string_list(model_brief.get("questions"))
+        coverage = model_brief.get("coverage")
+        generated_at = model_brief.get("generated_at")
+        model = model_brief.get("model")
+        brief_text = str(model_brief.get("brief") or "") or None
+        was_cut = bool(model_brief.get("truncated"))
+    else:
+        summary = " ".join(extractive_points[:3]) if extractive_points else (
+            "No processed text is available for this document yet."
+        )
+        key_points = extractive_points
+        names = unique_in_order(NAME_PATTERN.findall(combined_text))
+        questions = [
+            "Ringkas isi dokumen ini dalam 5 poin.",
+            "Apa pola utama yang terlihat dari dokumen ini?",
+            "Siapa saja nama atau pihak penting yang muncul?",
+            "Apa insight yang bisa dipakai untuk keputusan bisnis?",
+            "Buatkan report singkat berdasarkan dokumen ini.",
+        ]
+        coverage = None
+        generated_at = None
+        model = None
+        brief_text = None
+        was_cut = False
 
     return DocumentIntelligenceResponse(
         document_id=document.id,
@@ -219,49 +262,21 @@ def build_document_intelligence(
         status=document.status,
         chunk_count=len(chunks),
         summary=summary[:900],
+        insight_source="model" if model_brief else "extractive",
         key_points=key_points,
+        # Exact and free, so these stay pattern matches even once a model brief exists.
         emails=unique_in_order(EMAIL_PATTERN.findall(combined_text)),
         links=unique_in_order(LINK_PATTERN.findall(combined_text)),
-        candidate_names=unique_in_order(NAME_PATTERN.findall(combined_text)),
+        candidate_names=names,
+        dates=string_list(entities.get("dates")),
+        money=string_list(entities.get("money")),
         top_pages=[page for page, _count in page_counts.most_common(5)],
-        suggested_questions=[
-            "Ringkas isi dokumen ini dalam 5 poin.",
-            "Apa pola utama yang terlihat dari dokumen ini?",
-            "Siapa saja nama atau pihak penting yang muncul?",
-            "Apa insight yang bisa dipakai untuk keputusan bisnis?",
-            "Buatkan report singkat berdasarkan dokumen ini.",
-        ],
-    )
-
-
-def build_ai_brief_prompt(
-    document: DocumentResponse,
-    chunks: list[DocumentChunkResponse],
-) -> str:
-    context_parts: list[str] = []
-    current_length = 0
-    for chunk in chunks:
-        page = f"page {chunk.page_number}" if chunk.page_number else "page unknown"
-        part = f"[Chunk {chunk.chunk_index}, {page}]\n{chunk.text.strip()}"
-        if current_length + len(part) > MAX_AI_BRIEF_CONTEXT_CHARS:
-            break
-        context_parts.append(part)
-        current_length += len(part)
-
-    context = "\n\n".join(context_parts)
-    return (
-        "Anda adalah analis dokumen untuk produk Contexta.\n"
-        "Buat brief bisnis yang rapi, lengkap, dan sangat ringkas dalam Bahasa Indonesia berdasarkan konteks dokumen saja.\n"
-        "Wajib selesaikan semua bagian, jangan berhenti di tengah kalimat, dan akhiri jawaban dengan kalimat 'Brief selesai.'\n"
-        "Target panjang 350-500 kata agar jawaban selesai tanpa terpotong.\n"
-        "Format jawaban:\n"
-        "1. Ringkasan singkat: 1 paragraf maksimal 5 kalimat.\n"
-        "2. Insight utama: 4 bullet pendek.\n"
-        "3. Pola yang terlihat: 3 bullet pendek.\n"
-        "4. Rekomendasi pertanyaan lanjutan: 3 pertanyaan pendek saja.\n"
-        "Jika konteks tidak cukup, jelaskan batasannya.\n\n"
-        f"Nama dokumen: {document.filename}\n\n"
-        f"Konteks dokumen:\n{context}"
+        suggested_questions=questions,
+        brief_generated_at=generated_at if isinstance(generated_at, str) else None,
+        brief_model=str(model) if model else None,
+        brief_coverage=float(coverage) if isinstance(coverage, (int, float)) else None,
+        brief_truncated=was_cut,
+        brief=brief_text,
     )
 
 
@@ -318,7 +333,11 @@ def get_document_intelligence(
         raise HTTPException(status_code=404, detail="document not found")
 
     chunks = repository.list_document_chunks(current_user.id, document_id)
-    return build_document_intelligence(document, chunks)
+    return build_document_intelligence(
+        document,
+        chunks,
+        repository.get_ai_brief(current_user.id, document_id),
+    )
 
 
 @router.get("/{document_id}/chunks", response_model=DocumentChunksPage)
@@ -347,6 +366,7 @@ def get_document_chunks(
 def generate_document_ai_brief(
     document_id: str,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    settings: Annotated[Settings, Depends(get_settings)],
     repository: Annotated[DocumentRepository, Depends(get_document_repository)],
     answer_generator: Annotated[AnswerGenerator, Depends(get_document_answer_generator)],
 ) -> DocumentAIBriefResponse:
@@ -358,19 +378,45 @@ def generate_document_ai_brief(
     if not chunks:
         raise HTTPException(status_code=422, detail="document has no processed chunks")
 
+    generated_at = datetime.now(timezone.utc)
     try:
-        brief = answer_generator.generate_answer(
-            build_ai_brief_prompt(document, chunks)
-        ).content
+        payload = generate_brief(answer_generator, document.filename, chunks)
     except HTTPException:
         raise
+    except BriefModelError as exc:
+        logger.warning("brief for document %s was unreadable: %s", document_id, exc)
+        raise HTTPException(
+            status_code=502, detail="The AI answer was not a readable brief. Try again."
+        ) from exc
     except Exception as exc:
         logger.exception("could not generate a brief for document %s", document_id)
         raise HTTPException(
             status_code=502, detail="Unable to generate AI brief."
         ) from exc
 
-    return DocumentAIBriefResponse(document_id=document.id, brief=brief)
+    payload["chunk_count"] = len(chunks)
+    payload["generated_at"] = generated_at.isoformat()
+    payload["model"] = settings.deepseek_model
+    try:
+        repository.save_ai_brief(current_user.id, document_id, payload)
+    except Exception:
+        # The calls are already spent, so a storage hiccup must not throw the answer away.
+        logger.exception("brief for document %s was generated but not saved", document_id)
+
+    entities = payload["entities"]
+    return DocumentAIBriefResponse(
+        document_id=document.id,
+        brief=payload["brief"],
+        summary=payload["summary"],
+        key_points=payload["key_points"],
+        entities=BriefEntities.model_validate(entities),
+        questions=payload["questions"],
+        language=payload["language"],
+        coverage=payload["coverage"],
+        truncated=payload["truncated"],
+        generated_at=generated_at,
+        model=settings.deepseek_model,
+    )
 
 
 @router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)

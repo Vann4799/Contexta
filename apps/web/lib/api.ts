@@ -27,23 +27,46 @@ export type DocumentItem = {
   updated_at: string;
 };
 
+export type BriefEntities = {
+  persons: string[];
+  dates: string[];
+  money: string[];
+};
+
 export type DocumentIntelligence = {
   document_id: string;
   filename: string;
   status: DocumentStatus;
   chunk_count: number;
   summary: string;
+  insight_source: "model" | "extractive";
   key_points: string[];
   emails: string[];
   links: string[];
   candidate_names: string[];
+  dates: string[];
+  money: string[];
   top_pages: number[];
   suggested_questions: string[];
+  brief_generated_at: string | null;
+  brief_model: string | null;
+  brief_coverage: number | null;
+  brief_truncated: boolean;
+  brief: string | null;
 };
 
 export type DocumentAIBrief = {
   document_id: string;
   brief: string;
+  summary: string;
+  key_points: string[];
+  entities: BriefEntities;
+  questions: string[];
+  language: string;
+  coverage: number;
+  truncated: boolean;
+  generated_at: string | null;
+  model: string | null;
 };
 
 export type DocumentChunkRow = {

@@ -95,11 +95,23 @@ class DocumentRepository(Protocol):
     ) -> DocumentResponse | None:
         ...
 
+    def get_ai_brief(self, user_id: str, document_id: str) -> dict[str, object] | None:
+        ...
+
+    def save_ai_brief(
+        self,
+        user_id: str,
+        document_id: str,
+        brief: dict[str, object],
+    ) -> None:
+        ...
+
 
 class InMemoryDocumentRepository:
     def __init__(self) -> None:
         self._documents: list[DocumentResponse] = []
         self._chunks: list[DocumentChunkResponse] = []
+        self._briefs: dict[str, dict[str, object]] = {}
 
     def list_documents(self, user_id: str) -> list[DocumentResponse]:
         return [document for document in self._documents if document.user_id == user_id]
@@ -183,6 +195,7 @@ class InMemoryDocumentRepository:
             for chunk in self._chunks
             if not (chunk.user_id == user_id and chunk.document_id == document_id)
         ]
+        self._briefs.pop(document_id, None)
 
     def retry_failed_document(
         self,
@@ -281,6 +294,19 @@ class InMemoryDocumentRepository:
                 self._documents[index] = restored
                 return restored
         return None
+
+    def get_ai_brief(self, user_id: str, document_id: str) -> dict[str, object] | None:
+        if self.get_document(user_id, document_id) is None:
+            return None
+        return self._briefs.get(document_id)
+
+    def save_ai_brief(
+        self,
+        user_id: str,
+        document_id: str,
+        brief: dict[str, object],
+    ) -> None:
+        self._briefs[document_id] = dict(brief)
 
 
 class SupabaseDocumentRepository:
@@ -585,6 +611,51 @@ class SupabaseDocumentRepository:
         if not documents:
             return None
         return DocumentResponse.model_validate(documents[0])
+
+    def get_ai_brief(self, user_id: str, document_id: str) -> dict[str, object] | None:
+        if not is_uuid(document_id):
+            return None
+        response = httpx.get(
+            f"{self._supabase_url}/rest/v1/documents",
+            headers=self._headers,
+            params={
+                "id": f"eq.{document_id}",
+                "user_id": f"eq.{user_id}",
+                # The brief payload is several KB; selecting it explicitly keeps it off
+                # every ordinary document read.
+                "select": "ai_brief",
+                "limit": "1",
+            },
+        )
+        response.raise_for_status()
+        documents = response.json()
+        if not documents:
+            return None
+        brief = documents[0].get("ai_brief")
+        return brief if isinstance(brief, dict) else None
+
+    def save_ai_brief(
+        self,
+        user_id: str,
+        document_id: str,
+        brief: dict[str, object],
+    ) -> None:
+        if not is_uuid(document_id):
+            return
+        response = httpx.patch(
+            f"{self._supabase_url}/rest/v1/documents",
+            headers={
+                **self._headers,
+                "Content-Type": "application/json",
+                "Prefer": "return=minimal",
+            },
+            params={
+                "id": f"eq.{document_id}",
+                "user_id": f"eq.{user_id}",
+            },
+            json={"ai_brief": brief},
+        )
+        response.raise_for_status()
 
 
 document_repository = InMemoryDocumentRepository()

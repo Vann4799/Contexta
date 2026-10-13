@@ -62,6 +62,10 @@ class LlmDayBudget:
 
 llm_day_budget = LlmDayBudget()
 
+# Briefs are metered separately from chat: one click reads several sampled windows, so
+# sharing chat's counter made a couple of briefs enough to lock a user out of chatting.
+brief_day_budget = LlmDayBudget()
+
 
 class BudgetedAnswerGenerator:
     """Charges the day for each prompt that actually reaches the answer model.
@@ -123,6 +127,19 @@ def budgeted_answer_generator(
         return inner
     return BudgetedAnswerGenerator(
         inner, budget, current_user.id, settings.llm_day_limit
+    )
+
+
+def budgeted_brief_generator(
+    inner: AnswerGenerator,
+    current_user: CurrentUser,
+    settings: Settings,
+    budget: LlmDayBudget = brief_day_budget,
+) -> AnswerGenerator:
+    if settings.brief_day_limit <= 0:
+        return inner
+    return BudgetedAnswerGenerator(
+        inner, budget, current_user.id, settings.brief_day_limit
     )
 
 

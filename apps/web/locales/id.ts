@@ -347,9 +347,17 @@ export const id: Dictionary = {
       names: "Nama",
       emails: "Email",
       links: "Tautan",
+      dates: "Tanggal",
+      money: "Nilai / angka",
       noNames: "Belum ada nama terdeteksi.",
       noEmails: "Belum ada email terdeteksi.",
       noLinks: "Belum ada tautan terdeteksi.",
+      noDates: "Belum ada tanggal terdeteksi.",
+      noMoney: "Belum ada angka terdeteksi.",
+      extractiveNote:
+        "Ringkasan ini masih kutipan mentah dari bagian awal dokumen. Buat brief AI agar seluruh isi dibaca.",
+      modelNote: (coverage: number) => `Brief AI membaca ${Math.round(coverage * 100)}% isi dokumen.`,
+      truncatedNote: "Brief terpotong di batas token model.",
       askEyebrow: "Tanya",
       suggestedTitle: "Pertanyaan saran",
       notices: {
@@ -916,6 +924,8 @@ export const id: Dictionary = {
         "Model mengembalikan jawaban kosong. Coba lagi.",
       "DEEPSEEK_API_KEY is not configured": "Layanan jawaban belum dikonfigurasi.",
       "Unable to generate AI brief.": "Ringkasan AI gagal dibuat.",
+      "The AI answer was not a readable brief. Try again.":
+        "Jawaban AI tidak bisa dibaca sebagai brief. Coba lagi.",
       "Unable to load chat sessions.": "Tidak bisa memuat sesi chat.",
       "Unable to load chat messages.": "Tidak bisa memuat pesan chat.",
       "Unable to create chat session.": "Tidak bisa memulai sesi chat.",

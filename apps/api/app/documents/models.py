@@ -170,20 +170,47 @@ class DocumentChunksPage(BaseModel):
     items: list[DocumentChunkRow]
 
 
+class BriefEntities(BaseModel):
+    persons: list[str] = []
+    dates: list[str] = []
+    money: list[str] = []
+
+
 class DocumentIntelligenceResponse(BaseModel):
     document_id: str
     filename: str
     status: DocumentStatus
     chunk_count: int
     summary: str
+    # "model" means a real brief backs these fields; "extractive" means they are the
+    # document's opening sentences, which is all a no-cost pass can honestly claim.
+    insight_source: Literal["model", "extractive"] = "extractive"
     key_points: list[str]
     emails: list[str]
     links: list[str]
     candidate_names: list[str]
+    dates: list[str] = []
+    money: list[str] = []
     top_pages: list[int]
     suggested_questions: list[str]
+    brief_generated_at: datetime | None = None
+    brief_model: str | None = None
+    # Fraction of the document's text the brief was allowed to read.
+    brief_coverage: float | None = None
+    brief_truncated: bool = False
+    # Rendered prose of the stored brief, so reloading the page does not cost another call.
+    brief: str | None = None
 
 
 class DocumentAIBriefResponse(BaseModel):
     document_id: str
     brief: str
+    summary: str
+    key_points: list[str] = []
+    entities: BriefEntities = BriefEntities()
+    questions: list[str] = []
+    language: str = "Bahasa Indonesia"
+    coverage: float = 1.0
+    truncated: bool = False
+    generated_at: datetime | None = None
+    model: str | None = None
