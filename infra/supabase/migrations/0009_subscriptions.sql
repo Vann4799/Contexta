@@ -15,3 +15,13 @@ create table if not exists public.subscriptions (
 
 create index if not exists subscriptions_user_id_idx on public.subscriptions(user_id);
 create index if not exists subscriptions_stripe_customer_idx on public.subscriptions(stripe_customer_id) where stripe_customer_id is not null;
+
+alter table public.subscriptions enable row level security;
+
+-- Defense in depth only. The API talks to PostgREST with the service-role key, which
+-- bypasses RLS entirely; this policy exists so that a browser-supplied access token
+-- can never read another user's plan or Stripe identifiers. Writes stay service-role
+-- only because there is no insert/update/delete policy.
+drop policy if exists "subscriptions_select_own" on public.subscriptions;
+create policy "subscriptions_select_own" on public.subscriptions
+  for select using (auth.uid() = user_id);
