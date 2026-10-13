@@ -1,10 +1,11 @@
 """Structured brief extraction: sample evenly across the document, then merge.
 
-The brief used to read a 14k-character prefix and stop, so on a real thesis it saw about
-four chunks out of five hundred and still presented itself as a summary of the whole
-document. This samples a fixed number of contiguous windows spread over the corpus and
-reports the coverage it actually achieved, which is the honest ceiling for a fixed
-number of model calls.
+The brief used to read a 14k-character prefix and stop, so on a real thesis it saw the
+first few pages and still presented itself as a summary of the whole document. This
+samples a fixed number of windows, each filled to its character budget, spread over the
+corpus, and reports the coverage it actually achieved - the honest ceiling for a fixed
+number of model calls. A closing bibliography is not sampled; it is a list of citations,
+not content.
 """
 
 from __future__ import annotations
@@ -12,6 +13,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+from bisect import bisect_right
 from dataclasses import dataclass
 
 from app.chat.llm import AnswerGenerator
@@ -24,6 +26,17 @@ BRIEF_MAX_WINDOWS = 4
 BRIEF_MAX_POINTS = 8
 BRIEF_MAX_ENTITIES = 20
 BRIEF_MAX_QUESTIONS = 5
+
+CHUNK_SEPARATOR = "\n\n"
+
+# A bibliography heading alone on its line. Dot leaders and page numbers are excluded on
+# purpose: a table of contents carries the same words and must not cut the document.
+REFERENCE_HEADING = re.compile(
+    r"^[ \t#*_-]*(DAFTAR\s+PUSTAKA|DAFTAR\s+RUJUKAN|DAFTAR\s+REFERENSI|REFERENCES|BIBLIOGRAPHY)"
+    r"[ \t#*_-]*$",
+    re.IGNORECASE | re.MULTILINE,
+)
+REFERENCE_TAIL_MIN_OFFSET = 0.5
 
 INDONESIAN_MARKERS = {
     "yang", "dan", "dari", "dalam", "dengan", "untuk", "pada", "adalah", "ini", "itu",
@@ -74,12 +87,13 @@ def _json_contract(language: str, limits: str) -> str:
 class BriefContext:
     windows: list[str]
     total_chars: int
+    read_chars: int
 
     @property
     def coverage(self) -> float:
         if self.total_chars <= 0:
             return 0.0
-        return min(1.0, sum(len(window) for window in self.windows) / self.total_chars)
+        return min(1.0, self.read_chars / self.total_chars)
 
 
 def detect_language(text: str) -> str:
@@ -90,45 +104,118 @@ def detect_language(text: str) -> str:
     return "English" if english > indonesian else "Bahasa Indonesia"
 
 
+def _pack_forward(texts: list[str], start: int, budget: int) -> list[str]:
+    """Consecutive chunks from `start` while they fit the budget."""
+    kept: list[str] = []
+    size = 0
+    for text in texts[start:]:
+        separator = len(CHUNK_SEPARATOR) if kept else 0
+        room = budget - size - separator
+        if room <= 0:
+            break
+        if len(text) > room:
+            # A chunk longer than the remaining budget would otherwise leave the window
+            # short, so its head is read instead.
+            kept.append(text[:room])
+            break
+        kept.append(text)
+        size += separator + len(text)
+    return kept
+
+
+def _pack_backward(texts: list[str], budget: int) -> tuple[list[str], int]:
+    """The closing chunks of the corpus, with the overflowing chunk read from its tail."""
+    kept: list[str] = []
+    size = 0
+    for index in range(len(texts) - 1, -1, -1):
+        text = texts[index]
+        separator = len(CHUNK_SEPARATOR) if kept else 0
+        room = budget - size - separator
+        if room <= 0:
+            break
+        if len(text) > room:
+            kept.append(text[len(text) - room :])
+            return list(reversed(kept)), index + 1
+        kept.append(text)
+        size += separator + len(text)
+    return list(reversed(kept)), max(0, len(texts) - len(kept))
+
+
+def _split_reference_tail(texts: list[str]) -> tuple[list[str], int]:
+    """Cut a closing bibliography, returning the readable chunks and the characters dropped.
+
+    A reference list is a list of citations, not content, and one of the five brief calls
+    was spending itself on other people's titles. Only a heading past half the corpus
+    counts, because a table of contents line ("DAFTAR PUSTAKA ......... 113") sits at the
+    front of the same document.
+    """
+    total = sum(len(text) for text in texts) + len(CHUNK_SEPARATOR) * (len(texts) - 1)
+    offset = 0
+    for index, text in enumerate(texts):
+        heading = REFERENCE_HEADING.search(text)
+        if heading is not None and offset + heading.start() >= total * REFERENCE_TAIL_MIN_OFFSET:
+            kept = texts[:index]
+            leading = text[: heading.start()].strip()
+            if leading:
+                kept = [*kept, leading]
+            if sum(len(kept_text) for kept_text in kept) < total * REFERENCE_TAIL_MIN_OFFSET:
+                # A document that is mostly citations keeps them; dropping half the
+                # corpus would make the brief worse, not cheaper.
+                return texts, 0
+            return kept, total - sum(len(kept_text) for kept_text in kept) - len(
+                CHUNK_SEPARATOR
+            ) * (len(kept) - 1)
+        offset += len(text) + len(CHUNK_SEPARATOR)
+    return texts, 0
+
+
 def build_windows(
     chunks: list[DocumentChunkResponse],
     window_chars: int = BRIEF_WINDOW_CHARS,
     max_windows: int = BRIEF_MAX_WINDOWS,
 ) -> BriefContext:
     texts = [chunk.text.strip() for chunk in chunks if chunk.text.strip()]
-    total_chars = sum(len(text) for text in texts)
     if not texts:
         # A scanned page or an image-only PDF indexes to chunks without a text layer.
         # Sampling it used to spend a full model call to summarize nothing.
         raise BriefNoTextError("the document has no readable text")
-    if total_chars <= window_chars or max_windows <= 1:
-        return BriefContext(windows=["\n\n".join(texts)], total_chars=total_chars)
 
-    # One call carries roughly this many consecutive chunks.
-    average = total_chars / len(texts)
-    fit = max(1, int(window_chars // (average + 2)))
-    fit = min(fit, len(texts))
-    last_start = len(texts) - fit
-    step = last_start / (max_windows - 1)
+    texts, dropped_chars = _split_reference_tail(texts)
+    body_chars = sum(len(text) for text in texts) + len(CHUNK_SEPARATOR) * (len(texts) - 1)
+    # Coverage stays measured against the whole document, bibliography included: the
+    # brief really did not read it, it just has nothing in it worth a model call.
+    total_chars = body_chars + dropped_chars
+    if body_chars <= window_chars or max_windows <= 1:
+        return BriefContext(
+            windows=[CHUNK_SEPARATOR.join(texts)], total_chars=total_chars, read_chars=body_chars
+        )
+
+    # Offsets spread across the body, so the final window ends at the document's end.
+    stride = (body_chars - window_chars) / (max_windows - 1)
+    starts: list[int] = []
+    running = 0
+    for text in texts:
+        starts.append(running)
+        running += len(text) + len(CHUNK_SEPARATOR)
 
     windows: list[str] = []
+    read_chars = 0
+    cursor = 0
     for index in range(max_windows):
-        # The last offset is the final one that still fits, so the document's closing
-        # chunks are always read; bucketing the corpus first used to drop its tail.
-        start = round(index * step)
-        size = 0
-        kept: list[str] = []
-        for text in texts[start : start + fit]:
-            separator = 2 if kept else 0
-            if size + separator + len(text) > window_chars:
-                # A chunk longer than the whole window would otherwise leave the window
-                # empty, so its head is read instead.
-                kept.append(text[: window_chars - size - separator])
-                break
-            kept.append(text)
-            size += separator + len(text)
-        windows.append("\n\n".join(kept))
-    return BriefContext(windows=windows, total_chars=total_chars)
+        if index == max_windows - 1:
+            pieces, first = _pack_backward(texts, window_chars)
+            if first < cursor:
+                pieces, first = _pack_forward(texts, cursor, window_chars), cursor
+        else:
+            first = max(bisect_right(starts, round(index * stride)) - 1, cursor)
+            pieces = _pack_forward(texts, first, window_chars)
+        if not pieces:
+            continue
+        windows.append(CHUNK_SEPARATOR.join(pieces))
+        separators = len(CHUNK_SEPARATOR) * (len(pieces) - 1)
+        read_chars += sum(len(piece) for piece in pieces) + separators
+        cursor = min(first + len(pieces), len(texts))
+    return BriefContext(windows=windows, total_chars=total_chars, read_chars=read_chars)
 
 
 def build_window_prompt(document_name: str, language: str, window: str, part: int, of: int) -> str:

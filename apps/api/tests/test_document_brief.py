@@ -77,6 +77,64 @@ def test_a_short_document_stays_one_window_and_full_coverage() -> None:
     assert context.coverage == 1.0
 
 
+def test_every_window_is_filled_to_its_budget() -> None:
+    """Sampling by chunk count gave the live thesis 2 chunks per window: 5.6k of a 12k budget."""
+    context = build_windows(chunks_of(400, 200), window_chars=12_000, max_windows=4)
+
+    assert [len(window) for window in context.windows] == [12_000] * 4
+    assert context.coverage > 0.55
+    assert context.read_chars <= context.total_chars
+
+
+def reference_entries(count: int) -> str:
+    return "DAFTAR PUSTAKA\n" + "\n".join(
+        f"Author, K. ({2020 + index % 6}). Judul penelitian nomor {index}."
+        for index in range(count)
+    )
+
+
+def test_a_closing_bibliography_is_never_read() -> None:
+    context = build_windows(
+        [chunk(index, f"Isi bab {index} " + "x" * 3_000) for index in range(10)]
+        + [chunk(10, "Saran: evaluasi pengaruh gamifikasi terhadap motivasi siswa."),
+         chunk(11, reference_entries(300))],
+        window_chars=12_000,
+        max_windows=4,
+    )
+
+    assert not any("Author, K." in window for window in context.windows)
+    assert "Saran: evaluasi pengaruh gamifikasi" in context.windows[-1]
+    assert context.coverage < 1.0
+
+
+def body_chunks(size: int, count: int) -> list:
+    return [chunk(index, f"Isi bab {index} " + "x" * size) for index in range(1, count)] + [
+        chunk(count, "Bagian terakhir skripsi ini membahas simpulan.")
+    ]
+
+
+def test_a_reference_heading_at_the_front_of_a_document_does_not_cut_it() -> None:
+    """An approval page can name the bibliography; only a late heading is the document's tail."""
+    context = build_windows(
+        [chunk(0, "Halaman pengesahan\nDAFTAR PUSTAKA"), *body_chunks(6_000, 8)],
+        window_chars=12_000,
+        max_windows=4,
+    )
+
+    assert "Bagian terakhir skripsi ini membahas simpulan." in context.windows[-1]
+
+
+def test_a_document_that_is_mostly_citations_keeps_them() -> None:
+    context = build_windows(
+        [chunk(0, "Simpulan singkat.")] + [chunk(1, reference_entries(600))],
+        window_chars=12_000,
+        max_windows=4,
+    )
+
+    assert any("nomor 599" in window for window in context.windows)
+    assert context.read_chars <= context.total_chars
+
+
 def test_a_document_without_a_text_layer_never_reaches_the_model() -> None:
     """A scanned page indexes to empty chunks; summarizing it used to cost a full call."""
     with pytest.raises(BriefNoTextError):
