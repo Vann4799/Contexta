@@ -67,11 +67,14 @@ def test_document_answer_generator_uses_configured_token_limit() -> None:
             deepseek_api_key="test-key",
             deepseek_model="deepseek-v4-pro",
             deepseek_max_tokens=2222,
+            deepseek_thinking=True,
         )
     )
 
     assert isinstance(generator, DeepSeekAnswerGenerator)
     assert generator._max_tokens == 2222
+    # A brief that lets DeepSeek think spends the whole budget on reasoning.
+    assert generator._thinking is False
 
 
 @pytest.fixture(autouse=True)
