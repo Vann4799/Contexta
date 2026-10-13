@@ -11,8 +11,9 @@ from app.documents.brief import (
     BRIEF_WINDOW_CHARS,
     BriefModelError,
     BriefNoTextError,
-    build_windows,
+    build_merge_prompt,
     build_window_prompt,
+    build_windows,
     detect_language,
     generate_brief,
     parse_brief_json,
@@ -251,6 +252,42 @@ def test_a_single_long_chunk_is_still_read() -> None:
     assert all(window for window in context.windows)
     assert all(len(window) <= BRIEF_WINDOW_CHARS for window in context.windows)
     assert context.windows[0].startswith("yyy")
+
+
+def test_a_reply_cut_mid_value_keeps_what_was_written() -> None:
+    """Production hit this: the answer budget truncated the JSON and the whole brief 502'd."""
+    cut = (
+        '{"summary": "Skripsi ini membangun sistem rekomendasi.", '
+        '"key_points": ["Menggunakan collaborative filtering", "Evaluasi memakai NDCG"], '
+        '"entities": {"persons": ["Vaneza"], "dates": ["2026"], "money": []}, '
+        '"questions": ["Bagaimana skalabilit'
+    )
+
+    parsed = parse_brief_json(cut)
+
+    assert parsed["summary"] == "Skripsi ini membangun sistem rekomendasi."
+    assert parsed["key_points"] == [
+        "Menggunakan collaborative filtering",
+        "Evaluasi memakai NDCG",
+    ]
+    assert parsed["entities"]["persons"] == ["Vaneza"]
+    assert parsed["questions"] == []
+
+
+def test_a_reply_cut_before_any_value_is_still_a_failure() -> None:
+    with pytest.raises(BriefModelError):
+        parse_brief_json('{"summary": "panjang sekali tanpa akhir')
+
+
+def test_each_call_is_told_how_long_its_answer_may_be() -> None:
+    """One section is free to write thirty key points unless the prompt says otherwise."""
+    window = build_window_prompt("riset.pdf", "Bahasa Indonesia", "isi", 1, 4)
+    merge = build_merge_prompt("riset.pdf", "Bahasa Indonesia", [{}])
+
+    assert "at most 4 key points" in window
+    assert "at most 8 key points" in merge
+    assert "{limits}" not in window
+    assert "{limits}" not in merge
 
 
 def test_table_rows_survive_sampling_and_entities_pass_through() -> None:

@@ -10,11 +10,14 @@ number of model calls.
 from __future__ import annotations
 
 import json
+import logging
 import re
 from dataclasses import dataclass
 
 from app.chat.llm import AnswerGenerator
 from app.documents.models import DocumentChunkResponse
+
+logger = logging.getLogger(__name__)
 
 BRIEF_WINDOW_CHARS = 12_000
 BRIEF_MAX_WINDOWS = 4
@@ -37,7 +40,19 @@ _JSON_CONTRACT = (
     '"entities": {"persons": [string], "dates": [string], "money": [string]}, '
     '"questions": [string]}\n'
     "Write every string value in {language}. Use text from the document only; never invent names, dates or amounts. "
-    "If a field has no evidence in the text, return an empty list for it."
+    "If a field has no evidence in the text, return an empty list for it.\n"
+    "{limits}"
+)
+# A section call that is free to write thirty key points can run past the answer token
+# budget and come back with its JSON cut mid-value, which discards every call of the run.
+WINDOW_LIMITS = (
+    "This is one section of a longer document, so keep it short: a summary under 400 "
+    "characters, at most 4 key points, at most 6 entries in each entity list, and at "
+    "most 2 questions."
+)
+MERGE_LIMITS = (
+    "This is the final analysis of the whole document: a summary under 1500 characters, "
+    "at most 8 key points, at most 20 entries in each entity list, and at most 5 questions."
 )
 
 
@@ -49,10 +64,10 @@ class BriefNoTextError(BriefModelError):
     """The document has no readable text at all, so there is nothing to summarize."""
 
 
-def _json_contract(language: str) -> str:
+def _json_contract(language: str, limits: str) -> str:
     # Not str.format: the contract itself shows a JSON object, and format would read
     # those braces as field names.
-    return _JSON_CONTRACT.replace("{language}", language)
+    return _JSON_CONTRACT.replace("{language}", language).replace("{limits}", limits)
 
 
 @dataclass(frozen=True)
@@ -120,7 +135,7 @@ def build_window_prompt(document_name: str, language: str, window: str, part: in
     span = f"section {part} of {of}" if of > 1 else "the whole document"
     return (
         f"You are a document analyst. Summarize {span} of the document '{document_name}'.\n\n"
-        + _json_contract(language)
+        + _json_contract(language, WINDOW_LIMITS)
         + "\n\nDocument text:\n"
         + window
     )
@@ -133,7 +148,7 @@ def build_merge_prompt(document_name: str, language: str, partials: list[dict]) 
         f"different sections of the document '{document_name}'. Merge them into one analysis "
         "of the whole document: one coherent summary, the most important distinct key points, "
         "deduplicated entities, and the questions that best probe what the document leaves open.\n\n"
-        + _json_contract(language)
+        + _json_contract(language, MERGE_LIMITS)
         + "\n\nSection analyses to merge:\n"
         + payload
     )
@@ -165,11 +180,65 @@ def _first_object(raw: str) -> str:
     return raw[start:end + 1]
 
 
+def _close_truncated(raw: str) -> str | None:
+    """Rebalance a JSON object the answer token budget cut off mid-value.
+
+    Every value before the cut is still evidence from the document, so the longest
+    complete tail is kept instead of throwing the whole section analysis away.
+    """
+    start = raw.find("{")
+    if start == -1:
+        return None
+    body = raw[start:]
+    stack: list[str] = []
+    in_string = False
+    escaped = False
+    completed: list[tuple[int, tuple[str, ...]]] = []
+    for index, char in enumerate(body):
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+                completed.append((index + 1, tuple(stack)))
+        elif char == '"':
+            in_string = True
+        elif char == "{":
+            stack.append("}")
+        elif char == "[":
+            stack.append("]")
+        elif char in "}]":
+            if not stack or stack[-1] != char:
+                return None
+            stack.pop()
+            completed.append((index + 1, tuple(stack)))
+            if not stack:
+                return None
+        elif char in ",: \n\t\r":
+            continue
+        else:
+            completed.append((index + 1, tuple(stack)))
+    for cut, open_brackets in reversed(completed):
+        candidate = body[:cut].rstrip().rstrip(",") + "".join(open_brackets)
+        try:
+            json.loads(candidate)
+        except json.JSONDecodeError:
+            continue
+        return candidate
+    return None
+
+
 def parse_brief_json(raw: str) -> dict:
     try:
         payload = json.loads(_first_object(raw))
     except (json.JSONDecodeError, TypeError) as exc:
-        raise BriefModelError(f"could not parse the model reply as JSON: {exc}") from exc
+        rescued = _close_truncated(raw)
+        if rescued is None:
+            raise BriefModelError(f"could not parse the model reply as JSON: {exc}") from exc
+        logger.warning("rescued a brief from a truncated model reply")
+        payload = json.loads(rescued)
     if not isinstance(payload, dict):
         raise BriefModelError("the model reply was not a JSON object")
 
