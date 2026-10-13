@@ -926,6 +926,8 @@ export const id: Dictionary = {
       "Unable to generate AI brief.": "Ringkasan AI gagal dibuat.",
       "The AI answer was not a readable brief. Try again.":
         "Jawaban AI tidak bisa dibaca sebagai brief. Coba lagi.",
+      "This document has no readable text. A scanned PDF or an image-only file has no text layer to summarize.":
+        "Dokumen ini tidak punya teks yang bisa dibaca. PDF hasil scan atau berkas gambar tidak punya lapisan teks untuk dirangkum.",
       "Unable to load chat sessions.": "Tidak bisa memuat sesi chat.",
       "Unable to load chat messages.": "Tidak bisa memuat pesan chat.",
       "Unable to create chat session.": "Tidak bisa memulai sesi chat.",

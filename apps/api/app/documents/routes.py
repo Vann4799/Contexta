@@ -21,7 +21,12 @@ from app.auth.supabase_jwt import CurrentUser
 from app.chat.llm import AnswerGenerator, DeepSeekAnswerGenerator
 from app.core.config import Settings, get_settings
 from app.services.llm_budget import budgeted_brief_generator
-from app.documents.brief import BriefModelError, generate_brief
+from app.documents.brief import (
+    BriefModelError,
+    BriefNoTextError,
+    detect_language,
+    generate_brief,
+)
 from app.documents.models import (
     DEFAULT_CHUNK_PAGE_SIZE,
     MAX_CHUNK_PAGE_SIZE,
@@ -62,6 +67,20 @@ EMAIL_PATTERN = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b"
 LINK_PATTERN = re.compile(r"https?://[^\s,)]+")
 NAME_PATTERN = re.compile(r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3}\b")
 _PAYLOAD_SYNCED_FIELDS = frozenset({"doc_type", "doc_version"})
+EXTRACTIVE_QUESTIONS_INDONESIAN = [
+    "Ringkas isi dokumen ini dalam 5 poin.",
+    "Apa pola utama yang terlihat dari dokumen ini?",
+    "Siapa saja nama atau pihak penting yang muncul?",
+    "Apa insight yang bisa dipakai untuk keputusan bisnis?",
+    "Buatkan report singkat berdasarkan dokumen ini.",
+]
+EXTRACTIVE_QUESTIONS_ENGLISH = [
+    "Summarize this document in 5 points.",
+    "What main patterns show up across this document?",
+    "Which people or parties are important here?",
+    "What insight is usable for a business decision?",
+    "Write a short report based on this document.",
+]
 
 
 def safe_upload_filename(filename: str) -> str:
@@ -243,13 +262,11 @@ def build_document_intelligence(
         )
         key_points = extractive_points
         names = unique_in_order(NAME_PATTERN.findall(combined_text))
-        questions = [
-            "Ringkas isi dokumen ini dalam 5 poin.",
-            "Apa pola utama yang terlihat dari dokumen ini?",
-            "Siapa saja nama atau pihak penting yang muncul?",
-            "Apa insight yang bisa dipakai untuk keputusan bisnis?",
-            "Buatkan report singkat berdasarkan dokumen ini.",
-        ]
+        questions = (
+            EXTRACTIVE_QUESTIONS_ENGLISH
+            if detect_language(combined_text) == "English"
+            else EXTRACTIVE_QUESTIONS_INDONESIAN
+        )
         coverage = None
         generated_at = None
         model = None
@@ -383,6 +400,14 @@ def generate_document_ai_brief(
         payload = generate_brief(answer_generator, document.filename, chunks)
     except HTTPException:
         raise
+    except BriefNoTextError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "This document has no readable text. A scanned PDF or an image-only "
+                "file has no text layer to summarize."
+            ),
+        ) from exc
     except BriefModelError as exc:
         logger.warning("brief for document %s was unreadable: %s", document_id, exc)
         raise HTTPException(

@@ -8,7 +8,9 @@ from app.chat.llm import AnswerResult
 from app.documents.brief import (
     BRIEF_MAX_ENTITIES,
     BRIEF_MAX_WINDOWS,
+    BRIEF_WINDOW_CHARS,
     BriefModelError,
+    BriefNoTextError,
     build_windows,
     build_window_prompt,
     detect_language,
@@ -74,8 +76,15 @@ def test_a_short_document_stays_one_window_and_full_coverage() -> None:
     assert context.coverage == 1.0
 
 
-def test_an_empty_corpus_reports_no_coverage() -> None:
-    assert build_windows([]).coverage == 0.0
+def test_a_document_without_a_text_layer_never_reaches_the_model() -> None:
+    """A scanned page indexes to empty chunks; summarizing it used to cost a full call."""
+    with pytest.raises(BriefNoTextError):
+        build_windows([chunk(0, "   "), chunk(1, "\n\n")])
+
+    generator = ScriptedGenerator([brief_json()])
+    with pytest.raises(BriefNoTextError):
+        generate_brief(generator, "scan.pdf", [chunk(0, "")])
+    assert generator.prompts == []
 
 
 def test_window_prompt_labels_the_section_and_demands_json() -> None:
@@ -183,3 +192,91 @@ def test_rendered_brief_uses_the_documents_own_language() -> None:
     assert "**3. Names mentioned**" in english
     assert "**1. Ringkasan**" in indonesian
     assert "**3. Nama yang disebut**" in indonesian
+
+
+def english_chunks(count: int) -> list[DocumentChunkResponse]:
+    return [
+        chunk(
+            index,
+            "The quarterly report shows that the team will ship the feature and "
+            f"that revenue rose. Section {index} " + "result " * 60,
+        )
+        for index in range(count)
+    ]
+
+
+def indonesian_chunks(count: int) -> list[DocumentChunkResponse]:
+    return [
+        chunk(
+            index,
+            "Laporan ini menunjukkan bahwa tim akan merilis fitur baru dan pendapatan "
+            f"naik. Bagian {index} " + "hasil " * 60,
+        )
+        for index in range(count)
+    ]
+
+
+def test_every_call_of_a_multi_section_run_asks_for_the_documents_language() -> None:
+    """3.6 - a mixed run must not ask for Indonesian in one section and English in the merge."""
+    answers = [brief_json(summary=f"Part {i}") for i in range(BRIEF_MAX_WINDOWS)]
+    answers.append(brief_json(summary="Whole document."))
+    english = ScriptedGenerator(list(answers))
+    generate_brief(english, "report.pdf", english_chunks(400))
+    assert len(english.prompts) == BRIEF_MAX_WINDOWS + 1
+    assert all("in English" in prompt for prompt in english.prompts)
+
+    indonesian = ScriptedGenerator(list(answers))
+    generate_brief(indonesian, "laporan.pdf", indonesian_chunks(400))
+    assert all("in Bahasa Indonesia" in prompt for prompt in indonesian.prompts)
+
+
+def test_an_english_document_gets_an_english_payload_and_headings() -> None:
+    generator = ScriptedGenerator([brief_json()])
+
+    result = generate_brief(generator, "report.pdf", english_chunks(3))
+
+    assert result["language"] == "English"
+    assert "**1. Summary**" in result["brief"]
+
+
+def test_a_single_long_chunk_is_still_read() -> None:
+    """3.7 - one oversized table or OCR block used to make a whole window empty."""
+    context = build_windows(
+        [chunk(0, "y" * (BRIEF_WINDOW_CHARS * 2)), *chunks_of(200, 120)],
+        window_chars=BRIEF_WINDOW_CHARS,
+        max_windows=4,
+    )
+
+    assert len(context.windows) == 4
+    assert all(window for window in context.windows)
+    assert all(len(window) <= BRIEF_WINDOW_CHARS for window in context.windows)
+    assert context.windows[0].startswith("yyy")
+
+
+def test_table_rows_survive_sampling_and_entities_pass_through() -> None:
+    table = "| Vendor | Tanggal | Jumlah |\n|---|---|---|\n| PT Maju | 12-03-2026 | Rp 45.000.000 |"
+    chunks = [chunk(0, table), chunk(1, "Pembayaran vendor dilakukan tepat waktu.")]
+    context = build_windows(chunks)
+    generator = ScriptedGenerator(
+        [
+            json.dumps(
+                {
+                    "summary": "Dua vendor membayar tepat waktu.",
+                    "key_points": ["PT Maju membayar Rp 45.000.000"],
+                    "entities": {
+                        "persons": ["PT Maju"],
+                        "dates": ["12-03-2026"],
+                        "money": ["Rp 45.000.000"],
+                    },
+                    "questions": ["Vendor mana yang terlambat?"],
+                }
+            )
+        ]
+    )
+
+    result = generate_brief(generator, "invoice.pdf", chunks)
+
+    assert table in context.windows[0]
+    assert result["entities"]["money"] == ["Rp 45.000.000"]
+    assert result["entities"]["dates"] == ["12-03-2026"]
+    assert result["coverage"] == 1.0

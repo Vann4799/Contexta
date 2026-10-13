@@ -16,6 +16,8 @@ from app.documents.repository import (
 )
 from app.main import app
 from app.documents.routes import (
+    EXTRACTIVE_QUESTIONS_ENGLISH,
+    EXTRACTIVE_QUESTIONS_INDONESIAN,
     build_document_answer_generator,
     get_document_answer_generator,
     get_document_repository,
@@ -386,6 +388,100 @@ def test_generate_document_ai_brief_uses_document_chunks() -> None:
     assert served["brief_coverage"] == 1.0
     assert served["brief_model"] == body["model"]
     assert answer_generator.calls == 1
+
+
+def test_a_scanned_document_is_refused_before_any_model_call() -> None:
+    """A page without a text layer has nothing to summarize; the call used to be spent anyway."""
+    repository = InMemoryDocumentRepository()
+    answer_generator = FakeAnswerGenerator()
+    app.dependency_overrides[get_document_repository] = lambda: repository
+    app.dependency_overrides[get_document_answer_generator] = lambda: answer_generator
+    created = repository.create_document(
+        USER_ID,
+        DocumentCreate(
+            filename="scan.pdf",
+            file_type="pdf",
+            file_size=44_000_000,
+            storage_path=f"{USER_ID}/{DOCUMENT_ID}/scan.pdf",
+        ),
+    )
+    repository.add_chunks(
+        [
+            {
+                "document_id": created.id,
+                "user_id": USER_ID,
+                "chunk_index": 0,
+                "text": "   \n  ",
+                "page_number": 1,
+                "qdrant_point_id": "point-1",
+            }
+        ]
+    )
+
+    response = client.post(f"/documents/{created.id}/brief", headers=auth_headers())
+
+    assert response.status_code == 422
+    assert response.json()["detail"].startswith("This document has no readable text.")
+    assert answer_generator.calls == 0
+
+
+def test_extractive_suggestions_follow_the_documents_language() -> None:
+    english = InMemoryDocumentRepository()
+    app.dependency_overrides[get_document_repository] = lambda: english
+    created = english.create_document(
+        USER_ID,
+        DocumentCreate(
+            filename="report.pdf",
+            file_type="pdf",
+            file_size=1200,
+            storage_path=f"{USER_ID}/{DOCUMENT_ID}/report.pdf",
+        ),
+    )
+    english.add_chunks(
+        [
+            {
+                "document_id": created.id,
+                "user_id": USER_ID,
+                "chunk_index": 0,
+                "text": "The report shows that the team will ship the feature next week.",
+                "page_number": 1,
+                "qdrant_point_id": "point-1",
+            }
+        ]
+    )
+
+    body = client.get(f"/documents/{created.id}/intelligence", headers=auth_headers()).json()
+
+    assert body["insight_source"] == "extractive"
+    assert body["suggested_questions"] == EXTRACTIVE_QUESTIONS_ENGLISH
+
+    indonesian = InMemoryDocumentRepository()
+    app.dependency_overrides[get_document_repository] = lambda: indonesian
+    created = indonesian.create_document(
+        USER_ID,
+        DocumentCreate(
+            filename="laporan.pdf",
+            file_type="pdf",
+            file_size=1200,
+            storage_path=f"{USER_ID}/{DOCUMENT_ID}/laporan.pdf",
+        ),
+    )
+    indonesian.add_chunks(
+        [
+            {
+                "document_id": created.id,
+                "user_id": USER_ID,
+                "chunk_index": 0,
+                "text": "Laporan ini menunjukkan bahwa tim akan merilis fitur tersebut.",
+                "page_number": 1,
+                "qdrant_point_id": "point-1",
+            }
+        ]
+    )
+
+    body = client.get(f"/documents/{created.id}/intelligence", headers=auth_headers()).json()
+
+    assert body["suggested_questions"] == EXTRACTIVE_QUESTIONS_INDONESIAN
 
 
 def test_create_document_with_unsupported_file_type_returns_422() -> None:

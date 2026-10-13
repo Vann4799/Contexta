@@ -45,6 +45,10 @@ class BriefModelError(RuntimeError):
     """The model answered with something we cannot turn into a brief."""
 
 
+class BriefNoTextError(BriefModelError):
+    """The document has no readable text at all, so there is nothing to summarize."""
+
+
 def _json_contract(language: str) -> str:
     # Not str.format: the contract itself shows a JSON object, and format would read
     # those braces as field names.
@@ -78,6 +82,10 @@ def build_windows(
 ) -> BriefContext:
     texts = [chunk.text.strip() for chunk in chunks if chunk.text.strip()]
     total_chars = sum(len(text) for text in texts)
+    if not texts:
+        # A scanned page or an image-only PDF indexes to chunks without a text layer.
+        # Sampling it used to spend a full model call to summarize nothing.
+        raise BriefNoTextError("the document has no readable text")
     if total_chars <= window_chars or max_windows <= 1:
         return BriefContext(windows=["\n\n".join(texts)], total_chars=total_chars)
 
@@ -96,12 +104,15 @@ def build_windows(
         size = 0
         kept: list[str] = []
         for text in texts[start : start + fit]:
-            if size + len(text) > window_chars:
+            separator = 2 if kept else 0
+            if size + separator + len(text) > window_chars:
+                # A chunk longer than the whole window would otherwise leave the window
+                # empty, so its head is read instead.
+                kept.append(text[: window_chars - size - separator])
                 break
             kept.append(text)
-            size += len(text)
-        if kept:
-            windows.append("\n\n".join(kept))
+            size += separator + len(text)
+        windows.append("\n\n".join(kept))
     return BriefContext(windows=windows, total_chars=total_chars)
 
 

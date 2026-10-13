@@ -929,6 +929,8 @@ export const en = {
       "Unable to generate AI brief.": "The AI brief could not be generated.",
       "The AI answer was not a readable brief. Try again.":
         "The AI answer was not a readable brief. Try again.",
+      "This document has no readable text. A scanned PDF or an image-only file has no text layer to summarize.":
+        "This document has no readable text. A scanned PDF or an image-only file has no text layer to summarize.",
       "Unable to load chat sessions.": "Unable to load chat sessions.",
       "Unable to load chat messages.": "Unable to load the chat messages.",
       "Unable to create chat session.": "Unable to start a chat session.",
