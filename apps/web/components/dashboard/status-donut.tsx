@@ -5,6 +5,11 @@ import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 export type DonutSlice = { name: string; value: number; color: string };
 
 export default function StatusDonut({ items }: { items: DonutSlice[] }) {
+  // Mounted before data arrives so its lazy chunk downloads in parallel with the fetch.
+  if (items.length === 0) {
+    return <div className="flex h-full items-center justify-center text-[13px] text-ink-muted">—</div>;
+  }
+
   return (
     <ResponsiveContainer width="100%" height="100%">
       <PieChart>

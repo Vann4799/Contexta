@@ -465,11 +465,7 @@ export function DashboardInsights() {
           <p className="mt-0.5 text-[11px] text-ink-muted">{copy.statusSubtitle}</p>
           <div className="mt-3 flex flex-1 items-center justify-center">
             <div className="h-[130px] w-[130px]">
-              {isLoading ? (
-                <div className="flex h-full items-center justify-center text-[13px] text-ink-muted">—</div>
-              ) : (
-                <StatusDonut items={statusData} />
-              )}
+              <StatusDonut items={isLoading ? [] : statusData} />
             </div>
           </div>
           <div className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1 text-[11px]">
