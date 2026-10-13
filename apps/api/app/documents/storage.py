@@ -30,6 +30,12 @@ def _is_missing_object(response: httpx.Response) -> bool:
     return "not_found" in body or "NoSuchKey" in body
 
 
+# httpx's 5s default is per read/write operation, which aborts a 50 MB upload long
+# before the body finishes moving; connects stay fast so an unreachable host fails early.
+UPLOAD_TIMEOUT = httpx.Timeout(300.0, connect=10.0)
+DELETE_TIMEOUT = httpx.Timeout(30.0, connect=10.0)
+
+
 class SupabaseDocumentStorage:
     def __init__(
         self,
@@ -60,7 +66,7 @@ class SupabaseDocumentStorage:
             f"{self._supabase_url}/storage/v1/object/"
             f"{self._bucket}/{encoded_storage_path}"
         )
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=UPLOAD_TIMEOUT) as client:
             response = await client.post(url, content=content, headers=headers)
             response.raise_for_status()
 

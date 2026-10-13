@@ -209,9 +209,12 @@ export const en = {
       exporting: "Exporting...",
       browse: "Browse files",
       uploading: "Uploading...",
+      uploadingFiles: "Uploading files",
       dropTitle: "Drag and drop files here",
       dropBody: "Files are uploaded to your workspace and indexed automatically for grounded answers.",
       uploadingBody: "Your document is being uploaded and will be indexed automatically.",
+      uploadedLabel: "Transferred",
+      transferredPercent: (percent: number) => `${percent}%`,
       formatHint: "PDF or DOCX · max 50 MB",
       statusEyebrow: "System status",
       storageUsed: "Storage used",
@@ -852,7 +855,9 @@ export const en = {
   // Anything not listed here renders verbatim rather than pretending to be translated.
   errors: {
     server: {
-      "uploaded file is too large": "The uploaded file is too large.",
+      "uploaded file is too large": "The uploaded file is too large. Files must be 50 MB or smaller.",
+      "Unable to store the uploaded document.": "The file could not be saved. Please upload it again.",
+      "Unable to register the uploaded document.": "The upload could not be recorded. Please upload it again.",
       "uploaded file must be a PDF": "The uploaded file must be a PDF.",
       "uploaded file must not be empty": "The uploaded file is empty.",
       "unsupported upload file type": "That file type is not supported.",

@@ -385,25 +385,85 @@ export async function generateDocumentAIBrief(accessToken: string, documentId: s
 export async function uploadDocument(
   accessToken: string,
   file: File,
-  docType: DocumentType = "unclassified"
+  docType: DocumentType = "unclassified",
+  onProgress?: (percent: number) => void
 ) {
   const formData = new FormData();
   formData.append("file", file);
   formData.append("doc_type", docType);
 
-  const response = await fetchApi("/documents/upload", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`
-    },
-    body: formData
-  }, FILE_TRANSFER_TIMEOUT_MS);
+  let lastError: unknown = null;
 
-  if (!response.ok) {
-    throw new Error(await getErrorMessage(response, "Unable to upload document."));
+  for (const baseUrl of apiBaseUrls()) {
+    try {
+      const response = await xhrUpload(
+        `${baseUrl}/documents/upload`,
+        accessToken,
+        formData,
+        FILE_TRANSFER_TIMEOUT_MS,
+        onProgress
+      );
+
+      if (!response.ok) {
+        throw new Error(await getErrorMessage(response, "Unable to upload document."));
+      }
+
+      return (await response.json()) as DocumentItem;
+    } catch (error) {
+      lastError = error;
+    }
   }
 
-  return (await response.json()) as DocumentItem;
+  throw lastError instanceof Error ? lastError : new Error("Unable to upload document.");
+}
+
+/**
+ * `fetch` reports no upload progress, so a 50 MB file on a slow uplink looks frozen.
+ * XHR's upload events give real byte counts, and the response is rebuilt as a
+ * `Response` so the shared error parsing keeps working.
+ */
+function xhrUpload(
+  url: string,
+  accessToken: string,
+  formData: FormData,
+  timeoutMs: number,
+  onProgress?: (percent: number) => void
+): Promise<Response> {
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open("POST", url);
+    request.setRequestHeader("Authorization", `Bearer ${accessToken}`);
+    request.timeout = timeoutMs;
+
+    request.upload.addEventListener("progress", (event) => {
+      if (event.lengthComputable && event.total > 0) {
+        onProgress?.(Math.min(99, (event.loaded / event.total) * 100));
+      }
+    });
+    request.addEventListener("load", () => {
+      if (request.status === 0) {
+        reject(new Error(`Unable to reach Contexta API at ${url}.`));
+        return;
+      }
+      resolve(
+        new Response(request.responseText, {
+          status: request.status,
+          statusText: request.statusText
+        })
+      );
+    });
+    request.addEventListener("error", () => {
+      reject(new Error(`Unable to reach Contexta API at ${url}.`));
+    });
+    request.addEventListener("timeout", () => {
+      reject(new Error("Request timed out. Please try again."));
+    });
+    request.addEventListener("abort", () => {
+      reject(new Error(REQUEST_CANCELED_MESSAGE));
+    });
+
+    request.send(formData);
+  });
 }
 
 export async function updateDocumentMetadata(

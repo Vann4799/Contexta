@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import math
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal, NamedTuple, Protocol, TypedDict
@@ -224,6 +225,9 @@ class WorkerProcessor:
         overlap_words: int = 100,
         min_chunk_words: int = 40,
         index_metadata: dict[str, object] | None = None,
+        max_attempts: int = 3,
+        retry_backoff_seconds: float = 2.0,
+        sleep=time.sleep,
     ) -> None:
         self.repository = repository
         self.storage = storage or MissingDocumentStorage()
@@ -236,6 +240,9 @@ class WorkerProcessor:
         self.overlap_words = overlap_words
         self.min_chunk_words = min_chunk_words
         self.index_metadata = {"chunker_version": CHUNKER_VERSION, **(index_metadata or {})}
+        self.max_attempts = max(1, max_attempts)
+        self.retry_backoff_seconds = retry_backoff_seconds
+        self._sleep = sleep
 
     def process_once(self) -> bool:
         document = self.repository.claim_next_processing_document()
@@ -243,7 +250,7 @@ class WorkerProcessor:
             return False
 
         try:
-            self.process_document(document)
+            self._process_with_retries(document)
         except UserVisibleError as exc:
             self.repository.mark_failed(document, str(exc))
         except Exception:
@@ -253,6 +260,34 @@ class WorkerProcessor:
             self.repository.mark_failed(document, UNEXPECTED_FAILURE_MESSAGE)
 
         return True
+
+    def _process_with_retries(self, document: ProcessingDocument) -> None:
+        """Retry transient failures instead of failing the document on the first one.
+
+        A momentary embedding or Qdrant outage used to mark the row failed and push
+        the owner back to re-uploading. Indexing is idempotent (point ids derive from
+        the document and chunk index, chunks are replaced wholesale), so rerunning
+        the whole document is cheaper than asking the user to start over.
+        """
+        for attempt in range(1, self.max_attempts + 1):
+            try:
+                self.process_document(document)
+                return
+            except UserVisibleError:
+                raise
+            except Exception:
+                if attempt >= self.max_attempts:
+                    raise
+                delay = self.retry_backoff_seconds * (2 ** (attempt - 1))
+                logger.warning(
+                    "indexing attempt %d/%d failed for document %s; retrying in %.1fs",
+                    attempt,
+                    self.max_attempts,
+                    document["id"],
+                    delay,
+                    exc_info=True,
+                )
+                self._sleep(delay)
 
     def process_document(self, document: ProcessingDocument) -> int:
         # `documents.file_type` is what the extractor receives and the schema pins it to

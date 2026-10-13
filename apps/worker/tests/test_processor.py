@@ -308,6 +308,7 @@ def build_processor(
     repository: InMemoryDocumentRepository,
     extractor: Any,
     vector_store: FakeVectorStore | None = None,
+    sleep: Any = lambda _seconds: None,
 ) -> WorkerProcessor:
     return WorkerProcessor(
         repository=repository,
@@ -315,6 +316,7 @@ def build_processor(
         extractor=extractor,
         embedding_arms=[EmbeddingArm(name="", provider=FakeEmbeddingProvider())],
         vector_store=vector_store or FakeVectorStore(),
+        sleep=sleep,
     )
 
 
@@ -349,6 +351,57 @@ def test_unexpected_failure_is_replaced_by_a_generic_message() -> None:
     assert message == UNEXPECTED_FAILURE_MESSAGE
     assert "supabase.co" not in message
     assert "user-1" not in message
+
+
+def test_transient_failure_retries_and_indexes_the_document() -> None:
+    class FlakyExtractor:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def extract(self, content: bytes, file_type: str) -> ExtractedDocument:
+            self.calls += 1
+            if self.calls == 1:
+                raise RuntimeError("embedding service unavailable: connection reset")
+            return FakeExtractor().extract(content, file_type)
+
+    repository = processing_repository()
+    extractor = FlakyExtractor()
+    build_processor(repository, extractor).process_once()
+
+    assert extractor.calls == 2
+    assert repository.documents[0]["status"] == "ready"
+    assert "error_message" not in repository.documents[0]
+
+
+def test_repeated_transient_failures_stop_after_the_retry_budget() -> None:
+    delays: list[float] = []
+
+    class AlwaysDownExtractor:
+        def extract(self, content: bytes, file_type: str) -> ExtractedDocument:
+            raise RuntimeError("embedding service unavailable: connection refused")
+
+    repository = processing_repository()
+    build_processor(repository, AlwaysDownExtractor(), sleep=delays.append).process_once()
+
+    assert repository.documents[0]["error_message"] == UNEXPECTED_FAILURE_MESSAGE
+    assert delays == [2.0, 4.0]
+
+
+def test_user_visible_failure_is_not_retried() -> None:
+    class EmptyTextExtractor:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def extract(self, content: bytes, file_type: str) -> ExtractedDocument:
+            self.calls += 1
+            raise UserVisibleError("No extractable text found")
+
+    extractor = EmptyTextExtractor()
+    repository = processing_repository()
+    build_processor(repository, extractor).process_once()
+
+    assert extractor.calls == 1
+    assert repository.documents[0]["error_message"] == "No extractable text found"
 
 
 def test_worker_written_failure_message_reaches_the_document() -> None:
@@ -391,7 +444,8 @@ def test_failed_chunk_insert_drops_the_vectors_it_just_wrote() -> None:
 
     build_processor(repository, FakeExtractor(), vector_store).process_once()
 
-    assert vector_store.deleted == ["doc-1"]
+    # a rejected insert is transient, so each retry re-writes vectors and cleans them up
+    assert vector_store.deleted == ["doc-1"] * 3
     assert repository.documents[0]["status"] == "failed"
 
 

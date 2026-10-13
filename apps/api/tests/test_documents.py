@@ -549,6 +549,33 @@ def test_upload_rolls_back_the_stored_file_when_the_row_insert_fails() -> None:
     assert storage.objects == {}
 
 
+def test_upload_returns_502_when_storage_rejects_the_file() -> None:
+    class UnreachableStorage(InMemoryDocumentStorage):
+        async def upload_document(
+            self,
+            storage_path: str,
+            content: bytes,
+            content_type: str,
+        ) -> None:
+            raise RuntimeError("ConnectTimeout after 10s to internal-host:5432")
+
+    repository = InMemoryDocumentRepository()
+    app.dependency_overrides[get_document_storage] = UnreachableStorage
+    app.dependency_overrides[get_document_repository] = lambda: repository
+
+    response = client.post(
+        "/documents/upload",
+        files={"file": ("policy.pdf", b"%PDF-1.7 policy", "application/pdf")},
+        headers=auth_headers(),
+    )
+
+    assert response.status_code == 502
+    detail = response.json()["detail"]
+    assert detail == "Unable to store the uploaded document."
+    assert "ConnectTimeout" not in detail
+    assert repository.list_documents(USER_ID) == []
+
+
 def test_delete_document_removes_owned_document_and_storage_object() -> None:
     repository = InMemoryDocumentRepository()
     storage = InMemoryDocumentStorage()
@@ -958,6 +985,9 @@ async def test_supabase_storage_url_encodes_path_segments(
             return None
 
     class FakeAsyncClient:
+        def __init__(self, **_kwargs: object) -> None:
+            pass
+
         async def __aenter__(self) -> "FakeAsyncClient":
             return self
 

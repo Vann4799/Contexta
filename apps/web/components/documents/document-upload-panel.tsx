@@ -133,22 +133,6 @@ export function DocumentUploadPanel() {
   const [docType, setDocType] = useState<DocumentType>("unclassified");
   const [uploadProgress, setUploadProgress] = useState(0);
 
-  useEffect(() => {
-    if (!isUploading) {
-      setUploadProgress(0);
-      return;
-    }
-
-    const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 100) return 100;
-        return prev + Math.random() * 15 + 5;
-      });
-    }, 200);
-
-    return () => clearInterval(interval);
-  }, [isUploading]);
-
   const getAccessToken = useCallback(async () => {
     const supabase = getSupabaseBrowserClient();
     const { data } = await supabase.auth.getSession();
@@ -201,6 +185,7 @@ export function DocumentUploadPanel() {
   const handleUpload = async (file: File) => {
     setError(null);
     setNotice(null);
+    setUploadProgress(0);
 
     if (!allowedExtensions.has(getExtension(file.name))) {
       setError("wrongFormat");
@@ -226,7 +211,7 @@ export function DocumentUploadPanel() {
         return;
       }
 
-      const uploadedDocument = await uploadDocument(accessToken, file, docType);
+      const uploadedDocument = await uploadDocument(accessToken, file, docType, setUploadProgress);
       setDocuments((currentDocuments) => [uploadedDocument, ...currentDocuments]);
       try {
         setIndexingHealth(await getIndexingHealth());
@@ -564,9 +549,11 @@ export function DocumentUploadPanel() {
                     <path d="M8 36Q8 30 14 30H136Q142 30 142 36V52H8Z" fill="#fff" opacity=".15" />
                     <rect x="20" y="76" width="16" height="16" rx="5" fill="#fff" opacity=".3" />
                     <path d="M30 79l-5 5 5 5" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-                    <text x="42" y="82" fill="#fff" fontWeight="600" fontSize="9.5" fontFamily="Inter, sans-serif">Imported</text>
+                    <text x="42" y="82" fill="#fff" fontWeight="600" fontSize="9.5" fontFamily="Inter, sans-serif">
+                      {copy.uploadedLabel}
+                    </text>
                     <text x="42" y="93" fill="#fff" fontSize="9.5" fontFamily="Inter, sans-serif" className="upload-counter">
-                      {Math.round(uploadProgress * 37.21)} files
+                      {copy.transferredPercent(Math.round(uploadProgress))}
                     </text>
                   </svg>
                 </div>
@@ -587,7 +574,9 @@ export function DocumentUploadPanel() {
               </div>
             )}
           </div>
-          <h3 className="text-[19px] font-semibold tracking-tight">{isUploading ? "Uploading Files" : copy.dropTitle}</h3>
+          <h3 className="text-[19px] font-semibold tracking-tight">
+            {isUploading ? copy.uploadingFiles : copy.dropTitle}
+          </h3>
           <p className="mt-2 max-w-md text-[13px] text-ink-muted">
             {isUploading ? (
               <span className="inline-flex items-center gap-2">
@@ -595,12 +584,26 @@ export function DocumentUploadPanel() {
                   <circle cx="6" cy="6" r="4.5" fill="none" stroke="#fde047" strokeWidth="1.6" opacity=".3" />
                   <path d="M6 1.5a4.5 4.5 0 0 1 4.5 4.5" fill="none" stroke="#eab308" strokeWidth="1.6" strokeLinecap="round" />
                 </svg>
-                Processing your document...
+                {uploadProgress >= 99 ? copy.uploadingBody : copy.uploadingOne}
               </span>
             ) : (
               copy.dropBody
             )}
           </p>
+          {isUploading ? (
+            <div
+              aria-valuemax={100}
+              aria-valuemin={0}
+              aria-valuenow={Math.round(uploadProgress)}
+              className="mt-4 h-1.5 w-full max-w-[280px] overflow-hidden rounded-full bg-paper-chip"
+              role="progressbar"
+            >
+              <div
+                className="h-full rounded-full bg-accent transition-[width] duration-200"
+                style={{ width: `${uploadProgress}%` }}
+              />
+            </div>
+          ) : null}
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
             <span className="inline-flex h-10 items-center justify-center rounded-control bg-accent px-5 text-[13.5px] font-medium text-ink shadow-node">
               {copy.browse}

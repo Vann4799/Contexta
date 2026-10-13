@@ -619,11 +619,18 @@ async def upload_document(
         doc_type=doc_type,
     )
 
-    await storage.upload_document(
-        storage_path,
-        content,
-        file.content_type or "application/octet-stream",
-    )
+    try:
+        await storage.upload_document(
+            storage_path,
+            content,
+            file.content_type or "application/octet-stream",
+        )
+    except Exception as exc:
+        logger.exception("could not store uploaded document %s", storage_path)
+        raise HTTPException(
+            status_code=502,
+            detail="Unable to store the uploaded document.",
+        ) from exc
     try:
         return repository.create_document(current_user.id, document)
     except Exception as exc:

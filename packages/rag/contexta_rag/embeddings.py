@@ -44,6 +44,7 @@ class RemoteEmbeddingProvider:
         dimensions: int = 0,
         timeout_seconds: float = 60.0,
         max_attempts: int = 3,
+        batch_size: int = 128,
     ) -> None:
         if not base_url.strip():
             raise ValueError("base_url is required for the remote embedding provider")
@@ -51,11 +52,19 @@ class RemoteEmbeddingProvider:
         self._dimensions = dimensions
         self._timeout_seconds = timeout_seconds
         self._max_attempts = max(1, max_attempts)
+        self._batch_size = max(1, batch_size)
 
     def embed_texts(self, texts: list[str]) -> list[list[float]]:
-        if not texts:
-            return []
+        vectors: list[list[float]] = []
+        for start in range(0, len(texts), self._batch_size):
+            vectors.extend(self._embed_batch(texts[start : start + self._batch_size]))
+        if len(vectors) != len(texts):
+            raise ValueError(
+                f"embedding service returned {len(vectors)} vectors for {len(texts)} texts"
+            )
+        return vectors
 
+    def _embed_batch(self, texts: list[str]) -> list[list[float]]:
         vectors = self._post(texts)
         if len(vectors) != len(texts):
             raise ValueError(

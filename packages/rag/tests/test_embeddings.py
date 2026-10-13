@@ -107,6 +107,28 @@ def test_remote_provider_posts_texts_to_the_embed_endpoint(
     ]
 
 
+def test_remote_provider_splits_large_corpora_into_batches(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    batches: list[list[str]] = []
+
+    def fake_post(url: str, json: dict, timeout: float) -> FakeResponse:
+        texts = json["texts"]
+        batches.append(texts)
+        return FakeResponse(200, {"vectors": [[len(texts), len(text)] for text in texts]})
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    provider = RemoteEmbeddingProvider(base_url="http://embeddings:8070")
+    texts = [f"chunk-{index}" for index in range(300)]
+
+    vectors = provider.embed_texts(texts)
+
+    assert [len(batch) for batch in batches] == [128, 128, 44]
+    assert vectors[0] == [128, 7.0]
+    assert vectors[299] == [44, 9.0]
+    assert len(vectors) == 300
+
+
 def test_remote_provider_skips_the_request_for_no_texts(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

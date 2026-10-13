@@ -209,9 +209,12 @@ export const id: Dictionary = {
       exporting: "Mengekspor...",
       browse: "Pilih berkas",
       uploading: "Mengunggah...",
+      uploadingFiles: "Mengunggah berkas",
       dropTitle: "Tarik dan letakkan berkas di sini",
       dropBody: "Berkas diunggah ke workspace Anda dan diindeks otomatis untuk jawaban yang berdasar.",
       uploadingBody: "Dokumen Anda sedang diunggah dan akan diindeks otomatis.",
+      uploadedLabel: "Terunggah",
+      transferredPercent: (percent: number) => `${percent}%`,
       formatHint: "PDF atau DOCX · maks 50 MB",
       statusEyebrow: "Status sistem",
       storageUsed: "Penyimpanan terpakai",
@@ -849,7 +852,9 @@ export const id: Dictionary = {
   // Pesan yang tidak ada di daftar ini tampil apa adanya, tidak dibuat-buat diterjemahkan.
   errors: {
     server: {
-      "uploaded file is too large": "Berkas yang diunggah terlalu besar.",
+      "uploaded file is too large": "Berkas yang diunggah terlalu besar. Maksimal 50 MB.",
+      "Unable to store the uploaded document.": "Berkas gagal disimpan. Silakan unggah ulang.",
+      "Unable to register the uploaded document.": "Hasil unggah gagal dicatat. Silakan unggah ulang.",
       "uploaded file must be a PDF": "Berkas harus berformat PDF.",
       "uploaded file must not be empty": "Berkas yang diunggah kosong.",
       "unsupported upload file type": "Tipe berkas tersebut tidak didukung.",
