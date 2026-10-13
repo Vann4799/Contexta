@@ -15,6 +15,8 @@ class ConversationTurn(TypedDict):
 
 MAX_HISTORY_TURNS = 6
 MAX_HISTORY_TURN_CHARS = 300
+MAX_SOURCE_CHARS = 12_000
+MIN_CONTEXT_CHARS = 200
 
 
 def _history_block(history: list[ConversationTurn]) -> str:
@@ -42,9 +44,18 @@ def build_rag_prompt(
     question: str,
     contexts: list[CitationContext],
     history: list[ConversationTurn] | None = None,
+    max_source_chars: int = MAX_SOURCE_CHARS,
 ) -> str:
     source_blocks = []
+    remaining = max_source_chars
     for index, context in enumerate(contexts, start=1):
+        text = context["text"]
+        if len(text) > remaining:
+            if remaining < MIN_CONTEXT_CHARS:
+                break
+            text = text[:remaining - 1].rstrip() + "\u2026"
+        remaining -= len(text)
+
         page_number = context.get("page_number")
         page_label = f"Page {page_number}" if page_number is not None else "Page unknown"
         section_path = context.get("section_path")
@@ -58,7 +69,7 @@ def build_rag_prompt(
                     f"Document: {context['document_name']}",
                     *location_lines,
                     "Content:",
-                    context["text"],
+                    text,
                 ]
             )
         )

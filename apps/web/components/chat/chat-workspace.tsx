@@ -340,7 +340,9 @@ export function ChatWorkspace() {
       }
 
       const response = await sendChatMessage(accessToken, sessionId, trimmedQuestion, [selectedDocumentId], abortController.signal);
-      const answer = response.answer.trim() || t.emptyAnswer;
+      const answer = response.insufficient_context
+        ? t.insufficientContext
+        : (response.answer.trim() || t.emptyAnswer);
       setMessages((current) => [
         ...current,
         {
@@ -628,7 +630,7 @@ export function ChatWorkspace() {
                     </div>
                     <p className="nums mt-1 font-mono text-[11.5px] text-ink-muted">
                       {citation.section_path ? `${citation.section_path} · ` : ""}
-                      {citation.page_number ? t.page(citation.page_number) : t.pageUnknown} · {t.score(citation.score.toFixed(2))}
+                      {citation.page_number ? t.page(citation.page_number) : t.pageUnknown} · {t.score(citation.fusion_score.toFixed(2))}
                     </p>
                     <p className="mt-2 line-clamp-6 text-[13px] leading-5 text-ink-muted">{citation.text}</p>
                   </article>

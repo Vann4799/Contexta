@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -22,6 +23,8 @@ except ModuleNotFoundError:
 
 if TYPE_CHECKING:
     from app.core.config import Settings
+
+logger = logging.getLogger(__name__)
 
 
 class EmbeddingProvider(Protocol):
@@ -47,6 +50,7 @@ class QdrantRetriever:
         api_key: str = "",
         client: httpx.Client | None = None,
         arm_window: int = 10,
+        min_score: float = 0.0,
     ) -> None:
         if not arms:
             raise ValueError("at least one retrieval arm is required")
@@ -54,6 +58,7 @@ class QdrantRetriever:
         self._collection_name = collection_name
         self._arms = arms
         self._arm_window = arm_window
+        self._min_score = min_score
         self._headers = {"api-key": api_key} if api_key else None
         self._client = client or httpx.Client(timeout=30)
         self._vector_space_checked = False
@@ -169,10 +174,25 @@ class QdrantRetriever:
                     points_by_id[key] = point
             rankings.append(keys)
 
-        ordered = order_by_fusion(reciprocal_rank_fusion(rankings))[:top_k]
-        return [self._context(points_by_id[key]) for key in ordered]
+        fusion_scores = reciprocal_rank_fusion(rankings)
+        ordered = order_by_fusion(fusion_scores)[:top_k]
 
-    def _context(self, point: dict[str, object]) -> RetrievedContext:
+        if ordered and self._min_score > 0:
+            top_cosine = _score(points_by_id[ordered[0]])
+            if top_cosine < self._min_score:
+                logger.info(
+                    "retrieval below min_score threshold: top_cosine=%.4f < %.4f, returning empty",
+                    top_cosine,
+                    self._min_score,
+                )
+                return []
+
+        return [
+            self._context(points_by_id[key], fusion_scores.get(key, 0.0))
+            for key in ordered
+        ]
+
+    def _context(self, point: dict[str, object], fusion_score: float = 0.0) -> RetrievedContext:
         payload = point["payload"]
         assert isinstance(payload, dict)
         return {
@@ -184,6 +204,7 @@ class QdrantRetriever:
             "section_path": payload.get("section_path"),
             "text": payload["text"],
             "score": float(point["score"]),
+            "fusion_score": fusion_score,
         }
 
 
@@ -262,6 +283,7 @@ def retriever_from_settings(settings: Settings) -> QdrantRetriever:
         arms=arms,
         api_key=settings.qdrant_api_key,
         arm_window=settings.retrieval_arm_window,
+        min_score=settings.retrieval_min_score,
     )
 
 

@@ -111,3 +111,48 @@ def test_rewrite_prompt_asks_for_a_standalone_query_only():
     assert "no answer, no prefix" in prompt
     assert "Black Box Testing dipakai ke seluruh fitur." in prompt
     assert prompt.endswith("terus hasilnya gimana?\n\nStandalone search query:")
+
+
+def test_prompt_truncates_source_text_when_budget_is_tight():
+    contexts = [
+        {"document_name": "a.pdf", "text": "A" * 150},
+        {"document_name": "b.pdf", "text": "B" * 300},
+    ]
+
+    prompt = build_rag_prompt("q?", contexts, max_source_chars=400)
+
+    assert "A" * 150 in prompt
+    assert "B" * 300 not in prompt
+    assert "\u2026" in prompt
+    assert "[Source 2]" in prompt
+
+
+def test_prompt_drops_contexts_that_cannot_fit_minimum():
+    contexts = [
+        {"document_name": "a.pdf", "text": "A" * 500},
+        {"document_name": "b.pdf", "text": "B" * 500},
+        {"document_name": "c.pdf", "text": "C" * 500},
+    ]
+
+    prompt = build_rag_prompt("q?", contexts, max_source_chars=600)
+
+    assert "[Source 1]" in prompt
+    assert "[Source 2]" not in prompt
+    assert "[Source 3]" not in prompt
+
+
+def test_prompt_includes_all_sources_when_budget_is_generous():
+    contexts = [
+        {"document_name": "a.pdf", "text": "alpha"},
+        {"document_name": "b.pdf", "text": "beta"},
+        {"document_name": "c.pdf", "text": "gamma"},
+    ]
+
+    prompt = build_rag_prompt("q?", contexts, max_source_chars=50_000)
+
+    assert "[Source 1]" in prompt
+    assert "[Source 2]" in prompt
+    assert "[Source 3]" in prompt
+    assert "alpha" in prompt
+    assert "beta" in prompt
+    assert "gamma" in prompt

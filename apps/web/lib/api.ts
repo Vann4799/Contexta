@@ -111,12 +111,14 @@ export type ChatCitation = {
   section_path?: string | null;
   text: string;
   score: number;
+  fusion_score: number;
 };
 
 export type ChatQueryResponse = {
   answer: string;
   citations: ChatCitation[];
   truncated?: boolean;
+  insufficient_context?: boolean;
 };
 
 export type ChatSession = {

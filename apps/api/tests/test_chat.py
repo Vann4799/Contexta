@@ -67,6 +67,7 @@ def test_chat_query_returns_answer_with_citations() -> None:
                 "section_path": "2. Architecture",
                 "text": "Contexta answers questions using uploaded documents.",
                 "score": 0.91,
+                "fusion_score": 0.0164,
             }
         ]
     )
@@ -94,9 +95,11 @@ def test_chat_query_returns_answer_with_citations() -> None:
                 "section_path": "2. Architecture",
                 "text": "Contexta answers questions using uploaded documents.",
                 "score": 0.91,
+                "fusion_score": 0.0164,
             }
         ],
         "truncated": False,
+        "insufficient_context": False,
     }
     assert retriever.received_user_id == "user-chat-123"
     assert retriever.received_question == "What is Contexta?"
@@ -120,6 +123,7 @@ def test_chat_query_returns_insufficient_context_when_no_chunks_match() -> None:
         "answer": "The document context is insufficient to answer that question.",
         "citations": [],
         "truncated": False,
+        "insufficient_context": True,
     }
     app.dependency_overrides.clear()
 
@@ -157,6 +161,7 @@ def test_session_message_stores_user_and_assistant_messages() -> None:
                 "page_number": 2,
                 "text": "Contexta answers questions using uploaded documents.",
                 "score": 0.91,
+                "fusion_score": 0.0164,
             }
         ]
     )
@@ -462,6 +467,7 @@ def contexts_with_one_chunk() -> list[RetrievedContext]:
             "section_path": "2. Architecture",
             "text": "Contexta answers questions using uploaded documents.",
             "score": 0.91,
+            "fusion_score": 0.0164,
         }
     ]
 

@@ -84,6 +84,7 @@ def context() -> RetrievedContext:
         "section_path": "2. Architecture",
         "text": "Contexta answers from uploaded documents.",
         "score": 0.9,
+        "fusion_score": 0.0164,
     }
 
 

@@ -36,6 +36,8 @@ class Settings(BaseSettings):
     secondary_embedding_api_key: str = ""
     secondary_embedding_vector_name: str = "openai"
     retrieval_arm_window: int = 10
+    retrieval_min_score: float = 0.20
+    prompt_max_source_chars: int = 12_000
     api_key_minute_limit: int = 60
     api_key_day_limit: int = 5000
     llm_day_limit: int = 200

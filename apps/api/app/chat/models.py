@@ -19,6 +19,7 @@ class RetrievedContext(TypedDict):
     section_path: str | None
     text: str
     score: float
+    fusion_score: float
 
 
 class ChatCitation(BaseModel):
@@ -31,12 +32,14 @@ class ChatCitation(BaseModel):
     section_path: str | None = None
     text: str
     score: float
+    fusion_score: float = 0.0
 
 
 class ChatQueryResponse(BaseModel):
     answer: str
     citations: list[ChatCitation]
     truncated: bool = False
+    insufficient_context: bool = False
 
 
 class ChatSessionCreate(BaseModel):

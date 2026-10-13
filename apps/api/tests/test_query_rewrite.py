@@ -31,6 +31,7 @@ CONTEXT: RetrievedContext = {
     "section_path": "BAB V > Testing",
     "text": "Black box testing dijalankan pada seluruh fitur.",
     "score": 0.62,
+    "fusion_score": 0.0164,
 }
 
 

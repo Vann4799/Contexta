@@ -54,6 +54,7 @@ class RetrievedChunk(BaseModel):
     section_path: str | None
     text: str
     score: float
+    fusion_score: float = 0.0
 
 
 class V1Document(BaseModel):

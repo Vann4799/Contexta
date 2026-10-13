@@ -196,6 +196,7 @@ def build_chat_response(
                 section_path=context.get("section_path"),
                 text=str(context["text"]),
                 score=float(context["score"]),
+                fusion_score=float(context.get("fusion_score", 0.0)),
             )
             for index, context in enumerate(contexts, start=1)
         ],
@@ -437,6 +438,7 @@ def _answer_session_question(
     document_repository: DocumentRepository,
     retriever: QdrantRetriever,
     answer_generator: AnswerGenerator,
+    max_source_chars: int = 12_000,
 ) -> ChatQueryResponse:
     highest_metric_response = build_highest_metric_response(
         question,
@@ -466,9 +468,10 @@ def _answer_session_question(
         return ChatQueryResponse(
             answer="The document context is insufficient to answer that question.",
             citations=[],
+            insufficient_context=True,
         )
 
-    prompt = build_rag_prompt(question, contexts, history)
+    prompt = build_rag_prompt(question, contexts, history, max_source_chars=max_source_chars)
     try:
         result = answer_generator.generate_answer(prompt)
     except HTTPException:
@@ -484,6 +487,7 @@ def _answer_session_question(
 @router.post("/query", response_model=ChatQueryResponse)
 def query_chat(
     payload: ChatQueryRequest,
+    settings: Annotated[Settings, Depends(get_settings)],
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     document_repository: Annotated[DocumentRepository, Depends(get_document_repository)],
     retriever: Annotated[QdrantRetriever, Depends(get_retriever)],
@@ -517,9 +521,12 @@ def query_chat(
         return ChatQueryResponse(
             answer="The document context is insufficient to answer that question.",
             citations=[],
+            insufficient_context=True,
         )
 
-    prompt = build_rag_prompt(payload.question, contexts)
+    prompt = build_rag_prompt(
+        payload.question, contexts, max_source_chars=settings.prompt_max_source_chars
+    )
     try:
         result = answer_generator.generate_answer(prompt)
     except HTTPException:
@@ -572,6 +579,7 @@ def list_chat_messages(
 def create_chat_message(
     session_id: str,
     payload: ChatSessionMessageRequest,
+    settings: Annotated[Settings, Depends(get_settings)],
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     repository: Annotated[ChatRepository, Depends(get_chat_repository)],
     document_repository: Annotated[DocumentRepository, Depends(get_document_repository)],
@@ -613,6 +621,7 @@ def create_chat_message(
             document_repository=document_repository,
             retriever=retriever,
             answer_generator=answer_generator,
+            max_source_chars=settings.prompt_max_source_chars,
         )
     except Exception:
         # The question is already stored and no answer will follow it, so a retry

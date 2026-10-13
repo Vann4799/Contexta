@@ -74,6 +74,7 @@ def build_retriever(
     arms: list[RetrievalArm] | None = None,
     response_handler=handler,
     arm_window: int = 10,
+    min_score: float = 0.0,
 ) -> QdrantRetriever:
     def record(request: httpx.Request) -> httpx.Response:
         requests.append(request)
@@ -85,6 +86,7 @@ def build_retriever(
         arms=arms if arms is not None else [arm()],
         client=httpx.Client(transport=httpx.MockTransport(record)),
         arm_window=arm_window,
+        min_score=min_score,
     )
 
 
@@ -123,8 +125,18 @@ def test_retrieve_maps_payload_metadata_into_context() -> None:
             "section_path": "4. Steps",
             "text": "restart the worker",
             "score": 0.82,
+            "fusion_score": pytest.approx(1 / 61),
         }
     ]
+
+
+def test_retrieve_returns_empty_when_top_score_is_below_threshold() -> None:
+    requests: list[httpx.Request] = []
+    retriever = build_retriever(requests, min_score=0.90)
+
+    contexts = retriever.retrieve("user-1", "how do I restart")
+
+    assert contexts == []
 
 
 def test_retrieve_filters_by_document_types() -> None:
@@ -506,3 +518,12 @@ def test_the_configured_window_reaches_the_retriever() -> None:
     )
 
     assert retriever_from_settings(settings)._arm_window == 20
+
+
+def test_the_configured_min_score_reaches_the_retriever() -> None:
+    settings = Settings(
+        embedding_provider="deterministic",
+        retrieval_min_score=0.35,
+    )
+
+    assert retriever_from_settings(settings)._min_score == 0.35
