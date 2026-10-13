@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 from typing import Protocol
 
 from app.billing.models import (
@@ -115,61 +114,13 @@ class SupabaseBillingRepository:
     def get_usage(self, user_id: str) -> UsageSummary:
         import httpx
 
-        docs_response = httpx.get(
-            f"{self._supabase_url}/rest/v1/documents",
-            headers=self._headers,
-            params={
-                "user_id": f"eq.{user_id}",
-                "select": "id,file_size",
-            },
+        response = httpx.post(
+            f"{self._supabase_url}/rest/v1/rpc/billing_usage",
+            headers={**self._headers, "Content-Type": "application/json"},
+            json={"p_user_id": user_id},
         )
-        docs_response.raise_for_status()
-        documents = docs_response.json()
-
-        keys_response = httpx.get(
-            f"{self._supabase_url}/rest/v1/api_keys",
-            headers=self._headers,
-            params={
-                "user_id": f"eq.{user_id}",
-                "select": "id",
-            },
-        )
-        keys_response.raise_for_status()
-        api_keys = keys_response.json()
-
-        today = datetime.now(timezone.utc).date().isoformat()
-        logs_response = httpx.get(
-            f"{self._supabase_url}/rest/v1/api_request_logs",
-            headers=self._headers,
-            params={
-                "user_id": f"eq.{user_id}",
-                "created_at": f"gte.{today}",
-                "select": "id",
-            },
-        )
-        logs_response.raise_for_status()
-        api_requests = logs_response.json()
-
-        messages_response = httpx.get(
-            f"{self._supabase_url}/rest/v1/chat_messages",
-            headers=self._headers,
-            params={
-                "user_id": f"eq.{user_id}",
-                "role": "eq.user",
-                "created_at": f"gte.{today}",
-                "select": "id",
-            },
-        )
-        messages_response.raise_for_status()
-        chat_messages = messages_response.json()
-
-        return UsageSummary(
-            documents_count=len(documents),
-            storage_bytes=sum(int(doc.get("file_size", 0)) for doc in documents),
-            api_keys_count=len(api_keys),
-            api_requests_today=len(api_requests),
-            chat_messages_today=len(chat_messages),
-        )
+        response.raise_for_status()
+        return UsageSummary.model_validate(response.json())
 
 
 billing_repository = InMemoryBillingRepository()

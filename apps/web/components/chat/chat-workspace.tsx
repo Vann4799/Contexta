@@ -5,7 +5,6 @@ import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   createChatSession,
-  listDocuments,
   listChatMessages,
   listChatSessions,
   sendChatMessage,
@@ -15,6 +14,7 @@ import {
   type ChatMessage,
   type ChatSession
 } from "@/lib/api";
+import { fetchDocuments } from "@/lib/document-store";
 import { useT } from "@/lib/i18n";
 import type { Dictionary } from "@/locales/en";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
@@ -179,7 +179,7 @@ export function ChatWorkspace() {
         }
 
         let loadedSessions = await listChatSessions(accessToken);
-        const loadedDocuments = await listDocuments(accessToken);
+        const loadedDocuments = await fetchDocuments(accessToken);
         if (loadedSessions.length === 0) {
           const createdSession = await createChatSession(accessToken);
           loadedSessions = [createdSession];

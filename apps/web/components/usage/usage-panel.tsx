@@ -3,14 +3,6 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Bar,
-  BarChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis
-} from "recharts";
-import {
   ArrowRight,
   Key,
   RefreshCw,
@@ -25,10 +17,13 @@ import {
   type ApiKeyUsage
 } from "@/lib/api";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
+import dynamic from "next/dynamic";
 import { useT } from "@/lib/i18n";
 import { useServerError } from "@/lib/server-errors";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+const ApiActivityChart = dynamic(() => import("@/components/usage/api-activity-chart"), { ssr: false });
 
 const USAGE_DAYS = 14;
 
@@ -218,37 +213,11 @@ export function UsagePanel() {
               {isLoading ? (
                 <div className="flex h-full items-center justify-center text-[13px] text-ink-muted">{copy.loading}</div>
               ) : chartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
-                    <XAxis
-                      dataKey="label"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 11, fill: "#8b8680" }}
-                      interval="preserveStartEnd"
-                    />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "#8b8680" }} allowDecimals={false} />
-                    <Tooltip
-                      content={({ active, payload, label }) => {
-                        if (!active || !payload?.length) return null;
-                        return (
-                          <div className="rounded-lg border border-paper-line bg-paper-card px-3 py-2 text-[12px] shadow-node">
-                            <p className="mb-1 font-medium text-ink-muted">{label}</p>
-                            {payload.map((entry) => (
-                              <div key={entry.name} className="flex items-center gap-2">
-                                <span className="h-2 w-2 rounded-full" style={{ background: entry.color }} />
-                                <span className="text-ink-muted">{entry.name}:</span>
-                                <span className="font-semibold nums">{entry.value}</span>
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      }}
-                    />
-                    <Bar dataKey="allowed" name={t.usage.allowed} stackId="a" fill="#4f7e4d" radius={[0, 0, 0, 0]} barSize={20} />
-                    <Bar dataKey="rejected" name={t.usage.rejected} stackId="a" fill="#b54a4a" radius={[4, 4, 0, 0]} barSize={20} />
-                  </BarChart>
-                </ResponsiveContainer>
+                <ApiActivityChart
+                  data={chartData}
+                  allowedLabel={t.usage.allowed}
+                  rejectedLabel={t.usage.rejected}
+                />
               ) : (
                 <div className="flex h-full items-center justify-center text-[13px] text-ink-muted">{copy.loading}</div>
               )}

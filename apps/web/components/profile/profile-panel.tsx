@@ -27,9 +27,9 @@ import {
   listApiKeys,
   listChatMessages,
   listChatSessions,
-  listDocuments,
   type AccountSummary
 } from "@/lib/api";
+import { fetchDocuments } from "@/lib/document-store";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { useLocale, useT } from "@/lib/i18n";
 import { useServerError } from "@/lib/server-errors";
@@ -367,7 +367,7 @@ export function ProfilePanel() {
       if (!token) throw new Error("No session");
 
       const [docs, keys, sessionsData, accountData] = await Promise.all([
-        listDocuments(token),
+        fetchDocuments(token),
         listApiKeys(token),
         listChatSessions(token),
         getAccountSummary(token)

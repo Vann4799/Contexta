@@ -4,13 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Cell,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip
-} from "recharts";
-import {
   ArrowRight,
   Bell,
   Clock,
@@ -28,7 +21,6 @@ import {
 import {
   getAccountSummary,
   getIndexingHealth,
-  listDocuments,
   markAllNotificationsRead,
   markNotificationRead,
   getNotifications,
@@ -39,12 +31,17 @@ import {
   type NotificationItem
 } from "@/lib/api";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { fetchDocuments } from "@/lib/document-store";
+
+import dynamic from "next/dynamic";
 import { useLocale, useT } from "@/lib/i18n";
 import { useServerError } from "@/lib/server-errors";
 import type { Dictionary } from "@/locales/en";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/status-pill";
 import { cn } from "@/lib/utils";
+
+const StatusDonut = dynamic(() => import("@/components/dashboard/status-donut"), { ssr: false });
 
 type DashboardCopy = Dictionary["dashboard"];
 
@@ -299,27 +296,24 @@ export function DashboardInsights() {
     return data.session?.access_token ?? null;
   }, []);
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (options: { force?: boolean } = {}) => {
     setIsLoading(true);
     setError(null);
     try {
-      try {
-        setIndexingHealth(await getIndexingHealth());
-      } catch {
-        setIndexingHealth(null);
-      }
       const accessToken = await getAccessToken();
       if (!accessToken) {
         setDocuments([]);
         setError("signIn");
         return;
       }
-      const [docs, acctSummary] = await Promise.all([
-        listDocuments(accessToken),
-        getAccountSummary(accessToken).catch(() => null)
+      const [docs, acctSummary, health] = await Promise.all([
+        fetchDocuments(accessToken, options),
+        getAccountSummary(accessToken).catch(() => null),
+        getIndexingHealth(accessToken).catch(() => null)
       ]);
       setDocuments(docs);
       setSummary(acctSummary);
+      setIndexingHealth(health);
     } catch (loadError) {
       setError(dashboardErrorMessage(loadError));
     } finally {
@@ -412,7 +406,7 @@ export function DashboardInsights() {
         </div>
         <div className="flex items-center gap-2">
           <DashboardNotifications />
-          <Button disabled={isLoading} onClick={() => void loadData()} variant="secondary">
+          <Button disabled={isLoading} onClick={() => void loadData({ force: true })} variant="secondary">
             <RefreshCw className="h-4 w-4" aria-hidden="true" />
             {copy.refresh}
           </Button>
@@ -474,36 +468,7 @@ export function DashboardInsights() {
               {isLoading ? (
                 <div className="flex h-full items-center justify-center text-[13px] text-ink-muted">—</div>
               ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={statusData}
-                      dataKey="value"
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={40}
-                      outerRadius={58}
-                      paddingAngle={3}
-                      strokeWidth={0}
-                    >
-                      {statusData.map((entry) => (
-                        <Cell key={entry.name} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      content={({ active, payload }) => {
-                        if (!active || !payload?.[0]) return null;
-                        const d = payload[0].payload as { name: string; value: number };
-                        return (
-                          <div className="rounded-lg border border-paper-line bg-paper-card px-3 py-1.5 text-[12px] shadow-node">
-                            <span className="font-medium">{d.name}:</span>{" "}
-                            <span className="nums font-semibold">{d.value}</span>
-                          </div>
-                        );
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+                <StatusDonut items={statusData} />
               )}
             </div>
           </div>

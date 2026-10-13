@@ -306,9 +306,10 @@ export async function listDocuments(accessToken: string) {
   return (await response.json()) as DocumentItem[];
 }
 
-export async function getIndexingHealth() {
+export async function getIndexingHealth(accessToken?: string) {
   const response = await fetchApi("/health/indexing", {
-    cache: "no-store"
+    cache: "no-store",
+    ...(accessToken ? { headers: { Authorization: `Bearer ${accessToken}` } } : {})
   });
 
   if (!response.ok) {

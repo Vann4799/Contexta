@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
 import Link from "next/link";
 import {
   Bot,
@@ -98,13 +99,14 @@ export function SettingsPanel() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const runChecks = useCallback(async () => {
+    const { data: session } = await getSupabaseBrowserClient().auth.getSession();
     setIsRefreshing(true);
     setStatusRows(initialState());
 
     const [api, vector, indexing] = await Promise.all([
       getApiHealth().catch(() => null),
       getVectorHealth().catch(() => null),
-      getIndexingHealth().catch(() => null)
+      getIndexingHealth(session?.session?.access_token).catch(() => null)
     ]);
 
     setVectorCollection(vector && vector.status === "ok" ? vector.collection || null : null);

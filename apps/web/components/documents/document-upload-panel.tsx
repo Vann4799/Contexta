@@ -14,12 +14,12 @@ import {
   trashDocument,
   uploadDocument,
   updateDocumentMetadata,
-  listDocuments,
   type DocumentItem,
   type DocumentStatus,
   type DocumentType,
   type IndexingHealth
 } from "@/lib/api";
+import { fetchDocuments, invalidateDocuments } from "@/lib/document-store";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { saveBlobAsFile } from "@/lib/download";
 import { useT } from "@/lib/i18n";
@@ -139,17 +139,11 @@ export function DocumentUploadPanel() {
     return data.session?.access_token ?? null;
   }, []);
 
-  const loadDocuments = useCallback(async () => {
+  const loadDocuments = useCallback(async (options: { force?: boolean } = {}) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      try {
-        setIndexingHealth(await getIndexingHealth());
-      } catch {
-        setIndexingHealth(null);
-      }
-
       const accessToken = await getAccessToken();
       if (!accessToken) {
         setDocuments([]);
@@ -157,7 +151,12 @@ export function DocumentUploadPanel() {
         return;
       }
 
-      setDocuments(await listDocuments(accessToken));
+      const [docs, health] = await Promise.all([
+        fetchDocuments(accessToken, options),
+        getIndexingHealth(accessToken).catch(() => null)
+      ]);
+      setDocuments(docs);
+      setIndexingHealth(health);
     } catch (loadError) {
       setError(uploadErrorMessage(loadError, "loadFailed"));
     } finally {
@@ -176,7 +175,7 @@ export function DocumentUploadPanel() {
     }
 
     const intervalId = window.setInterval(() => {
-      void loadDocuments();
+      void loadDocuments({ force: true });
     }, 5000);
 
     return () => window.clearInterval(intervalId);
@@ -212,9 +211,10 @@ export function DocumentUploadPanel() {
       }
 
       const uploadedDocument = await uploadDocument(accessToken, file, docType, setUploadProgress);
+      invalidateDocuments();
       setDocuments((currentDocuments) => [uploadedDocument, ...currentDocuments]);
       try {
-        setIndexingHealth(await getIndexingHealth());
+        setIndexingHealth(await getIndexingHealth(accessToken));
       } catch {
         setIndexingHealth(null);
       }
@@ -244,6 +244,7 @@ export function DocumentUploadPanel() {
       const updatedDocument = await updateDocumentMetadata(accessToken, document.id, {
         doc_type: nextDocType
       });
+      invalidateDocuments();
       setDocuments((currentDocuments) =>
         currentDocuments.map((item) => (item.id === updatedDocument.id ? updatedDocument : item))
       );
@@ -273,6 +274,7 @@ export function DocumentUploadPanel() {
       }
 
       const trashed = await trashDocument(accessToken, document.id);
+      invalidateDocuments();
       setDocuments((currentDocuments) =>
         currentDocuments.map((item) => (item.id === trashed.id ? trashed : item))
       );
@@ -302,6 +304,7 @@ export function DocumentUploadPanel() {
       }
 
       const restored = await restoreDocument(accessToken, document.id);
+      invalidateDocuments();
       setDocuments((currentDocuments) =>
         currentDocuments.map((item) => (item.id === restored.id ? restored : item))
       );
@@ -331,6 +334,7 @@ export function DocumentUploadPanel() {
       }
 
       await deleteDocument(accessToken, document.id);
+      invalidateDocuments();
       setDocuments((currentDocuments) => currentDocuments.filter((d) => d.id !== document.id));
       setNotice({ key: "permanentlyDeleted", name: document.filename });
     } catch (deleteError) {
@@ -353,6 +357,7 @@ export function DocumentUploadPanel() {
       }
 
       const retriedDocument = await retryDocument(accessToken, document.id);
+      invalidateDocuments();
       setDocuments((currentDocuments) => currentDocuments.map((currentDocument) => (currentDocument.id === document.id ? retriedDocument : currentDocument)));
       setNotice({ key: "retried", name: document.filename });
     } catch (retryError) {
@@ -375,6 +380,7 @@ export function DocumentUploadPanel() {
       }
 
       const reindexedDocument = await reindexDocument(accessToken, document.id);
+      invalidateDocuments();
       setDocuments((currentDocuments) => currentDocuments.map((currentDocument) => (currentDocument.id === document.id ? reindexedDocument : currentDocument)));
       setNotice({ key: "reindexed", name: document.filename });
     } catch (reindexError) {
@@ -427,7 +433,7 @@ export function DocumentUploadPanel() {
             <h2 className="mt-2 text-[22px] font-semibold leading-tight tracking-tight">{copy.trashTitle}</h2>
             <p className="mt-1 font-secondary text-[13px] text-ink-muted">{copy.trashDescription}</p>
           </div>
-          <Button disabled={isLoading} onClick={() => void loadDocuments()} variant="secondary">
+          <Button disabled={isLoading} onClick={() => void loadDocuments({ force: true })} variant="secondary">
             <RefreshCw className="h-4 w-4" aria-hidden="true" />
             {copy.refresh}
           </Button>
@@ -456,7 +462,7 @@ export function DocumentUploadPanel() {
                 ))}
               </select>
             </label>
-            <Button disabled={isLoading || isUploading} onClick={() => void loadDocuments()} variant="secondary">
+            <Button disabled={isLoading || isUploading} onClick={() => void loadDocuments({ force: true })} variant="secondary">
               <RefreshCw className="h-4 w-4" aria-hidden="true" />
               {copy.refresh}
             </Button>

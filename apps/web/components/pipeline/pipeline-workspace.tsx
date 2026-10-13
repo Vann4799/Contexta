@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { getAccountSummary, getIndexingHealth, getVectorHealth, listDocuments, type DocumentItem, type IndexingHealth, type VectorHealth } from "@/lib/api";
+import { getAccountSummary, getIndexingHealth, getVectorHealth, type DocumentItem, type IndexingHealth, type VectorHealth } from "@/lib/api";
+import { fetchDocuments } from "@/lib/document-store";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { useLocale, useT } from "@/lib/i18n";
 import type { Dictionary } from "@/locales/en";
@@ -46,9 +47,9 @@ export function PipelineWorkspace() {
         return;
       }
 
-      setDocuments(await listDocuments(accessToken));
+      setDocuments(await fetchDocuments(accessToken));
       try {
-        setHealth(await getIndexingHealth());
+        setHealth(await getIndexingHealth(accessToken));
       } catch {
         setHealth(null);
       }

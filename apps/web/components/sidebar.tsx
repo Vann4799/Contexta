@@ -27,7 +27,8 @@ import {
 } from "lucide-react";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { ContextaLogo } from "@/components/contexta-logo";
-import { listDocuments, type DocumentItem } from "@/lib/api";
+import { type DocumentItem } from "@/lib/api";
+import { fetchDocuments } from "@/lib/document-store";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { useT } from "@/lib/i18n";
 import type { Dictionary } from "@/locales/en";
@@ -113,7 +114,7 @@ function SidebarSearch() {
       try {
         const token = await getAccessToken();
         if (!token || cancelled) return;
-        const all = await listDocuments(token);
+        const all = await fetchDocuments(token);
         if (!cancelled) setDocs(all.filter((d) => d.status !== "trashed"));
       } catch {}
     })();
@@ -223,7 +224,7 @@ function RecentDocsSection() {
       try {
         const token = await getAccessToken();
         if (!token || cancelled) return;
-        const all = await listDocuments(token);
+        const all = await fetchDocuments(token);
         if (!cancelled) {
           const sorted = all
             .filter((d) => d.status !== "trashed")

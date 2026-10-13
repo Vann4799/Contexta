@@ -6,7 +6,6 @@ import {
   createApiKey,
   getApiKeyUsage,
   listApiKeys,
-  listDocuments,
   publicApiBaseUrl,
   revokeApiKey,
   type ApiKey,
@@ -14,6 +13,7 @@ import {
   type CreatedApiKey,
   type DocumentItem
 } from "@/lib/api";
+import { fetchDocuments } from "@/lib/document-store";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { useLocale, useT } from "@/lib/i18n";
 import { useServerError } from "@/lib/server-errors";
@@ -95,7 +95,7 @@ export function DeveloperPanel() {
         setError("signIn");
         return;
       }
-      const [keyRows, documentRows] = await Promise.all([listApiKeys(accessToken), listDocuments(accessToken)]);
+      const [keyRows, documentRows] = await Promise.all([listApiKeys(accessToken), fetchDocuments(accessToken)]);
       setKeys(keyRows);
       setDocuments(documentRows);
     } catch (loadError) {
