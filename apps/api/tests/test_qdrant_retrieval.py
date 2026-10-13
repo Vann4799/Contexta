@@ -125,9 +125,27 @@ def test_retrieve_maps_payload_metadata_into_context() -> None:
             "section_path": "4. Steps",
             "text": "restart the worker",
             "score": 0.82,
-            "fusion_score": pytest.approx(1 / 61),
+            "fusion_score": pytest.approx(1.0),
         }
     ]
+
+
+def test_fusion_score_is_relative_to_the_arms_that_returned_results() -> None:
+    requests: list[httpx.Request] = []
+    single = build_retriever(requests)
+    both = build_retriever(
+        [],
+        arms=[arm(name="minilm"), arm(name="openai", tag=0.9)],
+        response_handler=two_arm_handler,
+    )
+
+    assert single.retrieve("user-1", "how do I restart")[0]["fusion_score"] == pytest.approx(1.0)
+
+    # Top of the merged list is first in one arm and second in the other, so it sits
+    # just under the ceiling of two arms that both returned results.
+    fused = both.retrieve("user-1", "how do I restart", top_k=3)
+    assert fused[0]["fusion_score"] == pytest.approx((1 / 61 + 1 / 62) / (2 / 61))
+    assert fused[0]["fusion_score"] > fused[1]["fusion_score"]
 
 
 def test_retrieve_returns_empty_when_top_score_is_below_threshold() -> None:

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+FUSION_K = 60
 
-def reciprocal_rank_fusion(ranked_keys: list[list[str]], k: int = 60) -> dict[str, float]:
+
+def reciprocal_rank_fusion(ranked_keys: list[list[str]], k: int = FUSION_K) -> dict[str, float]:
     """Merge per-arm rankings into one score per key.
 
     Only the position of a key inside its own arm counts, so arms whose cosine

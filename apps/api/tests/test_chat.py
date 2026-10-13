@@ -215,6 +215,24 @@ def test_truncated_query_answer_is_flagged_and_marker_repaired() -> None:
     app.dependency_overrides.clear()
 
 
+def test_session_message_forwards_the_insufficient_context_flag() -> None:
+    repository = InMemoryChatRepository()
+    session = repository.create_session("user-chat-123", title="New chat")
+    app.dependency_overrides[get_current_user] = override_user
+    app.dependency_overrides[get_chat_repository] = lambda: repository
+    app.dependency_overrides[get_retriever] = lambda: FakeRetriever([])
+    app.dependency_overrides[get_answer_generator] = lambda: FakeAnswerGenerator()
+
+    response = client.post(
+        f"/chat/sessions/{session.id}/messages",
+        json={"question": "Which rows match?"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["insufficient_context"] is True
+    app.dependency_overrides.clear()
+
+
 def test_truncated_session_answer_is_persisted_with_the_flag() -> None:
     repository = InMemoryChatRepository()
     session = repository.create_session("user-chat-123", title="New chat")

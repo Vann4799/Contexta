@@ -630,7 +630,8 @@ export function ChatWorkspace() {
                     </div>
                     <p className="nums mt-1 font-mono text-[11.5px] text-ink-muted">
                       {citation.section_path ? `${citation.section_path} · ` : ""}
-                      {citation.page_number ? t.page(citation.page_number) : t.pageUnknown} · {t.score(citation.fusion_score.toFixed(2))}
+                      {citation.page_number ? t.page(citation.page_number) : t.pageUnknown}
+                      {citation.fusion_score > 0 ? ` · ${t.score(`${Math.round(citation.fusion_score * 100)}%`)}` : ""}
                     </p>
                     <p className="mt-2 line-clamp-6 text-[13px] leading-5 text-ink-muted">{citation.text}</p>
                   </article>

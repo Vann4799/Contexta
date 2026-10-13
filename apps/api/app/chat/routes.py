@@ -646,4 +646,5 @@ def create_chat_message(
         answer=chat_response.answer,
         citations=chat_response.citations,
         truncated=chat_response.truncated,
+        insufficient_context=chat_response.insufficient_context,
     )

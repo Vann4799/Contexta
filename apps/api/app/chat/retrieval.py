@@ -12,13 +12,13 @@ from app.chat.models import RetrievedContext
 
 try:
     from contexta_rag.embeddings import create_embedding_provider, embedding_model_label
-    from contexta_rag.fusion import order_by_fusion, reciprocal_rank_fusion
+    from contexta_rag.fusion import FUSION_K, order_by_fusion, reciprocal_rank_fusion
     from contexta_rag.vector_space import VectorSpace, assert_vector_spaces_match
 except ModuleNotFoundError:
     rag_package_path = Path(__file__).resolve().parents[4] / "packages" / "rag"
     sys.path.append(str(rag_package_path))
     from contexta_rag.embeddings import create_embedding_provider, embedding_model_label
-    from contexta_rag.fusion import order_by_fusion, reciprocal_rank_fusion
+    from contexta_rag.fusion import FUSION_K, order_by_fusion, reciprocal_rank_fusion
     from contexta_rag.vector_space import VectorSpace, assert_vector_spaces_match
 
 if TYPE_CHECKING:
@@ -187,8 +187,16 @@ class QdrantRetriever:
                 )
                 return []
 
+        # Raw RRF sits around 1/61 per arm, which reads as 0.00 to a user. Dividing by
+        # the best score these arms can hand out turns it into a 0-1 relevance where
+        # 1.0 means "first place in every arm that returned anything".
+        ceiling = sum(1 for keys in rankings if keys) / (FUSION_K + 1)
+
         return [
-            self._context(points_by_id[key], fusion_scores.get(key, 0.0))
+            self._context(
+                points_by_id[key],
+                (fusion_scores.get(key, 0.0) / ceiling) if ceiling else 0.0,
+            )
             for key in ordered
         ]
 
