@@ -34,6 +34,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { fetchDocuments } from "@/lib/document-store";
 
 import StatusDonut from "@/components/dashboard/status-donut";
+import { ActivityChart } from "@/components/dashboard/activity-chart";
 import { useLocale, useT } from "@/lib/i18n";
 import { useServerError } from "@/lib/server-errors";
 import type { Dictionary } from "@/locales/en";
@@ -76,8 +77,8 @@ function formatDate(value: string, locale: string) {
   }).format(new Date(value));
 }
 
-function formatShortDate(value: string) {
-  return new Intl.DateTimeFormat("en", { day: "numeric", month: "short" }).format(new Date(value));
+function formatShortDate(value: string, locale: string) {
+  return new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" }).format(new Date(value));
 }
 
 function dashboardErrorMessage(error: unknown) {
@@ -92,7 +93,7 @@ interface DayBucket {
   indexed: number;
 }
 
-function buildActivityBuckets(documents: DocumentItem[]): DayBucket[] {
+function buildActivityBuckets(documents: DocumentItem[], locale: string): DayBucket[] {
   const now = new Date();
   const days: DayBucket[] = [];
 
@@ -101,7 +102,7 @@ function buildActivityBuckets(documents: DocumentItem[]): DayBucket[] {
     const key = d.toISOString().slice(0, 10);
     days.push({
       date: key,
-      label: new Intl.DateTimeFormat("en", { weekday: "short", timeZone: "UTC" }).format(d),
+      label: new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" }).format(d),
       uploads: 0,
       indexed: 0
     });
@@ -333,26 +334,7 @@ export function DashboardInsights() {
     return { ready, failed, processing, chunks, storage };
   }, [documents]);
 
-  const activityBuckets = useMemo(() => buildActivityBuckets(documents), [documents]);
-  const activityMax = useMemo(
-    () => Math.max(...activityBuckets.map((d) => Math.max(d.uploads, d.indexed)), 1),
-    [activityBuckets]
-  );
-  const yAxisMax = useMemo(() => {
-    const tiers = [10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000];
-    for (const t of tiers) {
-      if (activityMax <= t) return t;
-    }
-    return Math.ceil(activityMax / 1000) * 1000;
-  }, [activityMax]);
-  const yAxisLabels = useMemo(() => {
-    const step = yAxisMax <= 10 ? 2 : yAxisMax <= 50 ? 10 : yAxisMax <= 200 ? 50 : Math.round(yAxisMax / 5);
-    const labels: number[] = [];
-    for (let v = yAxisMax; v >= 0; v -= step) labels.push(v);
-    if (labels[labels.length - 1] !== 0) labels.push(0);
-    return labels;
-  }, [yAxisMax]);
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const activityBuckets = useMemo(() => buildActivityBuckets(documents, locale), [documents, locale]);
 
   const statusData = useMemo(() => {
     return [
@@ -514,199 +496,16 @@ export function DashboardInsights() {
             </span>
           </div>
         </div>
-        <div className="relative h-[220px] w-full">
-          {isLoading ? (
-            <div className="flex h-full items-center justify-center text-[13px] text-ink-muted">Loading...</div>
-          ) : (
-            <>
-              <div className="relative h-[190px] w-full">
-                {/* Y-axis labels */}
-                <div className="absolute left-0 top-0 flex h-full flex-col justify-between pr-2 text-[10px] text-ink-muted nums">
-                  {yAxisLabels.map((n) => (
-                    <span key={n}>{n}</span>
-                  ))}
-                </div>
-                <div className="ml-6 h-full">
-                  <svg
-                    className="h-full w-full"
-                    viewBox={`0 0 ${activityBuckets.length * 40} 190`}
-                    preserveAspectRatio="none"
-                  >
-                    {/* Grid lines */}
-                    {yAxisLabels.map((n) => {
-                      const y = 185 - (n / yAxisMax) * 180;
-                      return (
-                        <line
-                          key={`grid-${n}`}
-                          x1="0"
-                          y1={y}
-                          x2={activityBuckets.length * 40}
-                          y2={y}
-                          stroke="currentColor"
-                          className="text-paper-line/40"
-                          strokeWidth="1"
-                        />
-                      );
-                    })}
-                    {/* Uploads area */}
-                    <path
-                      fill="#f2fb48"
-                      fillOpacity="0.1"
-                      d={`${activityBuckets
-                        .map((b, i) => {
-                          const x = i * 40 + 20;
-                          const y = 185 - (b.uploads / yAxisMax) * 180;
-                          return `${i === 0 ? "M" : "L"} ${x},${y}`;
-                        })
-                        .join(" ")} L ${(activityBuckets.length - 1) * 40 + 20},185 L 20,185 Z`}
-                    />
-                    {/* Indexed area */}
-                    <path
-                      fill="#f2fb48"
-                      fillOpacity="0.05"
-                      d={`${activityBuckets
-                        .map((b, i) => {
-                          const x = i * 40 + 20;
-                          const y = 185 - (b.indexed / yAxisMax) * 180;
-                          return `${i === 0 ? "M" : "L"} ${x},${y}`;
-                        })
-                        .join(" ")} L ${(activityBuckets.length - 1) * 40 + 20},185 L 20,185 Z`}
-                    />
-                    {/* Uploads smooth line */}
-                    <path
-                      fill="none"
-                      stroke="#f2fb48"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d={activityBuckets
-                        .map((b, i) => {
-                          const x = i * 40 + 20;
-                          const y = 185 - (b.uploads / yAxisMax) * 180;
-                          if (i === 0) return `M ${x},${y}`;
-                          const prevX = (i - 1) * 40 + 20;
-                          const prevY = 185 - (activityBuckets[i - 1].uploads / yAxisMax) * 180;
-                          const cpx1 = prevX + 13;
-                          const cpx2 = x - 13;
-                          return `C ${cpx1},${prevY} ${cpx2},${y} ${x},${y}`;
-                        })
-                        .join(" ")}
-                    />
-                    {/* Indexed smooth line — dashed */}
-                    <path
-                      fill="none"
-                      stroke="#f2fb48"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeDasharray="6 4"
-                      strokeOpacity="0.4"
-                      d={activityBuckets
-                        .map((b, i) => {
-                          const x = i * 40 + 20;
-                          const y = 185 - (b.indexed / yAxisMax) * 180;
-                          if (i === 0) return `M ${x},${y}`;
-                          const prevX = (i - 1) * 40 + 20;
-                          const prevY = 185 - (activityBuckets[i - 1].indexed / yAxisMax) * 180;
-                          const cpx1 = prevX + 13;
-                          const cpx2 = x - 13;
-                          return `C ${cpx1},${prevY} ${cpx2},${y} ${x},${y}`;
-                        })
-                        .join(" ")}
-                    />
-                    {/* Hover zones */}
-                    {activityBuckets.map((b, i) => (
-                      <rect
-                        key={`hover-${i}`}
-                        x={i * 40}
-                        y="0"
-                        width="40"
-                        height="190"
-                        fill="transparent"
-                        className="cursor-pointer"
-                        onMouseEnter={() => setHoveredIndex(i)}
-                        onMouseLeave={() => setHoveredIndex(null)}
-                      />
-                    ))}
-                    {/* Data points for uploads */}
-                    {activityBuckets.map((b, i) => {
-                      const x = i * 40 + 20;
-                      const y = 185 - (b.uploads / yAxisMax) * 180;
-                      return (
-                        <circle
-                          key={`up-${i}`}
-                          cx={x}
-                          cy={y}
-                          r="4"
-                          fill="#f2fb48"
-                          className="pointer-events-none"
-                        />
-                      );
-                    })}
-                    {/* Data points for indexed */}
-                    {activityBuckets.map((b, i) => {
-                      const x = i * 40 + 20;
-                      const y = 185 - (b.indexed / yAxisMax) * 180;
-                      return (
-                        <circle
-                          key={`idx-${i}`}
-                          cx={x}
-                          cy={y}
-                          r="3"
-                          fill="#f2fb48"
-                          fillOpacity="0.4"
-                          className="pointer-events-none"
-                        />
-                      );
-                    })}
-                    {/* Hover line */}
-                    {hoveredIndex !== null && (
-                      <line
-                        x1={hoveredIndex * 40 + 20}
-                        y1="5"
-                        x2={hoveredIndex * 40 + 20}
-                        y2="185"
-                        stroke="currentColor"
-                        className="text-paper-line"
-                        strokeWidth="1"
-                        strokeDasharray="4 2"
-                      />
-                    )}
-                  </svg>
-                </div>
-                {/* Tooltip */}
-                {hoveredIndex !== null && (
-                  <div
-                    className="absolute z-20 -translate-x-1/2 whitespace-nowrap rounded-lg border border-paper-line bg-paper-card px-3 py-2 text-[12px] shadow-node"
-                    style={{
-                      left: `calc(${(hoveredIndex * 40 + 20) / (activityBuckets.length * 40) * 100}% + 24px)`,
-                      top: "10px"
-                    }}
-                  >
-                    <p className="mb-1 font-medium text-ink-muted">{activityBuckets[hoveredIndex].date}</p>
-                    <div className="flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full bg-accent" />
-                      <span className="text-ink-muted">{copy.activityUploads}:</span>
-                      <span className="font-semibold nums">{activityBuckets[hoveredIndex].uploads}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full bg-accent opacity-40" />
-                      <span className="text-ink-muted">{copy.activityIndexed}:</span>
-                      <span className="font-semibold nums">{activityBuckets[hoveredIndex].indexed}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div className="ml-6 flex gap-[6px] px-1 pt-1.5">
-                {activityBuckets.map((b) => (
-                  <div key={b.date} className="flex-1 text-center text-[10px] text-ink-muted nums">
-                    {b.label}
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
+        {isLoading ? (
+          <div className="flex h-[220px] items-center justify-center text-[13px] text-ink-muted">—</div>
+        ) : (
+          <ActivityChart
+            buckets={activityBuckets}
+            uploadsLabel={copy.activityUploads}
+            indexedLabel={copy.activityIndexed}
+            locale={locale}
+          />
+        )}
       </article>
 
       {/* Bento row 3: Library + Side panels */}
@@ -810,7 +609,7 @@ export function DashboardInsights() {
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[13px] font-medium">{doc.filename}</span>
                       <span className="nums block truncate text-[11.5px] text-ink-muted">
-                        {copy.chunkCount(doc.chunk_count)} · {formatShortDate(doc.created_at)}
+                        {copy.chunkCount(doc.chunk_count)} · {formatShortDate(doc.created_at, locale)}
                       </span>
                     </span>
                   </Link>
