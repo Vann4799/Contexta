@@ -126,7 +126,7 @@ export function UsagePanel() {
 
   const metricCards = [
     { label: copy.totalRequests, value: totals.total, icon: Zap, color: "text-accent" },
-    { label: copy.allowed, value: totals.allowed, icon: ShieldCheck, color: "text-[#4f7e4d]" },
+    { label: copy.allowed, value: totals.allowed, icon: ShieldCheck, color: "text-[#7c5210]" },
     { label: copy.rejected, value: totals.rejected, icon: ShieldX, color: "text-[#b54a4a]" },
     { label: copy.activeKeys, value: totals.activeKeys, icon: Key, color: "text-[#6b5b95]" }
   ];
@@ -199,7 +199,7 @@ export function UsagePanel() {
               </div>
               <div className="flex items-center gap-4 text-[11px] text-ink-muted">
                 <span className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-[#4f7e4d]" />
+                  <span className="h-2 w-2 rounded-full bg-[#d9e23a]" />
                   {copy.allowed}
                 </span>
                 <span className="flex items-center gap-1.5">
@@ -274,7 +274,7 @@ export function UsagePanel() {
                             </div>
                           </td>
                           <td className="nums px-3 py-3 text-right font-semibold">{keyTotal.toLocaleString()}</td>
-                          <td className="nums px-3 py-3 text-right text-[#4f7e4d]">{keyAllowed.toLocaleString()}</td>
+                          <td className="nums px-3 py-3 text-right text-[#7c5210]">{keyAllowed.toLocaleString()}</td>
                           <td className="nums px-3 py-3 text-right text-[#b54a4a]">{keyRejected.toLocaleString()}</td>
                           <td className="px-3 py-3">
                             {usage?.by_day?.length ? (
@@ -290,8 +290,8 @@ export function UsagePanel() {
                                       style={{
                                         height: `${height}px`,
                                         background: rejectedRatio > 0.5
-                                          ? `linear-gradient(to top, #b54a4a, #b54a4a ${rejectedRatio * 100}%, #4f7e4d ${rejectedRatio * 100}%)`
-                                          : `linear-gradient(to top, #4f7e4d, #4f7e4d ${(1 - rejectedRatio) * 100}%, #b54a4a ${(1 - rejectedRatio) * 100}%)`
+                                          ? `linear-gradient(to top, #b54a4a, #b54a4a ${rejectedRatio * 100}%, #d9e23a ${rejectedRatio * 100}%)`
+                                          : `linear-gradient(to top, #d9e23a, #d9e23a ${(1 - rejectedRatio) * 100}%, #b54a4a ${(1 - rejectedRatio) * 100}%)`
                                       }}
                                       title={`${day.date}: ${total} requests`}
                                     />

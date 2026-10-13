@@ -16,6 +16,8 @@ export function ContextaLogo({ compact = false, variant = "light", size }: Conte
       alt="Contexta"
       width={2172}
       height={724}
+      // Without this the 1x candidate resolves to 3840w: 56 kB for a 180 px mark.
+      sizes={`${width}px`}
       priority
       className="h-auto object-contain"
       style={{ width: `${width}px` }}

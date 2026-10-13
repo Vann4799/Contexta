@@ -41,7 +41,7 @@ export default function ApiActivityChart({
             );
           }}
         />
-        <Bar dataKey="allowed" name={allowedLabel} stackId="a" fill="#4f7e4d" radius={[0, 0, 0, 0]} barSize={20} />
+        <Bar dataKey="allowed" name={allowedLabel} stackId="a" fill="#d9e23a" radius={[0, 0, 0, 0]} barSize={20} />
         <Bar dataKey="rejected" name={rejectedLabel} stackId="a" fill="#b54a4a" radius={[4, 4, 0, 0]} barSize={20} />
       </BarChart>
     </ResponsiveContainer>
