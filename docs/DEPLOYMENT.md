@@ -265,8 +265,8 @@ with nothing recording it: `docker ps` was still listing the container. The on-b
 What it checks:
 
 ```text
-GET https://api.3.27.119.26.sslip.io/health          200 and a body containing "service":"contexta-api"
-GET https://api.3.27.119.26.sslip.io/health/vector    200 and a body containing "status":"ok"
+GET https://api.contexta.my.id/health          200 and a body containing "service":"contexta-api"
+GET https://api.contexta.my.id/health/vector    200 and a body containing "status":"ok"
 GET https://contexta.my.id/robots.txt                 200
 ```
 

@@ -103,60 +103,91 @@ https://web-hazel-beta-36.vercel.app
 
 ## Retiring the raw-IP hostname (Cloudflare cutover)
 
-The API is currently published as `api.<VPS-IP>.sslip.io`. The hostname carries the origin IP, so
-anyone who reads it can reach the origin directly and skip whatever edge protection sits in front of
-the domain. Until this section is done, treat the VPS IP as public knowledge.
+`api.<VPS-IP>.sslip.io` carries the origin IP, so anyone who reads it can reach the origin directly
+and skip whatever edge protection sits in front of the domain. The replacement is
+`api.contexta.my.id`, proxied through Cloudflare, with the origin's `80`/`443` closed to everything
+except Cloudflare's ranges.
 
-Measured on 2026-10-14, which narrows what this cutover actually has to fix:
+Measured on 2026-10-14, which narrowed what this cutover actually had to fix:
 
 - `ss -tlnp` shows only `22`, `80` and `443` bound on the host. `api` (8001), `embeddings` (8070),
   `mcp` (8080) and `qdrant` (6333-6334) are published to the docker network only, with no host port,
   so there is no extra service to lock down — Caddy is the entire public surface.
-- `https://<VPS-IP>/health` does **not** serve the API today. The one site block is `{$API_DOMAIN}`,
-  so a handshake for the bare IP or for any other Host has no certificate to offer and fails. Port 80
-  answers `308` and redirects to the sslip name. So the bypass to close is the sslip *hostname*, not
-  a working IP-address endpoint.
-- `contexta.my.id` is already a Cloudflare zone (`arely`/`mitchell.ns.cloudflare.com`, apex `A`
-  `76.76.21.21` -> Vercel, DNS only). Step 1 is done. `api.contexta.my.id` does not exist yet.
-- The `DOCKER-USER` chain is empty and present, which is the hook Docker leaves for exactly this:
-  step 7 can be enforced on the box, so it does not need the AWS console.
+- `https://<VPS-IP>/health` does **not** serve the API. The one site block is `{$API_DOMAIN}`, so a
+  handshake for the bare IP or any other Host has no certificate to offer and fails. Port 80 answers
+  `308` and redirects to the sslip name. The bypass to close is therefore the sslip *hostname*, not a
+  working IP-address endpoint.
+- `contexta.my.id` is a Cloudflare zone (`arely`/`mitchell.ns.cloudflare.com`). The web hostname (apex
+  `A` `76.76.21.21` and `www` CNAME) is **DNS only**, pointed straight at Vercel — the edge settings
+  below therefore only ever affect `api`.
+- The `DOCKER-USER` chain is empty and present, which is the hook Docker leaves for exactly this, so
+  step 7 can be enforced on the box and does not need the AWS console.
 
-Step 2 needs the zone; everything else can be run from the VPS or the repo.
+Status: steps 1-4 are done. Steps 5-7 (this repo's URLs, Supabase, the origin lock) are open.
 
 1. Done — the zone exists and the nameservers are already on Cloudflare.
-2. Create an `A` record `api` pointing at the VPS IP as **DNS only** for now (grey cloud).
-   Keep ports `80`/`443` reachable as the Requirements section asks for.
-3. On the VPS, swap the hostname the stack answers for, in `.env.production`:
+2. Done — `A api -> <VPS-IP>`, created as **DNS only** on purpose (see step 3).
+3. Done. `.env.production` now answers for both names while the sslip hostname is still in use:
 
    ```text
-   API_DOMAIN=api.contexta.my.id
-   MCP_ALLOWED_HOSTS=api.contexta.my.id
+   API_DOMAIN=api.contexta.my.id, api.3.27.119.26.sslip.io
+   MCP_ALLOWED_HOSTS=api.contexta.my.id, api.3.27.119.26.sslip.io
    ```
 
-   `deploy/vps/Caddyfile` is parameterized on `{$API_DOMAIN}`, so this is the only change Caddy
-   needs. Do the cutover while the record is still DNS-only: Caddy must complete a Let's Encrypt
-   HTTP-01 challenge for the new name before any proxying is involved.
+   `deploy/vps/Caddyfile` is parameterized on `{$API_DOMAIN}`, so this is the only change Caddy needs.
+   The record was still DNS-only when this ran, so Caddy completed a Let's Encrypt HTTP-01 challenge
+   for the new name before any proxying was involved — measured `SAN: DNS:api.contexta.my.id`, and the
+   sslip hostname kept answering `200` throughout.
+
+   **Caddyfile address parsing is a trap here.** The value above is substituted into the site
+   address *before* the Caddyfile is tokenized, so:
+   - a bare comma (`a,b`) is a hard runtime error — `Site addresses cannot contain a comma ','`, and
+     Caddy crash-loops, i.e. the API goes down;
+   - a bare space (`a b`) parses but silently keeps **only the first name**, so the second hostname
+     stops answering;
+   - the two forms that work are `{$A} {$B}` (two placeholders) or one value using **comma + space**.
+
+   `caddy validate` prints `Valid configuration` for both broken forms. The only check that tells the
+   truth is `caddy adapt`, reading the host matcher:
+
+   ```bash
+   docker run --rm --env-file /opt/contexta/.env.production \
+     -v /opt/contexta/deploy/vps/Caddyfile:/etc/caddy/Caddyfile:ro \
+     --entrypoint caddy caddy:2.8-alpine adapt --config /etc/caddy/Caddyfile --adapter caddyfile \
+     | grep -o '"host":\[[^]]*\]'      # must list BOTH names
+   ```
+
+   Run that gate *before* `up -d`; the crash loop above cost about a minute of downtime, and the
+   rollback is `cp -a .env.production.bak <file> && docker compose -f docker-compose.prod.yml up -d caddy`.
 
    ```bash
    git pull
-   docker compose -f docker-compose.prod.yml up -d --build
+   docker compose -f docker-compose.prod.yml up -d caddy mcp
    curl -i https://api.contexta.my.id/health
    ```
 
-4. Switch the record to **Proxied** (orange cloud). In Cloudflare: SSL/TLS mode `Full (strict)`,
-   `Always Use HTTPS` on, WAF managed rulesets on, and a rate-limiting rule on `/v1/*` and `/chat`.
-5. Point the web app at the new host and redeploy:
+4. Done — the record is **Proxied**, `ssl=strict`, `always_use_https=on`. Verified from off the box:
+   `api.contexta.my.id` resolves to `104.21.25.118`/`172.67.134.52`, `/health` 200 through the proxy,
+   `http://` 301s to `https://`, and `/mcp` still answers `401` (auth required, not an edge error).
+   The plan on this zone is **Free Website**, which has no rate-limiting rules, so any `/v1/*` or
+   `/chat` throttling has to come from the app's own limiter or a plan change.
+5. Point the web app and the monitors at the new host, then redeploy:
 
    ```bash
-   npx vercel env add NEXT_PUBLIC_API_BASE_URL production        # https://api.contexta.my.id
-   npx vercel env add NEXT_PUBLIC_PUBLIC_API_BASE_URL production
+   npx vercel env rm NEXT_PUBLIC_API_BASE_URL production --yes
+   npx vercel env add NEXT_PUBLIC_API_BASE_URL production       # https://api.contexta.my.id
    npx vercel deploy --prod
    ```
 
-6. In Supabase → Authentication → URL Configuration, replace every sslip.io entry in Site URL and
-   Redirect URLs with `https://api.contexta.my.id`.
-7. Close the origin so only Cloudflare can reach `80`/`443`. Do it on the box, in `DOCKER-USER`,
-   which Docker evaluates before its own published-port rules and which survives `docker compose up`:
+   `NEXT_PUBLIC_PUBLIC_API_BASE_URL` is intentionally *not* set; the code fallback in
+   `apps/web/lib/api.ts` carries the hostname. Also replaced in-repo: `.github/workflows/uptime.yml`
+   (`API_BASE`), `docs/api-v1.md`, `docs/DEPLOYMENT.md`.
+6. Replace every sslip.io entry in Supabase → Authentication → URL Configuration (Site URL and
+   Redirect URLs). The callback host is the **web** origin (`https://contexta.my.id/auth/callback`),
+   never the API host, so nothing there should name `api.` at all.
+7. **Last**, and only once nothing legitimate still calls the origin directly. Close `80`/`443` to
+   non-Cloudflare sources in `DOCKER-USER`, which Docker evaluates before its own published-port rules
+   and which survives `docker compose up`:
 
    ```bash
    sudo iptables -N CONTEXTA-ORIGIN 2>/dev/null
@@ -168,6 +199,19 @@ Step 2 needs the zone; everything else can be run from the VPS or the repo.
    sudo iptables -I DOCKER-USER 2 -p tcp -m multiport --dports 80,443 -j CONTEXTA-ORIGIN
    sudo iptables -A DOCKER-USER -p tcp -m multiport --dports 80,443 -j DROP
    ```
+
+   Two reasons this cannot move earlier in the order:
+   - Vercel prod and the uptime workflow call the API host by name, and a GitHub runner or Vercel
+     function is not a Cloudflare IP — locking first would drop live traffic;
+   - after the lock, Let's Encrypt can only renew through Cloudflare. `api.contexta.my.id` is proxied,
+     so its HTTP-01 request arrives from a Cloudflare range and gets through; the sslip name is **not**
+     on Cloudflare, so its renewal would fail. Drop it from `API_DOMAIN` and `MCP_ALLOWED_HOSTS` in the
+     same change:
+
+     ```text
+     API_DOMAIN=api.contexta.my.id
+     MCP_ALLOWED_HOSTS=api.contexta.my.id
+     ```
 
    Port 22 is untouched, so SSH keeps working. `docker compose up` leaves `DOCKER-USER` alone, but a
    **Docker daemon or host restart empties it**, so re-run the block above (or boot it from a systemd
@@ -191,11 +235,12 @@ curl -i --max-time 10 --resolve api.contexta.my.id:443:<VPS-IP> https://api.cont
 Run both from **off the box**. This host has no NAT hairpinning, so a request to its own public IP
 from inside it fails no matter what the firewall does, and a failure there is not evidence.
 
-The last command answering `200` after step 7 means the lockdown did not land. It is also the reason
+`curl -k https://<VPS-IP>/health` is not a valid test at any point in this cutover: Caddy has never
+served a certificate for the bare IP, so it fails before the lock and after it.
+
+The `--resolve` command answering `200` after step 7 means the lockdown did not land. It is also why
 step 7 comes last: while the record is proxied, real traffic arrives from Cloudflare's ranges and this
-direct request is only ever made by you. Note that `curl -k https://<VPS-IP>/health` is **not** a valid
-test — Caddy has no certificate for the bare IP, so that handshake fails whether or not the firewall
-rule is in place.
+direct request is only ever made by you.
 
 **On the proxy-side rate limit.** The stock `caddy:2.8-alpine` image has no `rate_limit` directive —
 it ships as a plugin build, so the "at minimum, rate-limit at Caddy" fallback is not available here

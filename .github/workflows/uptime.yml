@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 3
     env:
-      API_BASE: https://api.3.27.119.26.sslip.io
+      API_BASE: https://api.contexta.my.id
       WEB_PROBE: https://contexta.my.id/robots.txt
       ALERT_AFTER_RUNS: 2
       RESULTS: /tmp/contexta-probe-results.txt

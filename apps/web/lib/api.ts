@@ -1187,5 +1187,5 @@ export async function getIntegrationAuthUrl(
  * so apiBaseUrl() is the wrong thing to print inside a curl example.
  */
 export function publicApiBaseUrl() {
-  return process.env.NEXT_PUBLIC_PUBLIC_API_BASE_URL || "https://api.3.27.119.26.sslip.io";
+  return process.env.NEXT_PUBLIC_PUBLIC_API_BASE_URL || "https://api.contexta.my.id";
 }

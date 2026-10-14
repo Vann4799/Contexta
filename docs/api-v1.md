@@ -3,7 +3,7 @@
 Read-only access to your indexed documents, authenticated with an API key instead of a
 user login. Create and manage keys at **Settings → Developer** in the web app.
 
-Base URL: `https://api.3.27.119.26.sslip.io`
+Base URL: `https://api.contexta.my.id`
 
 ## Authentication
 
@@ -129,14 +129,14 @@ The same key works as an MCP server, so an agent can search your documents witho
 writing any HTTP glue:
 
 ```
-https://api.3.27.119.26.sslip.io/mcp
+https://api.contexta.my.id/mcp
 ```
 
 ```json
 {
   "mcpServers": {
     "contexta": {
-      "url": "https://api.3.27.119.26.sslip.io/mcp",
+      "url": "https://api.contexta.my.id/mcp",
       "headers": { "Authorization": "Bearer ctx_live_xxxxxxxxxxxxxxxxxxxxxxxxxx" }
     }
   }
