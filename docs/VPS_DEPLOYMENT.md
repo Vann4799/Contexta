@@ -228,9 +228,12 @@ name is gone from the code, the monitors and `.env.production`.
    The script refuses to run (leaving whatever is already installed alone) if it cannot fetch
    `https://api.cloudflare.com/client/v4/ips` or gets back fewer than 10 ranges, so a failed Cloudflare
    call can never replace the allow-list with an empty one. Beyond the 15 published ranges it accepts
-   `127.0.0.0/8` and `172.16.0.0/12`, because the on-box probes — `/health` from the Caddy guard, the
-   healthcheck inside the docker bridge — are not Cloudflare IPs and neither range is reachable from
-   the internet. Port 22 is deliberately absent, so SSH stays as the way back in.
+   `127.0.0.0/8` and `172.16.0.0/12`, so a probe run *on the box* can still reach the ports — neither
+   range is reachable from the internet. Confirmed by measuring: `curl -k -H "Host: api.contexta.my.id"
+   https://127.0.0.1/health` gets `rc=35` (Caddy refuses the handshake because an IP address carries no
+   SNI), not a timeout, so the packet passed the firewall and the rule counter on
+   `CONTEXTA-ORIGIN` moved. The on-box `caddy-guard.sh` does not need this — it only validates the
+   Caddyfile and never probes a port. Port 22 is deliberately absent, so SSH stays as the way back in.
 
    Why the timer and not just the boot unit: `docker compose up` leaves `DOCKER-USER` alone, but a
    **Docker daemon restart or a host reboot empties it**, and `netfilter-persistent` is *not* installed
