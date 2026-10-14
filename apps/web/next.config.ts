@@ -6,20 +6,46 @@ import type { NextConfig } from "next";
  * A CSP is only safe to enforce when it is derived from configuration: a hard-coded list here
  * would break the app the first time the API moves to another host, and the failure mode is a
  * blank page in production rather than a visible error.
+ *
+ * Each value is reduced to an origin, because a directive takes origins and not URLs: the API
+ * base is a path (`/api/proxy`) wherever the web app is served behind a rewrite, and pasting
+ * that into `connect-src` gives the browser an invalid source to complain about.
  */
-function buildConnectSrc(): string {
-  const origins = [
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_API_BASE_URL,
-  ].filter((value): value is string => Boolean(value));
-
-  if (origins.length < 2) {
-    // Incomplete configuration must not ship a policy that blocks the app. Every https
-    // endpoint stays reachable; everything the policy is actually there for does not.
-    return "'self' https: wss:";
+function connectSrcOrigins(): string[] {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_API_BASE_URL) {
+    return [];
   }
 
-  return ["'self'", ...origins.map((origin) => origin.replace(/\/+$/, "")), "wss:"].join(" ");
+  const origins = new Set<string>();
+  for (const value of [
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_API_BASE_URL,
+  ]) {
+    if (value.startsWith("/")) {
+      // Same origin, which 'self' already covers.
+      continue;
+    }
+    try {
+      const url = new URL(value);
+      if (url.protocol === "https:" || url.protocol === "http:") {
+        origins.add(url.origin);
+      }
+    } catch {
+      // Unparseable configuration falls through to the broad policy below.
+    }
+  }
+
+  // Incomplete or unparseable configuration must not ship a policy that blocks the app. Every
+  // https endpoint stays reachable; everything the policy is actually there for does not.
+  return [...origins];
+}
+
+function buildConnectSrc(): string {
+  const origins = connectSrcOrigins();
+  if (origins.length === 0) {
+    return "'self' https: wss:";
+  }
+  return ["'self'", ...origins, "wss:"].join(" ");
 }
 
 const CSP = [
