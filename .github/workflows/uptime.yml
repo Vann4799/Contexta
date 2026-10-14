@@ -83,8 +83,14 @@ jobs:
           # silently evicted. Only a `failure` conclusion extends the streak; cancelled, skipped and
           # timed-out runs break it, so runner infrastructure never pages anyone. Dispatched runs
           # count as probes too, which is what makes the page path testable by hand.
+          #
+          # Restricted to the two triggers this workflow has. A commit whose workflow file cannot be
+          # parsed still produces a completed `failure` run on `push` with zero jobs, and that run
+          # never probed anything: counting it would make the next healthy run declare a recovery
+          # from an outage that never happened, and send it to a phone.
           conclusions="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/uptime.yml/runs?per_page=30" \
-            --jq '.workflow_runs[] | select(.status=="completed") | .conclusion' \
+            --jq '.workflow_runs[] | select(.status=="completed")
+                   | select(.event=="schedule" or .event=="workflow_dispatch") | .conclusion' \
             2>/dev/null)"
           if [ -z "$conclusions" ]; then
             echo "::warning::Could not read previous run history, so the streak restarts at 0 and this run cannot page."
