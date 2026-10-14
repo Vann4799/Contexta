@@ -1,3 +1,5 @@
+import { takeBootData } from "@/lib/boot-prefetch";
+
 export type DocumentStatus = "uploaded" | "processing" | "ready" | "failed" | "trashed";
 
 export type DocumentType =
@@ -307,6 +309,16 @@ export async function listDocuments(accessToken: string) {
 }
 
 export async function getIndexingHealth(accessToken?: string) {
+  const prefetched = accessToken ? takeBootData<IndexingHealth>("indexingHealth", accessToken) : null;
+  if (prefetched) {
+    try {
+      return await prefetched;
+    } catch {
+      // Same contract as the account summary: a pre-hydration miss is retried here rather
+      // than reported, because this caller cannot tell a network failure from no data.
+    }
+  }
+
   const response = await fetchApi("/health/indexing", {
     cache: "no-store",
     ...(accessToken ? { headers: { Authorization: `Bearer ${accessToken}` } } : {})
@@ -854,6 +866,16 @@ export type AccountSummary = {
 };
 
 export async function getAccountSummary(accessToken: string): Promise<AccountSummary> {
+  const prefetched = takeBootData<AccountSummary>("accountSummary", accessToken);
+  if (prefetched) {
+    try {
+      return await prefetched;
+    } catch {
+      // The pre-hydration copy is gone; fall through to the request this caller would
+      // have made itself, so a refreshed token never surfaces as a failure here.
+    }
+  }
+
   const response = await fetchApi("/account/summary", {
     cache: "no-store",
     headers: { Authorization: `Bearer ${accessToken}` }
