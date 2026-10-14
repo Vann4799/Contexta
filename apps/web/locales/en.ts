@@ -1284,6 +1284,507 @@ export const en = {
     readTerms: "Terms of Service",
     readPrivacy: "Privacy Policy"
   },
+  site: {
+    nav: {
+      signIn: "Sign in",
+      getStarted: "Get started",
+      links: [
+        { label: "Pricing", href: "/pricing" },
+        { label: "Docs", href: "/docs" },
+        { label: "Changelog", href: "/changelog" }
+      ]
+    },
+    footer: {
+      tagline: "Document intelligence you can question. Upload PDFs, chat with citations, and call the same retrieval from your own code.",
+      rights: "© 2026 Contexta. All rights reserved.",
+      contactCta: "Contact us",
+      columns: {
+        product: "Product",
+        company: "Company",
+        resources: "Resources",
+        legal: "Legal"
+      },
+      links: {
+        features: "Features",
+        howItWorks: "How it works",
+        pricing: "Pricing",
+        changelog: "Changelog",
+        about: "About",
+        blog: "Blog",
+        careers: "Careers",
+        contact: "Contact",
+        documentation: "Documentation",
+        apiReference: "API Reference",
+        guides: "Guides",
+        support: "Support",
+        privacy: "Privacy",
+        terms: "Terms",
+        security: "Security",
+        gdpr: "GDPR"
+      }
+    },
+    pricing: {
+      eyebrow: "Pricing",
+      title: "You only ever pay for headroom",
+      lede:
+        "Every plan gets the same product. The tiers differ in five limits that the server actually enforces: documents, storage, API keys, API requests per day and chat messages per day.",
+      rows: {
+        documents: "Documents",
+        storage: "Storage",
+        apiKeys: "API keys",
+        apiRequests: "API requests / day",
+        chatMessages: "Chat messages / day"
+      },
+      names: {
+        free: "Free",
+        pro: "Pro",
+        enterprise: "Enterprise"
+      },
+      blurbs: {
+        free: "Enough to index a real shelf of papers and see whether the answers hold up.",
+        pro: "The working plan: a few hundred documents, room for a daily habit of chat, and keys for your own tooling.",
+        enterprise: "Same product, larger ceilings — for a corpus you keep growing."
+      },
+      perMonth: "/month",
+      perYear: "per year, billed yearly",
+      freeForever: "Free forever",
+      popularBadge: "Most chosen",
+      ctaFree: "Create an account",
+      ctaPaid: "Choose in Billing",
+      includedTitle: "In every plan",
+      included: [
+        "Chat grounded in your own documents, citing document, page and section",
+        "A stored brief per document: summary, key points, people, dates and amounts",
+        "PDF and DOCX upload with real indexing progress",
+        "Markdown conversion and full-corpus export as Markdown or JSONL",
+        "Personal API keys for the /v1 retrieval endpoints and the MCP server",
+        "Email or Google sign-in, with password management for either",
+        "Trash, restore, activity log and in-app notifications",
+        "The whole interface in English or Indonesian"
+      ],
+      faqTitle: "Questions people actually ask",
+      faq: [
+        {
+          question: "What happens when I hit a limit?",
+          answer:
+            "The gate stops the new action — an upload, a key creation, a chat message — and tells you which limit you reached. Nothing you already uploaded is deleted, so removing documents or upgrading is what gets you moving again."
+        },
+        {
+          question: "Can I change plans later?",
+          answer:
+            "Yes. Plan changes happen on the Billing page through Stripe Checkout, and the new limits apply as soon as the subscription is active."
+        },
+        {
+          question: "Do you store my card?",
+          answer:
+            "No. Card details stay with Stripe; Contexta only keeps the subscription status and the plan it maps to."
+        }
+      ]
+    },
+    changelog: {
+      eyebrow: "Changelog",
+      title: "What changed",
+      lede: "Written from the commits that shipped, newest first. Dates are deployment dates, not plan dates.",
+      entries: [
+        {
+          date: "2026-10-14",
+          title: "Charts you can use with a thumb",
+          body:
+            "The dashboard stopped shipping a charting library: both charts are drawn as plain SVG now and the largest bundle on /dashboard fell from 314 kB to 170 kB. Dense charts answer to a drag across the columns instead of a precise tap, form controls are at least 16 px on phones so iOS stops zooming the page, and wide tables now say that they scroll sideways."
+        },
+        {
+          date: "2026-10-13",
+          title: "Briefs read the whole document",
+          body:
+            "The Intelligence panel used to summarise from the first chunk only. It now samples windows spread across the corpus, merges them into one brief, and publishes the coverage it managed to read. The result is stored with the document, so reopening the page costs nothing."
+        },
+        {
+          date: "2026-10-13",
+          title: "Answers stopped running out of budget",
+          body:
+            "Two production 502s fixed. A truncated JSON answer is now repaired instead of thrown away, and brief requests no longer let the model spend the entire token budget on hidden reasoning before it writes anything."
+        },
+        {
+          date: "2026-10-13",
+          title: "Uploads finish",
+          body:
+            "Embeddings are batched at 128, transient indexing failures retry three times with backoff, storage calls time out at 300 s with a readable message, and the upload bar reports real bytes instead of a ticking animation."
+        },
+        {
+          date: "2026-10-13",
+          title: "Retrieval quality and honest scores",
+          body:
+            "Chat answers now run a relevance threshold and a prompt budget, and the relevance number shown is the fused score as a whole percentage. When the retrieved material is too thin to answer, the workspace says so instead of producing a confident paragraph."
+        },
+        {
+          date: "2026-10-11",
+          title: "Paid plans went live",
+          body:
+            "Stripe checkout wired to real plan tiers, a paywall that appears at the gate instead of a decorative banner, email verification, and a first-run onboarding flow."
+        },
+        {
+          date: "2026-10-10",
+          title: "Sign in with Google",
+          body:
+            "Google OAuth alongside email and password, with password management added to the profile so either sign-in method can set or change a password."
+        },
+        {
+          date: "2026-10-09",
+          title: "The workspace became a sidebar app",
+          body:
+            "Redesigned dashboard with an activity chart, a dedicated usage page, API keys moved to their own page, and trash, notifications and an activity log wired to real data."
+        },
+        {
+          date: "2026-10-07",
+          title: "Retrieval became an API and an MCP server",
+          body:
+            "Owners can mint and retire API keys, the /v1 endpoints serve retrieval, document listing and export, and the same key works as an MCP credential for the three Contexta tools."
+        }
+      ]
+    },
+    about: {
+      eyebrow: "About",
+      title: "A small product for reading your own documents",
+      lede:
+        "Contexta indexes PDFs and DOCX files so you can ask them questions and get answers that point back at the page they came from.",
+      sections: [
+        {
+          title: "What it is",
+          body:
+            "A workspace and a retrieval service in one. You upload documents, Contexta chunks and indexes them, and then three things read that index: the chat, the automatic brief on every document, and an API key you can call from your own code."
+        },
+        {
+          title: "How an answer is built",
+          body:
+            "Your question is embedded and also searched as keywords; the two result lists are fused with reciprocal rank fusion so neither arm can win alone; the surviving chunks are budgeted into a prompt; and the model answers from that context only. Each citation carries the document, the page and the section heading it came from."
+        },
+        {
+          title: "What it refuses to do",
+          body:
+            "It does not train on your documents, it does not fill a gap with general knowledge and present it as a source, and it does not show a relevance number it cannot back with a chunk. When retrieval is thin, the answer says the document does not cover it."
+        },
+        {
+          title: "How it is run",
+          body:
+            "An independent product, hosted on infrastructure we operate ourselves: a Next.js front end, a FastAPI service, a Python indexing worker, Postgres with row-level security, and a vector store we run. Prices are whole dollars and the limits are published on the pricing page."
+        }
+      ],
+      stackTitle: "The stack, in plain terms",
+      stack: [
+        "Next.js 15 front end, deployed on Vercel",
+        "FastAPI service plus a separate Python indexing worker",
+        "Supabase Postgres with row-level security on every table",
+        "Qdrant as the vector store, on our own server",
+        "An embedding model through OpenRouter, DeepSeek for answers",
+        "Stripe for subscriptions"
+      ]
+    },
+    blog: {
+      eyebrow: "Blog",
+      title: "Notes from building it",
+      lede: "Short write-ups about decisions we actually made, with the measurement that forced them.",
+      posts: [
+        {
+          date: "2026-10-14",
+          title: "We deleted the chart library for a 130 pixel donut",
+          excerpt: "A dependency was most of the dashboard bundle and bought us two shapes.",
+          body: [
+            "On a throttled phone the dashboard took 4.1 seconds to draw its charts. The waterfall was not subtle: 388 kB of JavaScript, and roughly 130 kB of it was a charting library used for one donut and one bar chart. Recharts also fought us on touch targets — fourteen columns inside a 300 pixel card is about 21 pixels per tap, which is not a thumb-sized control.",
+            "Both charts are hand-drawn SVG now. Because the library was ours to replace, we could change the interaction too: dragging across the chart scrubs the selection instead of requiring a precise tap, and the axis scales to the data instead of always topping out at ten. The largest chunk on /dashboard went from 314 kB to 170 kB. The lesson we keep: measure the bundle before you defend it."
+          ]
+        },
+        {
+          date: "2026-10-13",
+          title: "The model that spent the whole budget thinking",
+          excerpt: "A 502 with a valid-looking error message, caused by tokens we never counted.",
+          body: [
+            "Document briefs started failing in production with an empty answer. The request was fine, the retrieval was fine, and the model had used its entire max_tokens on hidden reasoning and returned no content at all. Our retry logic could not help: five calls at 42 seconds each had already blown the client timeout.",
+            "Two changes fixed it. Brief generation runs with thinking disabled, and a response that arrives truncated is now repaired — we keep the fields that did form and mark the answer truncated rather than discarding the call. The deeper lesson is about testing: a suite that stubs the answer generator never touches a token budget, so any paid path has to be measured live, and measuring means counting characters against the source text instead of watching for a 200."
+          ]
+        },
+        {
+          date: "2026-10-11",
+          title: "A paywall the server agrees with",
+          excerpt: "The UI gate and the API gate read one table, or the banner is a lie.",
+          body: [
+            "The upgrade banner existed before any limit did. Wiring billing meant picking the five numbers that actually matter — documents, storage, keys, API requests per day, chat messages per day — and having the API answer every mutation with a specific over-limit code that the front end can render as a modal.",
+            "That ordering is the part worth stating: define the limits in one place, enforce them in the service, and let the interface only report what the server said. A paywall that fires before the server rejects is a bug users feel as a lie."
+          ]
+        }
+      ]
+    },
+    careers: {
+      eyebrow: "Careers",
+      title: "No open roles right now",
+      lede:
+        "Contexta is run by a small independent team and the work in flight is not something we can hand to someone we have not worked with. That changes when it needs to.",
+      lookingTitle: "What the work looks like",
+      looking: [
+        "Retrieval quality: fusion, chunk windows, and eval sets measured against real documents instead of sample questions",
+        "Inference cost control: token budgets, truncation repair, per-day quotas that survive production traffic",
+        "Self-hosted operations: containers, TLS termination, migrations applied to a live database",
+        "Front-end work judged by a throttled phone, not a desktop dev server"
+      ],
+      howTitle: "If you still want to talk",
+      howBody:
+        "There is no application form and we will not pretend there is one. The contact page lists the in-app routes that reach us, and telling us what you have shipped is worth more than a cover letter.",
+      cta: "Go to contact"
+    },
+    contact: {
+      eyebrow: "Contact",
+      title: "How to reach us",
+      lede:
+        "Contexta does not have a public support inbox or an issue tracker yet. Rather than print an address nobody reads, these are the routes that actually reach the product.",
+      channelsTitle: "In-app routes",
+      channels: [
+        {
+          title: "Help and troubleshooting",
+          body: "How indexing, chat and conversion are meant to behave, plus the problems that come up most.",
+          cta: "Open Help",
+          href: "/help"
+        },
+        {
+          title: "Plan, billing and invoices",
+          body: "Change plan or manage the Stripe subscription from the billing screen in your workspace.",
+          cta: "Open Billing",
+          href: "/billing"
+        },
+        {
+          title: "Your data, export and deletion",
+          body: "Export the whole corpus, delete a single document, or close the account from your profile.",
+          cta: "Open Profile",
+          href: "/profile"
+        },
+        {
+          title: "API keys and integrations",
+          body: "Mint or retire keys and review recent retrieval traffic on the API keys page.",
+          cta: "Open API keys",
+          href: "/api-keys"
+        }
+      ],
+      securityTitle: "Reporting a security problem",
+      securityBody:
+        "Use the same in-app routes for now, and describe the smallest request that reproduces it. The Security page explains what is protected and what is not, so you can tell a real finding from a known gap.",
+      securityCta: "Read the security page"
+    },
+    docs: {
+      eyebrow: "Documentation",
+      title: "Start here",
+      lede: "Everything that is written down about Contexta, in one place, and it all links to a page that exists.",
+      startTitle: "First answer in three steps",
+      start: [
+        "Create an account — email and password, or Sign in with Google — and verify the address",
+        "Upload a PDF or DOCX in Documents and wait for the status to reach Ready",
+        "Open Chat, pick that document, and ask something specific; the answer cites the page and section it used"
+      ],
+      startCta: "Create an account",
+      cardsTitle: "Browse",
+      cards: [
+        {
+          title: "API reference",
+          description: "Authentication, the /v1 endpoints, error codes, quota headers and the MCP tools.",
+          cta: "Open reference",
+          href: "/docs/api"
+        },
+        {
+          title: "Guides",
+          description: "Upload to first answer, reading a citation, using a key, and getting your data back out.",
+          cta: "Open guides",
+          href: "/guides"
+        },
+        {
+          title: "Help centre",
+          description: "How the workspace behaves and what to check when an upload or a chat goes wrong.",
+          cta: "Open help",
+          href: "/help"
+        },
+        {
+          title: "Plans and limits",
+          description: "The five numbers the server enforces, per tier.",
+          cta: "See pricing",
+          href: "/pricing"
+        },
+        {
+          title: "Security",
+          description: "What is protected, how keys are stored, and the limits of what we can promise today.",
+          cta: "Read security",
+          href: "/security"
+        },
+        {
+          title: "Your data and GDPR",
+          description: "Rights you can exercise, how to exercise them in-app, and who processes your text.",
+          cta: "Read GDPR",
+          href: "/gdpr"
+        }
+      ]
+    },
+    api: {
+      eyebrow: "API Reference",
+      title: "Retrieval you can call",
+      lede:
+        "The same retrieval the chat uses, behind a bearer token. This reference is public; the live key management screen is in your workspace.",
+      keysCta: "Manage API keys",
+      mcpNote:
+        "One key serves both: the HTTP endpoints and the Contexta MCP tools accept the same credential."
+    },
+    guides: {
+      eyebrow: "Guides",
+      title: "Four things worth knowing",
+      lede: "Short, ordered steps. Each one ends on a screen you can open right now.",
+      guides: [
+        {
+          title: "From upload to first answer",
+          description: "What happens between picking a file and asking about it.",
+          steps: [
+            "Documents → upload a PDF or DOCX. The row shows Processing while the worker chunks and embeds it.",
+            "Wait for Ready. The status is read from the server, so refreshing is honest, not cosmetic.",
+            "Chat → choose the document. One conversation covers one document on purpose, so answers do not get mixed.",
+            "Ask something specific: summarise, count rows, find the highest value, or compare two sections."
+          ],
+          cta: "Open Documents",
+          href: "/documents"
+        },
+        {
+          title: "Reading a citation",
+          description: "How to check an answer instead of trusting it.",
+          steps: [
+            "Every answer lists the chunks it used, numbered. Selecting one opens that passage with its page number and section path.",
+            "Relevance is shown as a percentage of the fused retrieval ceiling, not a raw cosine. Low relevance means the corpus is thin on that question.",
+            "If the answer must contain an exact number, ask for the rows to be listed and check them against the source.",
+            "When nothing qualifies, Contexta says the document does not cover it rather than answering from general knowledge."
+          ],
+          cta: "Open Chat",
+          href: "/chat"
+        },
+        {
+          title: "Using your API key",
+          description: "The key is created once, shown once, and stored hashed.",
+          steps: [
+            "API keys → create a key, give it a name you will recognise when you revoke it.",
+            "Copy it immediately — only a prefix and the last four characters are kept on our side.",
+            "Send it as a bearer token to the /v1 retrieval endpoint; the same credential works for the MCP tools.",
+            "Watch the usage page for allowed versus rejected calls; quota rejections return 429 with the reason."
+          ],
+          cta: "Open API keys",
+          href: "/api-keys"
+        },
+        {
+          title: "Getting your data back out",
+          description: "Export before you delete, and check what is left.",
+          steps: [
+            "Convert a document to Markdown to get the exact text Contexta answers from.",
+            "Export the whole corpus as Markdown or JSONL from the documents panel; JSONL keeps chunk boundaries and metadata.",
+            "Deleting a document removes it from storage and drops its chunks from the index.",
+            "Deleting your account in Profile removes the workspace: documents, keys, and the history that goes with them."
+          ],
+          cta: "Open Profile",
+          href: "/profile"
+        }
+      ]
+    },
+    security: {
+      eyebrow: "Security",
+      title: "What is protected, and what is not claimed",
+      lede:
+        "Contexta is a small product on infrastructure we operate. This page is deliberately specific about both halves of that sentence.",
+      measuresTitle: "In place today",
+      measures: [
+        {
+          title: "API keys are stored hashed",
+          body:
+            "We keep a hash plus the prefix and last four characters. The plaintext is shown once at creation and cannot be recovered afterwards."
+        },
+        {
+          title: "Row-level security on the database",
+          body:
+            "Postgres policies scope rows to the authenticated account, so a token for one workspace cannot read another's documents, subscriptions or notifications."
+        },
+        {
+          title: "Quotas on every paid path",
+          body:
+            "Per-minute and per-day request limits per key, plus a daily budget on chat answers and document briefs. Rejections return 429 with a reason and are logged."
+        },
+        {
+          title: "Scoped keys",
+          body:
+            "A key can be limited to a subset of documents. Requests for material outside the subset return empty results, and exports answer 404."
+        },
+        {
+          title: "TLS everywhere, audited API traffic",
+          body:
+            "The web app is served over HTTPS and the API terminates TLS in front of the service. API calls are logged with the response status and pruned after 90 days."
+        },
+        {
+          title: "Authentication through Supabase Auth",
+          body:
+            "Tokens are verified against the provider's keys, email addresses must be verified, and Google sign-in is optional alongside email and password."
+        }
+      ],
+      disclosureTitle: "Reporting a problem",
+      disclosureBody:
+        "Use the routes on the contact page and include the smallest request that reproduces it. There is no bug bounty and no signed disclosure agreement yet — we would rather say that than imply a programme we do not run.",
+      limitsTitle: "What we cannot promise",
+      limits: [
+        "No SOC 2, ISO 27001 or similar certification, and no third-party penetration test on record",
+        "Answering a question sends the retrieved text to a third-party model (DeepSeek, and an OpenRouter model for embeddings); we do not use your documents to train anything, but the text does leave our infrastructure to produce an answer",
+        "Account deletion removes your workspace data; legal holds and the 90-day API log window are stated on the GDPR page rather than hidden"
+      ],
+      cta: "Contact options"
+    },
+    gdpr: {
+      eyebrow: "GDPR",
+      title: "Your data, in plain operational terms",
+      lede:
+        "What we hold, how long, and the exact screens you can use to exercise each right. No form letters required.",
+      controllerTitle: "Who is responsible",
+      controllerBody:
+        "Contexta is operated by the team behind contexta.my.id, which acts as the controller for the data in your workspace. There is no separate legal entity or DPO to address yet; the contact page lists the routes that reach the operators.",
+      rightsTitle: "Rights and how to use them",
+      rights: [
+        {
+          title: "Access",
+          body: "Profile → export your data, or download the whole corpus as Markdown or JSONL from the documents panel."
+        },
+        {
+          title: "Rectification",
+          body: "Fix your account details in Profile. Document content is corrected by deleting and re-uploading the file, which rebuilds its index."
+        },
+        {
+          title: "Erasure",
+          body: "Delete a document to remove its file and its chunks, or delete the account in Profile to remove the workspace."
+        },
+        {
+          title: "Portability",
+          body: "Export is available in two machine-readable formats and does not require contacting us."
+        },
+        {
+          title: "Restriction of processing",
+          body: "Revoke API keys and remove the documents you do not want queried. Retrieval only sees what is still indexed."
+        },
+        {
+          title: "Object and withdraw consent",
+          body: "Disconnect Google sign-in or an integration, switch off non-essential cookies in the banner, or close the account."
+        }
+      ],
+      retentionTitle: "How long things live",
+      retention: [
+        "Documents and their chunks: until you delete them, or until the account is closed",
+        "API call logs: pruned after 90 days by a scheduled worker job",
+        "Chat history: kept with your workspace and removed with it"
+      ],
+      subprocessorsTitle: "Who else processes it",
+      subprocessors: [
+        { name: "Supabase", role: "Postgres database, authentication and file storage" },
+        { name: "Vercel", role: "Serves the web application" },
+        { name: "Qdrant", role: "Vector index, running on our own server" },
+        { name: "OpenRouter", role: "Embedding model calls for indexing and search" },
+        { name: "DeepSeek", role: "Answer and brief generation from retrieved context" },
+        { name: "Stripe", role: "Payment processing and subscription records" }
+      ],
+      note:
+        "This page describes how the product works today. Where it differs from the Privacy Policy, the Policy is the legal document and this page is the operational one."
+    }
+  },
   cookieConsent: {
     message: "We use essential cookies to keep you signed in and remember your preferences. No tracking or advertising cookies.",
     accept: "Accept",

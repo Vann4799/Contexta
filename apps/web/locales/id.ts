@@ -1281,6 +1281,507 @@ export const id: Dictionary = {
     readTerms: "Syarat Layanan",
     readPrivacy: "Kebijakan Privasi"
   },
+  site: {
+    nav: {
+      signIn: "Masuk",
+      getStarted: "Mulai",
+      links: [
+        { label: "Harga", href: "/pricing" },
+        { label: "Dokumentasi", href: "/docs" },
+        { label: "Changelog", href: "/changelog" }
+      ]
+    },
+    footer: {
+      tagline: "Intelijen dokumen yang bisa Anda tanya. Unggah PDF, chat dengan sitasi, dan panggil retrieval yang sama dari kode Anda sendiri.",
+      rights: "© 2026 Contexta. Hak cipta dilindungi.",
+      contactCta: "Hubungi kami",
+      columns: {
+        product: "Produk",
+        company: "Perusahaan",
+        resources: "Sumber daya",
+        legal: "Legal"
+      },
+      links: {
+        features: "Fitur",
+        howItWorks: "Cara kerja",
+        pricing: "Harga",
+        changelog: "Changelog",
+        about: "Tentang",
+        blog: "Blog",
+        careers: "Karier",
+        contact: "Kontak",
+        documentation: "Dokumentasi",
+        apiReference: "Referensi API",
+        guides: "Panduan",
+        support: "Dukungan",
+        privacy: "Privasi",
+        terms: "Syarat",
+        security: "Keamanan",
+        gdpr: "GDPR"
+      }
+    },
+    pricing: {
+      eyebrow: "Harga",
+      title: "Anda hanya membayar untuk ruang gerak",
+      lede:
+        "Semua paket mendapat produk yang sama. Yang membedakan adalah lima batas yang benar-benar ditegakkan server: dokumen, penyimpanan, API key, request API per hari, dan pesan chat per hari.",
+      rows: {
+        documents: "Dokumen",
+        storage: "Penyimpanan",
+        apiKeys: "API key",
+        apiRequests: "Request API / hari",
+        chatMessages: "Pesan chat / hari"
+      },
+      names: {
+        free: "Free",
+        pro: "Pro",
+        enterprise: "Enterprise"
+      },
+      blurbs: {
+        free: "Cukup untuk mengindeks setumpuk makalah nyata dan menguji apakah jawabannya tahan diperiksa.",
+        pro: "Paket kerja: beberapa ratus dokumen, ruang untuk kebiasaan chat harian, dan key untuk tooling Anda sendiri.",
+        enterprise: "Produk yang sama, plafon lebih besar — untuk korpus yang terus bertambah."
+      },
+      perMonth: "/bulan",
+      perYear: "per tahun, ditagih tahunan",
+      freeForever: "Gratis selamanya",
+      popularBadge: "Paling dipilih",
+      ctaFree: "Buat akun",
+      ctaPaid: "Pilih di Billing",
+      includedTitle: "Ada di semua paket",
+      included: [
+        "Chat yang berpijak pada dokumen Anda sendiri, dengan sitasi dokumen, halaman, dan bagian",
+        "Brief tersimpan per dokumen: ringkasan, poin penting, orang, tanggal, dan nominal",
+        "Unggah PDF dan DOCX dengan progres indeksing yang nyata",
+        "Konversi Markdown dan ekspor korpus penuh sebagai Markdown atau JSONL",
+        "API key personal untuk endpoint retrieval /v1 dan server MCP",
+        "Masuk lewat email atau Google, dengan pengelolaan password untuk keduanya",
+        "Trash, restore, log aktivitas, dan notifikasi in-app",
+        "Seluruh antarmuka dalam Bahasa Inggris atau Indonesia"
+      ],
+      faqTitle: "Pertanyaan yang benar-benar ditanyakan",
+      faq: [
+        {
+          question: "Apa yang terjadi saat saya menabrak batas?",
+          answer:
+            "Gerbangnya menghentikan aksi baru — unggahan, pembuatan key, atau pesan chat — dan memberi tahu batas mana yang tercapai. Tidak ada dokumen yang sudah Anda unggah ikut terhapus, jadi menghapus dokumen atau upgrade yang membuat Anda bergerak lagi."
+        },
+        {
+          question: "Bisakah saya ganti paket nanti?",
+          answer:
+            "Bisa. Perubahan paket dilakukan di halaman Billing lewat Stripe Checkout, dan batas baru berlaku begitu langganannya aktif."
+        },
+        {
+          question: "Apakah kartu saya disimpan?",
+          answer:
+            "Tidak. Detail kartu tetap di Stripe; Contexta hanya menyimpan status langganan dan paket yang dipetakannya."
+        }
+      ]
+    },
+    changelog: {
+      eyebrow: "Changelog",
+      title: "Yang berubah",
+      lede: "Ditulis dari commit yang benar-benar dikirim, terbaru lebih dulu. Tanggalnya adalah tanggal deploy, bukan tanggal rencana.",
+      entries: [
+        {
+          date: "2026-10-14",
+          title: "Chart yang bisa dipakai dengan jempol",
+          body:
+            "Dashboard berhenti mengirim library chart: kedua chart kini digambar sebagai SVG biasa dan bundle terbesar di /dashboard turun dari 314 kB ke 170 kB. Chart padat merespons seretan di sepanjang kolom alih-alih tap presisi, kontrol form minimal 16 px di ponsel supaya iOS berhenti melakukan zoom halaman, dan tabel lebar kini memberi tahu bahwa mereka bisa digeser."
+        },
+        {
+          date: "2026-10-13",
+          title: "Brief membaca seluruh dokumen",
+          body:
+            "Panel Intelligence dulu meringkas dari chunk pertama saja. Sekarang ia mengambil sampel jendela yang tersebar di seluruh korpus, menggabungkannya jadi satu brief, dan menerbitkan coverage yang berhasil dibaca. Hasilnya disimpan bersama dokumen, jadi membuka ulang halaman tidak memakan biaya."
+        },
+        {
+          date: "2026-10-13",
+          title: "Jawaban berhenti kehabisan budget",
+          body:
+            "Dua 502 di produksi diperbaiki. Jawaban JSON yang terpotong kini diselamatkan, bukan dibuang, dan request brief tidak lagi membiarkan model menghabiskan seluruh token budget untuk reasoning tersembunyi sebelum menulis apa pun."
+        },
+        {
+          date: "2026-10-13",
+          title: "Unggahan selesai",
+          body:
+            "Embedding dibatch 128, kegagalan indeksing transien retry tiga kali dengan backoff, panggilan storage timeout di 300 s dengan pesan yang terbaca, dan bar unggah melaporkan byte nyata alih-alih animasi berdetak."
+        },
+        {
+          date: "2026-10-13",
+          title: "Kualitas retrieval dan skor yang jujur",
+          body:
+            "Jawaban chat kini menjalankan ambang relevansi dan budget prompt, dan angka relevansi yang ditampilkan adalah skor fusi sebagai persentase utuh. Saat materi yang retrieved terlalu tipis untuk menjawab, workspace mengatakannya alih-alih menghasilkan paragraf yang tampak yakin."
+        },
+        {
+          date: "2026-10-11",
+          title: "Paket berbayar goes live",
+          body:
+            "Stripe checkout disambungkan ke tier paket yang nyata, paywall yang muncul di gerbang alih-alih banner dekoratif, verifikasi email, dan alur onboarding untuk pengguna baru."
+        },
+        {
+          date: "2026-10-10",
+          title: "Masuk dengan Google",
+          body:
+            "Google OAuth berdampingan dengan email dan password, plus pengelolaan password di profil sehingga salah satu metode masuk bisa menyetel atau mengganti password."
+        },
+        {
+          date: "2026-10-09",
+          title: "Workspace jadi aplikasi sidebar",
+          body:
+            "Dashboard didesain ulang dengan chart aktivitas, halaman usage khusus, API key pindah ke halamannya sendiri, dan trash, notifikasi, serta log aktivitas disambungkan ke data nyata."
+        },
+        {
+          date: "2026-10-07",
+          title: "Retrieval jadi API dan server MCP",
+          body:
+            "Pemilik bisa membuat dan mencabut API key, endpoint /v1 melayani retrieval, daftar dokumen, dan ekspor, dan key yang sama berlaku sebagai kredensial MCP untuk tiga tool Contexta."
+        }
+      ]
+    },
+    about: {
+      eyebrow: "Tentang",
+      title: "Produk kecil untuk membaca dokumen Anda sendiri",
+      lede:
+        "Contexta mengindeks berkas PDF dan DOCX supaya Anda bisa bertanya dan mendapat jawaban yang menunjuk kembali ke halaman asalnya.",
+      sections: [
+        {
+          title: "Apa itu Contexta",
+          body:
+            "Workspace dan layanan retrieval dalam satu produk. Anda mengunggah dokumen, Contexta memotong dan mengindeksnya, lalu tiga hal membaca indeks itu: chat, brief otomatis di setiap dokumen, dan API key yang bisa Anda panggil dari kode Anda sendiri."
+        },
+        {
+          title: "Bagaimana jawaban dibentuk",
+          body:
+            "Pertanyaan Anda di-embed dan juga dicari sebagai kata kunci; dua daftar hasil itu difusi dengan reciprocal rank fusion sehingga tidak satu arm pun bisa menang sendiri; chunk yang lolos dimasukkan ke prompt sesuai budget; dan model menjawab dari konteks itu saja. Setiap sitasi membawa dokumen, halaman, dan judul bagian asalnya."
+        },
+        {
+          title: "Yang menolak ia lakukan",
+          body:
+            "Ia tidak melatih model dengan dokumen Anda, tidak menambal kekosongan dengan pengetahuan umum lalu menyajikannya sebagai sumber, dan tidak menampilkan angka relevansi yang tidak bisa dibuktikan oleh sebuah chunk. Saat retrieval tipis, jawabannya menyatakan dokumen tidak memuatnya."
+        },
+        {
+          title: "Bagaimana ia dijalankan",
+          body:
+            "Produk independen, dihosting di infrastruktur yang kami operasikan sendiri: front end Next.js, layanan FastAPI, worker indeksing Python terpisah, Postgres dengan row-level security, dan vector store yang kami jalankan sendiri. Harga dalam dolar utuh dan batasnya dipublikasikan di halaman harga."
+        }
+      ],
+      stackTitle: "Stack-nya, dengan bahasa sederhana",
+      stack: [
+        "Front end Next.js 15, di-deploy di Vercel",
+        "Layanan FastAPI plus worker indeksing Python terpisah",
+        "Supabase Postgres dengan row-level security di semua tabel",
+        "Qdrant sebagai vector store, di server kami sendiri",
+        "Model embedding lewat OpenRouter, DeepSeek untuk jawaban",
+        "Stripe untuk langganan"
+      ]
+    },
+    blog: {
+      eyebrow: "Blog",
+      title: "Catatan dari membangunnya",
+      lede: "Tulisan singkat soal keputusan yang benar-benar kami ambil, bersama pengukuran yang memaksanya.",
+      posts: [
+        {
+          date: "2026-10-14",
+          title: "Kami menghapus library chart demi donut 130 piksel",
+          excerpt: "Satu dependency hampir separuh bundle dashboard, dan hanya membeli dua bentuk.",
+          body: [
+            "Di ponsel dengan jaringan dibatasi, dashboard butuh 4,1 detik untuk menggambar chart-nya. Waterfall-nya tidak ambigu: 388 kB JavaScript, dan sekitar 130 kB di antaranya adalah library chart yang dipakai untuk satu donut dan satu bar chart. Recharts juga merepotkan soal target sentuh — empat belas kolom di dalam kartu 300 piksel berarti sekitar 21 piksel per tap, yang bukan ukuran kontrol untuk jempol.",
+            "Kedua chart kini digambar tangan sebagai SVG. Karena library-nya kami ganti sendiri, interaksinya juga bisa diubah: menyeret melewati chart menggeser seleksi tanpa perlu tap presisi, dan skala sumbunya mengikuti data alih-alih selalu mentok di sepuluh. Chunk terbesar di /dashboard turun dari 314 kB ke 170 kB. Pelajaran yang kami pegang: ukur bundle-nya sebelum membelanya."
+          ]
+        },
+        {
+          date: "2026-10-13",
+          title: "Model yang menghabiskan seluruh budget untuk berpikir",
+          excerpt: "502 dengan pesan error yang tampak masuk akal, penyebabnya token yang tidak pernah kami hitung.",
+          body: [
+            "Brief dokumen mulai gagal di produksi dengan jawaban kosong. Request-nya benar, retrieval-nya benar, dan model habis memakai seluruh max_tokens untuk reasoning tersembunyi tanpa mengembalikan konten sama sekali. Logika retry kami tidak menolong: lima panggilan @ 42 detik sudah melewatkan timeout client.",
+            "Dua perubahan memperbaikinya. Pembuatan brief berjalan dengan thinking dimatikan, dan respons yang datang terpotong kini diselamatkan — field yang sudah terbentuk kita pertahankan dan jawabannya ditandai terpotong, bukan dibuang. Pelajaran yang lebih dalam soal testing: test suite yang men-stub generator jawaban tidak pernah menyentuh token budget, jadi jalur berbayar harus diukur live, dan mengukur berarti menghitung karakter terhadap teks sumber, bukan menunggu status 200."
+          ]
+        },
+        {
+          date: "2026-10-11",
+          title: "Paywall yang sepakat dengan server",
+          excerpt: "Gerbang UI dan gerbang API membaca satu tabel, atau banner itu bohong.",
+          body: [
+            "Banner upgrade sudah ada sebelum batas mana pun ada. Menyambungkan billing berarti memilih lima angka yang benar-benar penting — dokumen, penyimpanan, key, request API per hari, pesan chat per hari — dan membuat API menjawab setiap mutasi dengan kode over-limit spesifik yang bisa dirender front end sebagai modal.",
+            "Urutan itulah yang layak dinyatakan: tentukan batas di satu tempat, tegakkan di layanan, dan biarkan antarmuka hanya melaporkan apa yang dikatakan server. Paywall yang menyala sebelum server menolak adalah bug yang dirasakan pengguna sebagai kebohongan."
+          ]
+        }
+      ]
+    },
+    careers: {
+      eyebrow: "Karier",
+      title: "Tidak ada posisi terbuka saat ini",
+      lede:
+        "Contexta dijalankan tim independen kecil, dan pekerjaan yang sedang berjalan bukan sesuatu yang bisa kami serahkan ke orang yang belum pernah kami ajak kerja bareng. Itu berubah saat memang perlu berubah.",
+      lookingTitle: "Seperti apa pekerjaannya",
+      looking: [
+        "Kualitas retrieval: fusi, jendela chunk, dan eval set yang diukur terhadap dokumen nyata, bukan pertanyaan contoh",
+        "Kontrol biaya inferensi: token budget, penyelamatan respons terpotong, kuota harian yang bertahan di trafik produksi",
+        "Operasi self-hosted: container, terminasi TLS, migration yang di-apply ke database live",
+        "Pekerjaan front end yang dinilai dari ponsel dengan jaringan dibatasi, bukan dev server di desktop"
+      ],
+      howTitle: "Kalau Anda tetap ingin ngobrol",
+      howBody:
+        "Tidak ada formulir lamaran dan kami tidak akan berpura-pura ada. Halaman kontak mencantumkan jalur in-app yang benar-benar sampai ke kami, dan menceritakan apa yang sudah Anda kirimkan jauh lebih bernilai daripada surat lamaran.",
+      cta: "Ke halaman kontak"
+    },
+    contact: {
+      eyebrow: "Kontak",
+      title: "Cara menghubungi kami",
+      lede:
+        "Contexta belum punya inbox dukungan publik atau issue tracker. Daripada mencetak alamat yang tidak ada yang membacanya, ini jalur yang benar-benar sampai ke produk.",
+      channelsTitle: "Jalur in-app",
+      channels: [
+        {
+          title: "Bantuan dan troubleshooting",
+          body: "Bagaimana indeksing, chat, dan konversi seharusnya berperilaku, plus masalah yang paling sering muncul.",
+          cta: "Buka Bantuan",
+          href: "/help"
+        },
+        {
+          title: "Paket, billing, dan invoice",
+          body: "Ganti paket atau kelola langganan Stripe dari layar billing di workspace Anda.",
+          cta: "Buka Billing",
+          href: "/billing"
+        },
+        {
+          title: "Data Anda, ekspor dan penghapusan",
+          body: "Ekspor seluruh korpus, hapus satu dokumen, atau tutup akun dari profil Anda.",
+          cta: "Buka Profil",
+          href: "/profile"
+        },
+        {
+          title: "API key dan integrasi",
+          body: "Buat atau cabut key dan tinjau trafik retrieval terbaru di halaman API key.",
+          cta: "Buka API key",
+          href: "/api-keys"
+        }
+      ],
+      securityTitle: "Melaporkan masalah keamanan",
+      securityBody:
+        "Untuk saat ini gunakan jalur in-app yang sama, dan sertakan request terkecil yang mereproduksinya. Halaman Keamanan menjelaskan apa yang terlindungi dan apa yang tidak, jadi Anda bisa membedakan temuan nyata dari celah yang sudah kami akui.",
+      securityCta: "Baca halaman keamanan"
+    },
+    docs: {
+      eyebrow: "Dokumentasi",
+      title: "Mulai dari sini",
+      lede: "Semua yang tertulis tentang Contexta ada di satu tempat, dan semuanya menunjuk ke halaman yang benar-benar ada.",
+      startTitle: "Jawaban pertama dalam tiga langkah",
+      start: [
+        "Buat akun — email dan password, atau Masuk dengan Google — lalu verifikasi alamatnya",
+        "Unggah PDF atau DOCX di Dokumen dan tunggu statusnya sampai Ready",
+        "Buka Chat, pilih dokumen itu, dan tanyakan sesuatu yang spesifik; jawabannya menyitasi halaman dan bagian yang dipakai"
+      ],
+      startCta: "Buat akun",
+      cardsTitle: "Jelajahi",
+      cards: [
+        {
+          title: "Referensi API",
+          description: "Autentikasi, endpoint /v1, kode error, header kuota, dan tool MCP.",
+          cta: "Buka referensi",
+          href: "/docs/api"
+        },
+        {
+          title: "Panduan",
+          description: "Dari unggah ke jawaban pertama, membaca sitasi, memakai key, dan mengambil kembali data Anda.",
+          cta: "Buka panduan",
+          href: "/guides"
+        },
+        {
+          title: "Pusat bantuan",
+          description: "Cara workspace berperilaku dan apa yang perlu diperiksa saat unggahan atau chat bermasalah.",
+          cta: "Buka bantuan",
+          href: "/help"
+        },
+        {
+          title: "Paket dan batas",
+          description: "Lima angka yang ditegakkan server, per tier.",
+          cta: "Lihat harga",
+          href: "/pricing"
+        },
+        {
+          title: "Keamanan",
+          description: "Apa yang terlindungi, bagaimana key disimpan, dan batas dari yang bisa kami janjikan hari ini.",
+          cta: "Baca keamanan",
+          href: "/security"
+        },
+        {
+          title: "Data Anda dan GDPR",
+          description: "Hak yang bisa Anda jalankan, cara menjalankannya in-app, dan siapa yang memproses teks Anda.",
+          cta: "Baca GDPR",
+          href: "/gdpr"
+        }
+      ]
+    },
+    api: {
+      eyebrow: "Referensi API",
+      title: "Retrieval yang bisa Anda panggil",
+      lede:
+        "Retrieval yang sama dengan yang dipakai chat, di balik bearer token. Referensi ini publik; layar pengelolaan key yang live ada di workspace Anda.",
+      keysCta: "Kelola API key",
+      mcpNote:
+        "Satu key melayani keduanya: endpoint HTTP dan tool MCP Contexta menerima kredensial yang sama."
+    },
+    guides: {
+      eyebrow: "Panduan",
+      title: "Empat hal yang layak diketahui",
+      lede: "Langkah singkat dan berurutan. Setiap panduan berakhir di layar yang bisa Anda buka sekarang juga.",
+      guides: [
+        {
+          title: "Dari unggah ke jawaban pertama",
+          description: "Yang terjadi antara memilih berkas dan bertanya tentangnya.",
+          steps: [
+            "Dokumen → unggah PDF atau DOCX. Barisnya menampilkan Processing sementara worker memotong dan meng-embed.",
+            "Tunggu sampai Ready. Statusnya dibaca dari server, jadi me-refresh itu jujur, bukan kosmetik.",
+            "Chat → pilih dokumen. Satu percakapan sengaja hanya mencakup satu dokumen, supaya jawaban tidak tercampur.",
+            "Tanyakan sesuatu yang spesifik: ringkas, hitung baris, cari nilai tertinggi, atau bandingkan dua bagian."
+          ],
+          cta: "Buka Dokumen",
+          href: "/documents"
+        },
+        {
+          title: "Membaca sebuah sitasi",
+          description: "Cara memeriksa jawaban alih-alih mempercayainya.",
+          steps: [
+            "Setiap jawaban mencantumkan chunk yang dipakai, bernomor. Memilih salah satunya membuka bagian itu beserta nomor halaman dan jalur bagiannya.",
+            "Relevansi ditampilkan sebagai persentase dari plafon fusi retrieval, bukan cosine mentah. Relevansi rendah berarti korpus tipis untuk pertanyaan itu.",
+            "Kalau jawaban harus memuat angka persis, minta barisnya didaftarkan dan periksa terhadap sumbernya.",
+            "Saat tidak ada yang memenuhi ambang, Contexta menyatakan dokumen tidak memuatnya alih-alih menjawab dari pengetahuan umum."
+          ],
+          cta: "Buka Chat",
+          href: "/chat"
+        },
+        {
+          title: "Memakai API key Anda",
+          description: "Key dibuat sekali, ditampilkan sekali, dan disimpan sebagai hash.",
+          steps: [
+            "API key → buat key, beri nama yang masih Anda kenali saat mencabutnya nanti.",
+            "Salin segera — di sisi kami hanya prefix dan empat karakter terakhir yang disimpan.",
+            "Kirim sebagai bearer token ke endpoint retrieval /v1; kredensial yang sama berlaku untuk tool MCP.",
+            "Pantau halaman usage untuk panggilan yang lolos versus yang ditolak; penolakan kuota mengembalikan 429 beserta alasannya."
+          ],
+          cta: "Buka API key",
+          href: "/api-keys"
+        },
+        {
+          title: "Mengambil kembali data Anda",
+          description: "Ekspor sebelum menghapus, dan periksa apa yang tersisa.",
+          steps: [
+            "Konversikan dokumen ke Markdown untuk mendapat teks persis yang dipakai Contexta menjawab.",
+            "Ekspor seluruh korpus sebagai Markdown atau JSONL dari panel dokumen; JSONL mempertahankan batas chunk dan metadata.",
+            "Menghapus dokumen mengeluarkan berkasnya dari storage dan membuang chunk-nya dari indeks.",
+            "Menghapus akun di Profil menghapus workspace: dokumen, key, dan riwayat yang menyertainya."
+          ],
+          cta: "Buka Profil",
+          href: "/profile"
+        }
+      ]
+    },
+    security: {
+      eyebrow: "Keamanan",
+      title: "Yang terlindungi, dan yang tidak kami klaim",
+      lede:
+        "Contexta produk kecil di infrastruktur yang kami operasikan sendiri. Halaman ini sengaja spesifik di kedua paruh kalimat itu.",
+      measuresTitle: "Sudah berlaku hari ini",
+      measures: [
+        {
+          title: "API key disimpan sebagai hash",
+          body:
+            "Kami menyimpan hash plus prefix dan empat karakter terakhir. Plaintext ditampilkan sekali saat pembuatan dan tidak bisa dipulihkan setelahnya."
+        },
+        {
+          title: "Row-level security di database",
+          body:
+            "Policy Postgres membatasi baris ke akun yang terautentikasi, jadi token satu workspace tidak bisa membaca dokumen, langganan, atau notifikasi milik workspace lain."
+        },
+        {
+          title: "Kuota di setiap jalur berbayar",
+          body:
+            "Batas request per menit dan per hari untuk setiap key, plus budget harian untuk jawaban chat dan brief dokumen. Penolakan mengembalikan 429 dengan alasan dan tercatat di log."
+        },
+        {
+          title: "Key dengan scope",
+          body:
+            "Sebuah key bisa dibatasi ke subset dokumen. Permintaan untuk materi di luar subset mengembalikan hasil kosong, dan ekspor menjawab 404."
+        },
+        {
+          title: "TLS di mana-mana, trafik API tercatat",
+          body:
+            "Web app disajikan lewat HTTPS dan API menterminasi TLS di depan layanan. Panggilan API dicatat bersama status respons dan dibersihkan setelah 90 hari."
+        },
+        {
+          title: "Autentikasi lewat Supabase Auth",
+          body:
+            "Token diverifikasi terhadap kunci provider, alamat email harus terverifikasi, dan masuk dengan Google bersifat opsional di samping email dan password."
+        }
+      ],
+      disclosureTitle: "Melaporkan masalah",
+      disclosureBody:
+        "Gunakan jalur di halaman kontak dan sertakan request terkecil yang mereproduksinya. Belum ada bug bounty dan tidak ada perjanjian disclosure yang ditandatangani — kami lebih memilih mengatakannya daripada menyiratkan program yang tidak kami jalankan.",
+      limitsTitle: "Yang tidak bisa kami janjikan",
+      limits: [
+        "Tidak ada SOC 2, ISO 27001, atau sertifikasi serupa, dan tidak ada catatan penetration test oleh pihak ketiga",
+        "Menjawab sebuah pertanyaan mengirim teks yang retrieved ke model pihak ketiga (DeepSeek, dan model OpenRouter untuk embedding); kami tidak memakai dokumen Anda untuk melatih apa pun, tetapi teks itu memang keluar dari infrastruktur kami untuk menghasilkan jawaban",
+        "Penghapusan akun menghapus data workspace Anda; legal hold dan jendela log API 90 hari dinyatakan di halaman GDPR alih-alih disembunyikan"
+      ],
+      cta: "Opsi kontak"
+    },
+    gdpr: {
+      eyebrow: "GDPR",
+      title: "Data Anda, dalam istilah operasional yang jelas",
+      lede:
+        "Apa yang kami pegang, berapa lama, dan layar persis yang bisa Anda pakai untuk menjalankan setiap hak. Tanpa surat formalitas.",
+      controllerTitle: "Siapa yang bertanggung jawab",
+      controllerBody:
+        "Contexta dioperasikan oleh tim di balik contexta.my.id, yang berperan sebagai controller atas data di workspace Anda. Belum ada badan hukum terpisah maupun DPO yang bisa ditujukan; halaman kontak mencantumkan jalur yang sampai ke operatornya.",
+      rightsTitle: "Hak dan cara menggunakannya",
+      rights: [
+        {
+          title: "Akses",
+          body: "Profil → ekspor data Anda, atau unduh seluruh korpus sebagai Markdown atau JSONL dari panel dokumen."
+        },
+        {
+          title: "Perbaikan",
+          body: "Perbaiki detail akun di Profil. Konten dokumen diperbaiki dengan menghapus dan mengunggah ulang berkasnya, yang membangun kembali indeksnya."
+        },
+        {
+          title: "Penghapusan",
+          body: "Hapus dokumen untuk mengeluarkan berkas dan chunk-nya, atau hapus akun di Profil untuk menghapus workspace."
+        },
+        {
+          title: "Portabilitas",
+          body: "Ekspor tersedia dalam dua format machine-readable dan tidak perlu menghubungi kami."
+        },
+        {
+          title: "Pembatasan pemrosesan",
+          body: "Cabut API key dan keluarkan dokumen yang tidak ingin diquery. Retrieval hanya melihat apa yang masih terindeks."
+        },
+        {
+          title: "Menolak dan menarik persetujuan",
+          body: "Putuskan koneksi masuk Google atau sebuah integrasi, matikan cookie non-esensial di banner, atau tutup akun."
+        }
+      ],
+      retentionTitle: "Berapa lama hal-hal bertahan",
+      retention: [
+        "Dokumen dan chunk-nya: sampai Anda menghapusnya, atau sampai akun ditutup",
+        "Log panggilan API: dibersihkan setelah 90 hari oleh job worker terjadwal",
+        "Riwayat chat: disimpan bersama workspace Anda dan dihapus besertanya"
+      ],
+      subprocessorsTitle: "Siapa lagi yang memprosesnya",
+      subprocessors: [
+        { name: "Supabase", role: "Database Postgres, autentikasi, dan penyimpanan berkas" },
+        { name: "Vercel", role: "Menyajikan aplikasi web" },
+        { name: "Qdrant", role: "Indeks vektor, berjalan di server kami sendiri" },
+        { name: "OpenRouter", role: "Panggilan model embedding untuk indeksing dan pencarian" },
+        { name: "DeepSeek", role: "Pembuatan jawaban dan brief dari konteks yang retrieved" },
+        { name: "Stripe", role: "Pemrosesan pembayaran dan catatan langganan" }
+      ],
+      note:
+        "Halaman ini menggambarkan cara produk bekerja hari ini. Bila berbeda dengan Kebijakan Privasi, Kebijakan itulah dokumen legalnya dan halaman ini adalah dokumen operasionalnya."
+    }
+  },
   cookieConsent: {
     message: "Kami menggunakan cookie esensial untuk menjaga Anda tetap masuk dan mengingat preferensi Anda. Tanpa cookie pelacakan atau iklan.",
     accept: "Terima",
