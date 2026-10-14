@@ -16,6 +16,7 @@ Vercel is HTTPS, so the API must also be HTTPS. The production compose stack inc
 - `docker-compose.prod.yml`: API, worker, Qdrant, and Caddy.
 - `.env.production.example`: copy to `.env.production` on the VPS.
 - `deploy/vps/Caddyfile`: HTTPS reverse proxy to the API container.
+- `deploy/vps/caddy-guard.sh`: cron guard that validates that Caddyfile and rolls it back when Caddy refuses it.
 
 ## First Deploy
 
@@ -164,6 +165,99 @@ misconfiguration: `api` is stateless (Postgres, Qdrant and the object store all 
 container), so a second replica behind a load balancer is the scaling path when measured load
 requires it. Cloudflare in front already absorbs volumetric attacks and caches static responses,
 which covers the availability half of the finding without adding a node.
+
+## Caddy crash-loop guard
+
+`deploy/vps/caddy-guard.sh` is the on-box half of the uptime work. The outside-in alarm is the
+`Uptime` workflow, documented under "Uptime Monitoring" in `docs/DEPLOYMENT.md`.
+
+It exists because of the `rate_limit` note above. That directive makes `caddy validate` fail on the
+stock image, so Caddy exits on start and Docker restarts it forever. `restart: unless-stopped` keeps
+the container listed in `docker ps`, with `Restarting` in the status column, which is how three
+minutes of a completely unreachable API looked like a healthy box.
+
+Each run, as `ubuntu`, does this:
+
+1. Stops unless `docker info` answers. Nothing is guessed when Docker is not reachable.
+2. Validates the Caddyfile on disk, passing `--env-file .env.production` because the site address is
+   `{$API_DOMAIN}` and validating without it can fail a good file.
+3. When it validates, copies it over the last-known-good file whenever the two differ.
+4. When it does not, writes the last-known-good file back and applies it: `caddy reload` inside the
+   container while the container is up, which costs no connections, and
+   `docker compose up -d --no-deps caddy` when the container is crash-looping. `--no-deps` is what
+   keeps the repair from also restarting api, worker, qdrant, embeddings and mcp.
+5. When the file validates but the container is crash-looping, it compares the checksum of the
+   Caddyfile on disk against the bytes the container actually holds. Those differ only when the bind
+   mount and the path have drifted apart, so the mount is the bad one and gets rewritten. When they
+   match, the crash is not the Caddyfile's doing and the guard stops with exit 1 rather than
+   recreating a proxy every minute and burying the real cause under guard churn.
+   It does not read the logs to decide: Caddy keeps its last config error in the log window across a
+   restart that succeeded, so a log match would revert a file that currently validates.
+
+The last-known-good file is `~/.contexta/caddy-guard/Caddyfile.known-good`, deliberately outside the
+checkout. `/opt/contexta/deploy/vps/Caddyfile` is tracked, so `git pull` replaces whatever is written
+there. A sibling untracked file would survive `git pull` but not `git clean -fdx` or a re-clone, and it
+invites committing a second Caddyfile that silently diverges from the one Caddy reads. `~/.contexta`
+needs no root, and no command in this document writes to it.
+
+The rollback is a `cp` into the existing file, never a temp file plus rename. The Caddyfile is a
+single-file bind mount, and a bind mount keeps following the inode it was created from, so renaming a
+new file over the path leaves the container reading the old inode while the host path shows the fixed
+file. The same rule is why a manual recovery rewrites in place:
+
+```bash
+cd /opt/contexta && git show HEAD:deploy/vps/Caddyfile > deploy/vps/Caddyfile
+```
+
+### Install the cron entry
+
+As `ubuntu` on the VPS:
+
+```bash
+cd /opt/contexta
+chmod +x deploy/vps/caddy-guard.sh
+./deploy/vps/caddy-guard.sh; echo "exit=$?"      # first run seeds the backup
+```
+
+Then the schedule. This form re-runs without duplicating the line and leaves any other entry alone:
+
+```bash
+{ crontab -l 2>/dev/null | grep -vF 'caddy-guard.sh'; \
+  echo '* * * * * /opt/contexta/deploy/vps/caddy-guard.sh >> /home/ubuntu/.contexta/caddy-guard/cron.log 2>&1'; } | crontab -
+crontab -l
+```
+
+Cron sets `HOME` from `/etc/passwd`, which is how the guard finds `~/.contexta` without being told.
+Add `MAILTO=name@example.com` above the entry if you want the refusal cases mailed; exit 1 always
+means "a person has to look". The guard writes to `~/.contexta/caddy-guard/caddy-guard.log` and logs
+nothing on a healthy minute, so an idle run costs one `docker run --rm` validation plus a rewrite of
+its own 30-byte capture file.
+
+### Rehearse it
+
+Point every path at a scratch tree and use a container name that does not exist, so no container
+command can reach `contexta-caddy`:
+
+```bash
+mkdir -p /tmp/guard-test/deploy/vps /tmp/guard-state
+printf 'API_DOMAIN=api.rehearsal.test\n' > /tmp/guard-test/.env.production
+printf 'services: {}\n' > /tmp/guard-test/docker-compose.prod.yml
+cp /opt/contexta/deploy/vps/Caddyfile /tmp/guard-test/deploy/vps/Caddyfile
+
+GUARD_ENV="REPO_DIR=/tmp/guard-test COMPOSE_FILE=/tmp/guard-test/docker-compose.prod.yml ENV_FILE=/tmp/guard-test/.env.production CADDYFILE=/tmp/guard-test/deploy/vps/Caddyfile STATE_DIR=/tmp/guard-state CONTAINER=guard-rehearsal-absent SERVICE=guard-rehearsal-absent"
+env $GUARD_ENV /opt/contexta/deploy/vps/caddy-guard.sh      # seeds /tmp/guard-state/Caddyfile.known-good
+
+# break it the way the incident did, then run the same command again
+printf '{$API_DOMAIN} {\n  encode gzip\n  rate_limit {\n    window 1m\n  }\n}\n' > /tmp/guard-test/deploy/vps/Caddyfile
+env $GUARD_ENV /opt/contexta/deploy/vps/caddy-guard.sh
+
+diff /tmp/guard-test/deploy/vps/Caddyfile /tmp/guard-state/Caddyfile.known-good   # no output means the rollback worked
+rm -rf /tmp/guard-test /tmp/guard-state
+```
+
+Expect a non-zero exit on the second run: the rollback of the file is what is being proved, and the
+final compose step cannot succeed because the scratch compose file declares no services. That failure
+is also the safety property — the rehearsal cannot recreate anything real.
 
 ## Update Later
 

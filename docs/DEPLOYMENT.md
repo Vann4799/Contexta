@@ -237,6 +237,78 @@ GET /health/indexing
 
 Use `/health` for platform liveness and `/health/indexing` for worker queue visibility.
 
+## Uptime Monitoring
+
+`.github/workflows/uptime.yml` probes production from outside the stack every 5 minutes and pages
+over Telegram. It exists because a Caddy crash loop made the API unreachable for about three minutes
+with nothing recording it: `docker ps` was still listing the container. The on-box companion is
+`deploy/vps/caddy-guard.sh`, described in `docs/VPS_DEPLOYMENT.md`.
+
+What it checks:
+
+```text
+GET https://api.3.27.119.26.sslip.io/health          200 and a body containing "service":"contexta-api"
+GET https://api.3.27.119.26.sslip.io/health/vector    200 and a body containing "status":"ok"
+GET https://contexta.my.id/robots.txt                 200
+```
+
+The body has to match, not only the status code, because a 200 from a TLS-terminating middlebox is
+not the API answering. Two endpoints are left alone on purpose: `/health/indexing` is behind
+`get_current_user` and answers 401 to an anonymous caller, so paging on it would page on a healthy
+system, and `/docs`, `/redoc` and `/openapi.json` are 404 in production by design.
+
+### Secrets to add
+
+GitHub -> `Vann4799/Contexta` -> Settings -> Secrets and variables -> Actions -> Repository secrets,
+Add a new secret, twice:
+
+```text
+TELEGRAM_BOT_TOKEN   the token @BotFather gives you for /newbot
+TELEGRAM_CHAT_ID     numeric id of the chat to page; negative for a channel
+```
+
+To read the chat id, send any message to the bot, then open
+`https://api.telegram.org/bot<token>/getUpdates` in a browser and copy `chat.id`. To page a channel,
+create it, then add the bot as an administrator, otherwise Telegram answers `403`.
+
+With either secret missing the workflow still runs and still reports: it writes the probe table to the
+run summary and emits a `::error::` annotation saying which secret is absent, and exits without
+calling Telegram. Nothing fails on an empty secret, so an outage is visible in the Actions tab even
+before the bot exists.
+
+### When it pages
+
+| situation | result |
+| --- | --- |
+| one failed run | `::warning::` annotation, run goes red, no page |
+| two consecutive failed runs, about 10 minutes | Telegram message, run red |
+| a third failed run and beyond | run stays red, no repeat page |
+| first passing run after a page | Telegram message saying RECOVERED, with the failing targets |
+
+Two consecutive runs is the floor because one timeout is not an outage: a single 15-second curl can
+fail on a bad route while the site is fine, and the incident this covers outlived several probes. A
+single failing run never pages, so the worst case for a real outage is discovery at the 10-minute
+mark. The streak needs somewhere to live and Actions gives a job no filesystem between runs, so it is
+read back from this workflow's own run history through the Actions API with the built-in
+`GITHUB_TOKEN`.
+That is why a failing probe has to leave the run red even when it does not page: the next run counts
+those. Only a `failure` conclusion extends the streak; a cancelled or skipped run breaks it, so
+runner infrastructure never pages you.
+
+To test the page path by hand: dispatch the workflow from the Actions tab and read the run summary.
+To see an actual page, change `API_BASE` in the workflow to an unreachable host on a branch, push it,
+and dispatch twice; the first run warns, the second messages. Revert before merging.
+
+### What it does not guarantee
+
+This is a scheduled job, not a monitor. GitHub delays scheduled workflows during busy periods and can
+drop runs outright, so the 5 minutes is a target, not a period. If the Actions service itself is
+degraded, or the repository goes 60 days without activity on a private plan, which makes GitHub
+switch schedules off, there is no alarm and no notice of its absence. Detection is 5 to 10 minutes,
+never seconds. The web probe is `robots.txt`, which Vercel can answer from the edge cache, so a green
+web row says the edge is serving, not that a page renders. And the probe only covers the three URLs
+above: an endpoint that is up but wrong, other than the two body matches, looks healthy.
+
 ## First Release Caveats
 
 - Keep worker replicas at `1`.
