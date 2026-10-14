@@ -100,6 +100,65 @@ Also set the site URL to:
 https://web-hazel-beta-36.vercel.app
 ```
 
+## Retiring the raw-IP hostname (Cloudflare cutover)
+
+The API is currently published as `api.<VPS-IP>.sslip.io`. The hostname carries the origin IP, so
+anyone can connect to `https://<VPS-IP>` directly and bypass whatever edge protection sits in front
+of the domain. Until this section is done, treat the VPS IP as public knowledge.
+
+Steps 1, 2 and 7 need Cloudflare and registrar access, so they are the owner's to run.
+
+1. Add `contexta.my.id` as a zone in Cloudflare and move the nameservers at the registrar.
+2. Create an `A` record `api` pointing at the VPS IP as **DNS only** for now (grey cloud).
+   Keep ports `80`/`443` reachable as the Requirements section asks for.
+3. On the VPS, swap the hostname the stack answers for, in `.env.production`:
+
+   ```text
+   API_DOMAIN=api.contexta.my.id
+   MCP_ALLOWED_HOSTS=api.contexta.my.id
+   ```
+
+   `deploy/vps/Caddyfile` is parameterized on `{$API_DOMAIN}`, so this is the only change Caddy
+   needs. Do the cutover while the record is still DNS-only: Caddy must complete a Let's Encrypt
+   HTTP-01 challenge for the new name before any proxying is involved.
+
+   ```bash
+   git pull
+   docker compose -f docker-compose.prod.yml up -d --build
+   curl -i https://api.contexta.my.id/health
+   ```
+
+4. Switch the record to **Proxied** (orange cloud). In Cloudflare: SSL/TLS mode `Full (strict)`,
+   `Always Use HTTPS` on, WAF managed rulesets on, and a rate-limiting rule on `/v1/*` and `/chat`.
+5. Point the web app at the new host and redeploy:
+
+   ```bash
+   npx vercel env add NEXT_PUBLIC_API_BASE_URL production        # https://api.contexta.my.id
+   npx vercel env add NEXT_PUBLIC_PUBLIC_API_BASE_URL production
+   npx vercel deploy --prod
+   ```
+
+6. In Supabase → Authentication → URL Configuration, replace every sslip.io entry in Site URL and
+   Redirect URLs with `https://api.contexta.my.id`.
+7. Close the origin. In the AWS security group, replace `0.0.0.0/0` on ports 80/443 with the
+   published Cloudflare IPv4 ranges (<https://www.cloudflare.com/ips/>), and keep port 22 limited
+   to your own IP. This is the step that actually removes the direct-IP bypass.
+
+Verify:
+
+```bash
+curl -i https://api.contexta.my.id/health         # 200
+curl -i --max-time 10 -k https://<VPS-IP>/health  # must time out or refuse
+```
+
+If the second command still answers, the security group change did not land.
+
+**On the "one instance, no load balancer" observation.** That is a capacity decision, not a
+misconfiguration: `api` is stateless (Postgres, Qdrant and the object store all run outside the
+container), so a second replica behind a load balancer is the scaling path when measured load
+requires it. Cloudflare in front already absorbs volumetric attacks and caches static responses,
+which covers the availability half of the finding without adding a node.
+
 ## Update Later
 
 On the VPS:

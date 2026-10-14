@@ -5,12 +5,25 @@
     Strict-Transport-Security "max-age=31536000; includeSubDomains"
   }
 
+  # The API rejects anything over 50 MB (documents/models.py MAX_DOCUMENT_FILE_SIZE_BYTES);
+  # this stops a oversized-body flood from ever reaching a worker. The margin is multipart
+  # framing, not a larger allowance.
+  request_body {
+    max_size 60MB
+  }
+
+  # uvicorn announces itself on every response. Two Server headers tell a prober the exact
+  # stack behind the reverse proxy, which is free information to give away.
   # MCP clients talk to a separate adapter process; the browser API keeps the rest.
   handle /mcp* {
-    reverse_proxy mcp:8080
+    reverse_proxy mcp:8080 {
+      header_down -Server
+    }
   }
 
   handle {
-    reverse_proxy api:8001
+    reverse_proxy api:8001 {
+      header_down -Server
+    }
   }
 }

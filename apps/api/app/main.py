@@ -15,7 +15,7 @@ from app.account.routes import router as account_router
 from app.activity.routes import router as activity_router
 from app.apikeys.dependencies import finalize_api_request_log
 from app.apikeys.routes import router as api_keys_router
-from app.auth.dependencies import get_current_user
+from app.auth.dependencies import get_current_user, get_optional_user
 from app.auth.supabase_jwt import CurrentUser
 from app.billing.routes import router as billing_router
 from app.chat.retrieval import configured_vector_spaces
@@ -49,7 +49,27 @@ async def convert_unhandled_errors(request: Request, call_next):
         return JSONResponse({"detail": "Internal server error"}, status_code=500)
 
 
-app = FastAPI(title="Contexta API", version="0.1.0")
+def doc_urls(environment: str) -> tuple[str | None, str | None, str | None]:
+    """The interactive docs are a development tool.
+
+    In production `/openapi.json` enumerates every route, including the ones no browser page
+    ever calls, which hands an anonymous prober the whole attack surface for free.
+    """
+    if environment.strip().lower() == "production":
+        return None, None, None
+
+    return "/docs", "/redoc", "/openapi.json"
+
+
+docs_url, redoc_url, openapi_url = doc_urls(get_settings().environment)
+
+app = FastAPI(
+    title="Contexta API",
+    version="0.1.0",
+    docs_url=docs_url,
+    redoc_url=redoc_url,
+    openapi_url=openapi_url,
+)
 app.add_middleware(BaseHTTPMiddleware, dispatch=convert_unhandled_errors)
 app.add_middleware(
     CORSMiddleware,
@@ -128,7 +148,10 @@ async def health() -> dict[str, str]:
 
 
 @app.get("/health/vector")
-async def vector_health(response: Response) -> dict[str, object]:
+async def vector_health(
+    response: Response,
+    current_user: Annotated[CurrentUser | None, Depends(get_optional_user)],
+) -> dict[str, object]:
     settings = get_settings()
     health_status = await check_qdrant_health(
         settings.qdrant_url,
@@ -139,6 +162,11 @@ async def vector_health(response: Response) -> dict[str, object]:
 
     if health_status["status"] == "unavailable":
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+
+    if current_user is None:
+        # Collection name, point count and embedding models describe how retrieval is built.
+        # An anonymous caller only needs to know whether the store answers.
+        return {"status": health_status["status"], "service": health_status.get("service", "qdrant")}
 
     return health_status
 

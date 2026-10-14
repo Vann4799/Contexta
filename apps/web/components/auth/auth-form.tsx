@@ -21,6 +21,11 @@ type MessageKind = "error" | "success" | "fallback";
 // key so a language switch re-translates a live message.
 type AuthMessage = { type: "success" | "error"; kind: MessageKind } | { type: "error"; text: string };
 
+type FieldErrors = { name?: string; email?: string; password?: string };
+
+// Shape only. Whether the address exists is Supabase's answer to give, not ours.
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export function AuthForm({ mode }: AuthFormProps) {
   const t = useT();
   const serverError = useServerError();
@@ -34,6 +39,30 @@ export function AuthForm({ mode }: AuthFormProps) {
 
   const isRegister = mode === "register";
   const needsPassword = mode !== "reset";
+
+  // Per-field, because "Enter your name, email, and password" blamed two correct fields
+  // for one malformed address.
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+
+  function validateFields(trimmedName: string, trimmedEmail: string): FieldErrors {
+    const errors: FieldErrors = {};
+
+    if (isRegister && !trimmedName) {
+      errors.name = t.auth.fieldErrors.name;
+    }
+
+    if (!trimmedEmail) {
+      errors.email = t.auth.fieldErrors.emailRequired;
+    } else if (!EMAIL_PATTERN.test(trimmedEmail)) {
+      errors.email = t.auth.fieldErrors.emailInvalid;
+    }
+
+    if (needsPassword && !password) {
+      errors.password = t.auth.fieldErrors.passwordRequired;
+    }
+
+    return errors;
+  }
 
   function messageText(entry: AuthMessage): string {
     if ("text" in entry) {
@@ -60,8 +89,10 @@ export function AuthForm({ mode }: AuthFormProps) {
     const trimmedName = fullName.trim();
     const trimmedEmail = email.trim();
 
-    if (!trimmedEmail || (needsPassword && !password) || (isRegister && !trimmedName)) {
-      setMessage({ type: "error", kind: "error" });
+    const errors = validateFields(trimmedName, trimmedEmail);
+    setFieldErrors(errors);
+
+    if (errors.name || errors.email || errors.password) {
       return;
     }
 
@@ -166,11 +197,23 @@ export function AuthForm({ mode }: AuthFormProps) {
           <input
             id="register-name"
             autoComplete="name"
+            aria-invalid={fieldErrors.name ? true : undefined}
+            aria-describedby={fieldErrors.name ? "register-name-error" : undefined}
             className="focus-ring h-11 w-full rounded-control border border-paper-line bg-paper-soft px-3.5 text-[13.5px] leading-5 text-ink transition placeholder:text-ink-faint focus:border-paper-edge focus:bg-paper-card"
             placeholder={t.auth.fullNamePlaceholder}
             value={fullName}
-            onChange={(event) => setFullName(event.target.value)}
+            onChange={(event) => {
+              setFullName(event.target.value);
+              if (fieldErrors.name) {
+                setFieldErrors((current) => ({ ...current, name: undefined }));
+              }
+            }}
           />
+          {fieldErrors.name ? (
+            <p id="register-name-error" className="text-[12px] leading-5 text-danger" role="alert">
+              {fieldErrors.name}
+            </p>
+          ) : null}
         </div>
       ) : null}
       <div className="space-y-1.5">
@@ -180,12 +223,24 @@ export function AuthForm({ mode }: AuthFormProps) {
         <input
           id={`${mode}-email`}
           autoComplete="email"
+          aria-invalid={fieldErrors.email ? true : undefined}
+          aria-describedby={fieldErrors.email ? `${mode}-email-error` : undefined}
           className="focus-ring h-11 w-full rounded-control border border-paper-line bg-paper-soft px-3.5 text-[13.5px] leading-5 text-ink transition placeholder:text-ink-faint focus:border-paper-edge focus:bg-paper-card"
           placeholder={t.auth.emailPlaceholder}
           type="email"
           value={email}
-          onChange={(event) => setEmail(event.target.value)}
+          onChange={(event) => {
+            setEmail(event.target.value);
+            if (fieldErrors.email) {
+              setFieldErrors((current) => ({ ...current, email: undefined }));
+            }
+          }}
         />
+        {fieldErrors.email ? (
+          <p id={`${mode}-email-error`} className="text-[12px] leading-5 text-danger" role="alert">
+            {fieldErrors.email}
+          </p>
+        ) : null}
       </div>
       {needsPassword ? (
         <div className="space-y-1.5">
@@ -196,11 +251,18 @@ export function AuthForm({ mode }: AuthFormProps) {
             <input
               id={`${mode}-password`}
               autoComplete={mode === "login" ? "current-password" : "new-password"}
+              aria-invalid={fieldErrors.password ? true : undefined}
+              aria-describedby={fieldErrors.password ? `${mode}-password-error` : undefined}
               className="focus-ring h-11 w-full rounded-control border border-paper-line bg-paper-soft px-3.5 pr-16 text-[13.5px] leading-5 text-ink transition placeholder:text-ink-faint focus:border-paper-edge focus:bg-paper-card"
               placeholder={t.auth.passwordPlaceholder}
               type={showPassword ? "text" : "password"}
               value={password}
-              onChange={(event) => setPassword(event.target.value)}
+              onChange={(event) => {
+                setPassword(event.target.value);
+                if (fieldErrors.password) {
+                  setFieldErrors((current) => ({ ...current, password: undefined }));
+                }
+              }}
             />
             <button
               aria-label={showPassword ? t.auth.hidePassword : t.auth.showPassword}
@@ -211,6 +273,11 @@ export function AuthForm({ mode }: AuthFormProps) {
               {showPassword ? t.auth.hide : t.auth.show}
             </button>
           </div>
+          {fieldErrors.password ? (
+            <p id={`${mode}-password-error`} className="text-[12px] leading-5 text-danger" role="alert">
+              {fieldErrors.password}
+            </p>
+          ) : null}
         </div>
       ) : null}
       {message ? (

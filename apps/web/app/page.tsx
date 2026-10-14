@@ -390,25 +390,25 @@ const features = [
     icon: FileText,
     title: "Smart Document Processing",
     description:
-      "Upload PDFs, Word docs, and more. Our AI extracts text, tables, and structure automatically.",
+      "PDF and Word documents — that is the whole list today. Contexta extracts text, tables and heading structure, and keeps the page and section with every chunk.",
   },
   {
     icon: MessageSquare,
     title: "Chat with Your Documents",
     description:
-      "Ask questions in natural language. Get accurate answers with citations to the source.",
+      "Ask questions in natural language. Each answer carries citations naming the page and section it was drawn from, so you can check it.",
   },
   {
     icon: Brain,
     title: "AI-Powered Insights",
     description:
-      "Automatic summaries, key findings, and intelligent analysis of your document collection.",
+      "One pass over the document produces the summary, key points, people, dates and figures shown on its Intelligence page, in the document's own language.",
   },
   {
     icon: Zap,
-    title: "Lightning Fast",
+    title: "Indexed While You Watch",
     description:
-      "Process thousands of pages in seconds. Real-time search across your entire knowledge base.",
+      "Uploads report real progress, not a decorative ticker. A 750 KB PDF becomes 576 searchable chunks in about 100 seconds on our hardware.",
   },
 ];
 
@@ -449,7 +449,7 @@ const steps = [
     number: "01",
     icon: Upload,
     title: "Upload your documents",
-    description: "Drag and drop PDFs, Word docs, or connect your cloud storage.",
+    description: "Drag and drop a PDF or a Word document. Those are the two formats Contexta reads.",
   },
   {
     number: "02",

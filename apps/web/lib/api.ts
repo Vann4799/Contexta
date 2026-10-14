@@ -331,9 +331,10 @@ export async function getApiHealth() {
   return (await response.json()) as ServiceHealth;
 }
 
-export async function getVectorHealth() {
+export async function getVectorHealth(accessToken?: string) {
   const response = await fetchApi("/health/vector", {
-    cache: "no-store"
+    cache: "no-store",
+    ...(accessToken ? { headers: { Authorization: `Bearer ${accessToken}` } } : {})
   });
 
   // An unreachable vector store is an honest 503 with a body, not a transport failure.

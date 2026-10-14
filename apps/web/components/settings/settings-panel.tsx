@@ -105,7 +105,7 @@ export function SettingsPanel() {
 
     const [api, vector, indexing] = await Promise.all([
       getApiHealth().catch(() => null),
-      getVectorHealth().catch(() => null),
+      getVectorHealth(session?.session?.access_token).catch(() => null),
       getIndexingHealth(session?.session?.access_token).catch(() => null)
     ]);
 

@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 import httpx
 import app.main as main
 
-from app.auth.dependencies import get_current_user
+from app.auth.dependencies import get_current_user, get_optional_user
 from app.auth.supabase_jwt import CurrentUser
 from app.core.config import Settings
 from app.documents.repository import InMemoryDocumentRepository
@@ -44,6 +44,9 @@ def test_vector_health_returns_ok_status(monkeypatch) -> None:
         }
 
     monkeypatch.setattr(main, "check_qdrant_health", check_qdrant_health)
+    app.dependency_overrides[get_optional_user] = lambda: CurrentUser(
+        id="health-test-user", email="health@test.com", role="authenticated"
+    )
     monkeypatch.setattr(
         main,
         "get_settings",
@@ -71,6 +74,7 @@ def test_vector_health_returns_ok_status(monkeypatch) -> None:
         {"name": "minilm", "dimensions": 384, "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"},
         {"name": "openai", "dimensions": 1536, "model": "openai/text-embedding-3-small"},
     ]
+    app.dependency_overrides.clear()
 
 
 def test_vector_health_returns_unavailable_status(monkeypatch) -> None:

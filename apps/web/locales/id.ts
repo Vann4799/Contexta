@@ -75,6 +75,12 @@ export const id: Dictionary = {
     hidePassword: "Sembunyikan kata sandi",
     submitting: "Memproses...",
     fallbackError: "Terjadi kesalahan. Coba lagi.",
+    fieldErrors: {
+      name: "Isi nama lengkap Anda.",
+      emailRequired: "Isi alamat email Anda.",
+      emailInvalid: "Itu bukan format alamat email yang valid.",
+      passwordRequired: "Isi kata sandi Anda."
+    },
     oauth: {
       divider: "atau",
       google: "Lanjut dengan Google"
@@ -1221,7 +1227,7 @@ export const id: Dictionary = {
         },
         contact: {
           title: "11. Kontak",
-          body: "Untuk pertanyaan tentang Syarat ini, silakan hubungi kami melalui Layanan atau di alamat email yang disediakan di aplikasi."
+          body: "Untuk pertanyaan tentang Syarat ini, hubungi kami melalui Layanan."
         }
       }
     },
@@ -1277,7 +1283,7 @@ export const id: Dictionary = {
         },
         contact: {
           title: "12. Kontak",
-          body: "Untuk pertanyaan terkait privasi atau untuk menggunakan hak data Anda, hubungi kami melalui Layanan atau di alamat email yang disediakan di aplikasi."
+          body: "Untuk pertanyaan terkait privasi atau untuk menggunakan hak data Anda, hubungi kami melalui Layanan."
         }
       }
     },

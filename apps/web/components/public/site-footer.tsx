@@ -31,7 +31,7 @@ export const FOOTER_COLUMNS = [
       { key: "documentation", href: "/docs" },
       { key: "apiReference", href: "/docs/api" },
       { key: "guides", href: "/guides" },
-      { key: "support", href: "/help" },
+      { key: "support", href: "/contact" },
     ],
   },
   {

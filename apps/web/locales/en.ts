@@ -75,6 +75,12 @@ export const en = {
     hidePassword: "Hide password",
     submitting: "Working...",
     fallbackError: "Something went wrong. Please try again.",
+    fieldErrors: {
+      name: "Enter your full name.",
+      emailRequired: "Enter your email address.",
+      emailInvalid: "That is not a valid email address.",
+      passwordRequired: "Enter your password."
+    },
     oauth: {
       divider: "or",
       google: "Continue with Google"
@@ -1224,7 +1230,7 @@ export const en = {
         },
         contact: {
           title: "11. Contact",
-          body: "For questions about these Terms, please contact us through the Service or at the email address provided in the application."
+          body: "For questions about these Terms, contact us through the Service."
         }
       }
     },
@@ -1280,7 +1286,7 @@ export const en = {
         },
         contact: {
           title: "12. Contact",
-          body: "For privacy-related inquiries or to exercise your data rights, contact us through the Service or at the email address provided in the application."
+          body: "For privacy-related inquiries or to exercise your data rights, contact us through the Service."
         }
       }
     },

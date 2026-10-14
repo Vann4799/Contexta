@@ -54,7 +54,7 @@ export function PipelineWorkspace() {
         setHealth(null);
       }
       try {
-        setVector(await getVectorHealth());
+        setVector(await getVectorHealth(accessToken));
       } catch {
         setVector(null);
       }
