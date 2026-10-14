@@ -45,6 +45,16 @@ class Settings(BaseSettings):
     # a chat question does; they get their own allowance instead of eating chat's.
     brief_day_limit: int = 100
     api_log_retention_days: int = 90
+    # Per million tokens, USD, keyed by the model id the request is sent with. A model with
+    # no entry is recorded with a null cost rather than a guessed one -- that is the whole
+    # point of these rows, so an unpriced model must not quietly inherit a neighbour's price.
+    # The shipped default is the off-peak pair Wave 5 Phase 3 wrote down for deepseek-v4-pro;
+    # it is a quoted figure, not a provider statement, and peak hours are double it, so a
+    # derived cost is a floor. deepseek-chat (the rewrite model) is deliberately absent: no
+    # figure for it survives anywhere in this repo, and inventing one would launder a guess
+    # into a measured column.
+    llm_price_input_per_million: dict[str, float] = {"deepseek-v4-pro": 0.66}
+    llm_price_output_per_million: dict[str, float] = {"deepseek-v4-pro": 1.98}
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
     app_base_url: str = "https://contexta.my.id"

@@ -28,6 +28,7 @@ from app.integrations.routes import router as integrations_router
 from app.notifications.routes import router as notifications_router
 from app.services.indexing_health import IndexingHealthResponse, check_indexing_health
 from app.services.qdrant_health import check_qdrant_health
+from app.usage.routes import router as usage_router
 from app.v1.routes import router as v1_router
 from app.v1.routes import v1_aware_validation_error
 
@@ -99,6 +100,7 @@ app.include_router(export_router)
 app.include_router(api_keys_router)
 app.include_router(integrations_router)
 app.include_router(notifications_router)
+app.include_router(usage_router)
 app.include_router(v1_router)
 app.add_exception_handler(RequestValidationError, v1_aware_validation_error)
 

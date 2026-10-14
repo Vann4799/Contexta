@@ -39,6 +39,10 @@ def load_env_files() -> None:
 
 DEFAULT_PRUNE_INTERVAL_SECONDS = 6 * 60 * 60
 DEFAULT_API_LOG_RETENTION_DAYS = 90
+# Mirrors the audit-log window on purpose: both tables are the worker's housekeeping, and the
+# ledger is the only measured record of what the models cost -- a shorter window here throws
+# away spend history that no estimate can be rebuilt from.
+DEFAULT_LLM_CALL_RETENTION_DAYS = 90
 
 
 class ArmSettings(NamedTuple):
@@ -168,6 +172,7 @@ def run_worker(
     poll_interval_seconds: int = 5,
     prune_interval_seconds: int = DEFAULT_PRUNE_INTERVAL_SECONDS,
     api_log_retention_days: int = DEFAULT_API_LOG_RETENTION_DAYS,
+    llm_call_retention_days: int = DEFAULT_LLM_CALL_RETENTION_DAYS,
 ) -> None:
     next_prune = time.monotonic() + prune_interval_seconds
     while True:
@@ -184,6 +189,16 @@ def run_worker(
                 print(f"api-log prune failed: {exc}")
             else:
                 print(f"api-log pruned={pruned}")
+
+            # Separate try: a ledger delete that fails must not also lose the audit-log
+            # result already printed above, and one table stopping is no reason for the
+            # other to keep growing.
+            try:
+                pruned_calls = processor.repository.prune_llm_calls(llm_call_retention_days)
+            except Exception as exc:  # noqa: BLE001 - retention is housekeeping, not indexing
+                print(f"llm-call prune failed: {exc}")
+            else:
+                print(f"llm-call pruned={pruned_calls}")
 
 
 def main() -> None:
@@ -210,6 +225,9 @@ def main() -> None:
         poll_interval_seconds=args.poll_interval,
         api_log_retention_days=int(
             os.environ.get("API_LOG_RETENTION_DAYS", str(DEFAULT_API_LOG_RETENTION_DAYS))
+        ),
+        llm_call_retention_days=int(
+            os.environ.get("LLM_CALL_RETENTION_DAYS", str(DEFAULT_LLM_CALL_RETENTION_DAYS))
         ),
     )
 

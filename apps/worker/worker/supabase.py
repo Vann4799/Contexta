@@ -187,6 +187,25 @@ class SupabaseDocumentRepository:
         _, _, total = content_range.rpartition("/")
         return int(total) if total.isdigit() else 0
 
+    def prune_llm_calls(self, retention_days: int) -> int:
+        """Drop cost-ledger rows past the retention window.
+
+        Same reasoning as the audit-log prune directly above: this deletes in bulk on a table
+        the API inserts into on every completion, so it runs here rather than inline. The ledger
+        is the only record of what the models cost, so the window is a retention decision the
+        founder can retune by env without a migration.
+        """
+        cutoff = datetime.now(timezone.utc) - timedelta(days=retention_days)
+        response = self._client.delete(
+            f"{self._supabase_url}/rest/v1/llm_calls",
+            headers={**self._headers, "Prefer": "count=exact"},
+            params={"created_at": f"lt.{cutoff.isoformat()}"},
+        )
+        response.raise_for_status()
+        content_range = response.headers.get("content-range") or ""
+        _, _, total = content_range.rpartition("/")
+        return int(total) if total.isdigit() else 0
+
     def _update_document(
         self, document: ProcessingDocument, payload: dict[str, object]
     ) -> None:

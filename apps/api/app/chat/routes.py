@@ -52,6 +52,9 @@ from app.services.llm_budget import (
     budgeted_answer_generator,
     budgeted_query_rewriter,
 )
+from app.services.llm_usage import attach_usage_ledger
+from app.usage.dependencies import get_llm_call_repository
+from app.usage.repository import LlmCallRepository
 
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -138,8 +141,12 @@ def get_answer_generator(
     settings: Annotated[Settings, Depends(get_settings)],
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     inner: Annotated[AnswerGenerator, Depends(build_answer_generator)],
+    repository: Annotated[LlmCallRepository, Depends(get_llm_call_repository)],
 ) -> AnswerGenerator:
     """The metered surface: every prompt here costs a paid completion."""
+    # Ledger before the budget wrapper: only the client that reads the provider's response
+    # ever sees a usage block, and the wrapper has no `attach_usage_sink` to call.
+    attach_usage_ledger(inner, repository, settings, current_user.id, "chat")
     return budgeted_answer_generator(inner, current_user, settings)
 
 
@@ -159,7 +166,10 @@ def get_query_rewriter(
     settings: Annotated[Settings, Depends(get_settings)],
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     inner: Annotated[QueryRewriter | None, Depends(build_query_rewriter)],
+    repository: Annotated[LlmCallRepository, Depends(get_llm_call_repository)],
 ) -> QueryRewriter | None:
+    # A None inner is the kill switch, and attach_usage_ledger passes it straight through.
+    attach_usage_ledger(inner, repository, settings, current_user.id, "rewrite")
     return budgeted_query_rewriter(inner, current_user, settings)
 
 

@@ -131,12 +131,16 @@ class DocumentRepository(Protocol):
     def prune_api_request_logs(self, retention_days: int) -> int:
         ...
 
+    def prune_llm_calls(self, retention_days: int) -> int:
+        ...
+
 
 class InMemoryDocumentRepository:
     def __init__(self, documents: list[ProcessingDocument] | None = None) -> None:
         self.documents = documents or []
         self.chunks: list[ProcessingChunk] = []
         self.pruned_api_log_retention_days: list[int] = []
+        self.pruned_llm_call_retention_days: list[int] = []
 
     def claim_next_processing_document(self) -> ProcessingDocument | None:
         for document in self.documents:
@@ -179,6 +183,10 @@ class InMemoryDocumentRepository:
 
     def prune_api_request_logs(self, retention_days: int) -> int:
         self.pruned_api_log_retention_days.append(retention_days)
+        return 0
+
+    def prune_llm_calls(self, retention_days: int) -> int:
+        self.pruned_llm_call_retention_days.append(retention_days)
         return 0
 
 

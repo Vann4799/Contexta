@@ -138,6 +138,21 @@ Both counters are in-process and approximate: per worker process, reset by a res
 change, and a cost brake rather than billing. Set either to `0` to meter nothing there.
 The only durable quota stays the per-key daily limit behind `/v1`.
 
+The cost ledger (`llm_calls`, read back through `GET /usage/llm`) prices tokens from two JSON maps
+keyed by the model id the request goes out with:
+
+```text
+LLM_PRICE_INPUT_PER_MILLION={"deepseek-v4-pro":0.66}
+LLM_PRICE_OUTPUT_PER_MILLION={"deepseek-v4-pro":1.98}
+```
+
+A model with no entry, or with an entry on only one side, is stored with a null cost rather than a
+borrowed one, so switching `DEEPSEEK_MODEL` means adding it to both maps before the ledger can say
+what it costs. Setting either variable replaces that whole map, not just the one key, so carry the
+other models across with it. These are quoted rates, and DeepSeek's peak hours cost roughly double,
+which makes a derived `cost_usd` a floor; a gateway that reports its own price (OpenRouter does) is
+stored under `cost_basis = provider` and wins over the map.
+
 Optional worker setting:
 
 ```text
@@ -165,10 +180,13 @@ http://localhost:3000/auth/callback
 ## Supabase Setup
 
 1. Create a Supabase project.
-2. Apply every file in `infra/supabase/migrations` in numeric order (`0001` .. `0011`). A
+2. Apply every file in `infra/supabase/migrations` in numeric order (`0001` .. `0013`). A
    migration must land before the code that reads its column is deployed: `0011_document_brief.sql`
    adds `documents.ai_brief`, and `GET /documents/{id}/intelligence` selects that column, so an
-   un-migrated database returns 500 for every document.
+   un-migrated database returns 500 for every document. `0013_llm_calls.sql` fails differently --
+   the API inserts a cost-ledger row after each completion and deliberately swallows that write,
+   so a missing `llm_calls` table costs no user their answer and leaves the ledger empty instead.
+   `GET /usage/llm` is where the missing table becomes visible.
 3. Confirm the private storage bucket `contexta-documents` exists.
 4. Confirm RLS is enabled on public tables and storage policies are present.
 5. Create a normal user through the app or Supabase Auth.

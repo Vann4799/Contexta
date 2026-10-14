@@ -21,6 +21,9 @@ from app.auth.supabase_jwt import CurrentUser
 from app.chat.llm import AnswerGenerator, DeepSeekAnswerGenerator
 from app.core.config import Settings, get_settings
 from app.services.llm_budget import budgeted_brief_generator
+from app.services.llm_usage import attach_usage_ledger
+from app.usage.dependencies import get_llm_call_repository
+from app.usage.repository import LlmCallRepository
 from app.documents.brief import (
     BriefModelError,
     BriefNoTextError,
@@ -143,8 +146,14 @@ def get_document_answer_generator(
     settings: Annotated[Settings, Depends(get_settings)],
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     inner: Annotated[AnswerGenerator, Depends(build_document_answer_generator)],
+    repository: Annotated[LlmCallRepository, Depends(get_llm_call_repository)],
 ) -> AnswerGenerator:
-    """The metered surface: a brief is a paid completion per click."""
+    """The metered surface: a brief is a paid completion per click.
+
+    Ledger before the budget wrapper, and one row per HTTP attempt: a brief's map-reduce
+    fires a completion per window plus a merge, so the click is not the unit of cost.
+    """
+    attach_usage_ledger(inner, repository, settings, current_user.id, "brief")
     return budgeted_brief_generator(inner, current_user, settings)
 
 
