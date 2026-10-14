@@ -19,7 +19,7 @@ function buildConnectSrc(): string {
     return "'self' https: wss:";
   }
 
-  return ['self', ...origins.map((origin) => origin.replace(/\/+$/, "")), "wss:"].join(" ");
+  return ["'self'", ...origins.map((origin) => origin.replace(/\/+$/, "")), "wss:"].join(" ");
 }
 
 const CSP = [
