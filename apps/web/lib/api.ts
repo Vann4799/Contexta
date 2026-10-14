@@ -986,6 +986,7 @@ export type PlanLimits = {
 export type Plan = {
   tier: PlanTier;
   name: string;
+  sellable: boolean;
   price_monthly: number;
   price_yearly: number;
   limits: PlanLimits;

@@ -48,14 +48,23 @@ def create_checkout_session(
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> CheckoutResponse:
+    plan = PLANS.get(body.plan_tier)
+    if not plan or body.plan_tier == "free":
+        raise HTTPException(status_code=400, detail="Cannot checkout free plan")
+
+    if not plan.sellable:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "plan_not_available",
+                "message": f"{plan.name} is not open for signup yet. Contexta is in beta.",
+            },
+        )
+
     import stripe
 
     if not settings.stripe_secret_key:
         raise HTTPException(status_code=503, detail="Stripe is not configured")
-
-    plan = PLANS.get(body.plan_tier)
-    if not plan or body.plan_tier == "free":
-        raise HTTPException(status_code=400, detail="Cannot checkout free plan")
 
     price_cents = (
         plan.price_yearly * 100 if body.interval == "yearly" else plan.price_monthly * 100

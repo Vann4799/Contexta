@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { ContextaLogo } from "@/components/contexta-logo";
 import { SiteFooter } from "@/components/public/site-footer";
+import { PRICING_TIERS, formatCount, formatStorage, formatUsd } from "@/lib/pricing";
 
 function DotField({ count = 60, className = "" }: { count?: number; className?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -500,10 +501,10 @@ function HowItWorks() {
 }
 
 const stats = [
-  { value: "10K+", label: "Documents processed" },
-  { value: "95%", label: "Accuracy rate" },
-  { value: "<1s", label: "Average response time" },
-  { value: "50+", label: "File formats supported" },
+  { value: "PDF · DOCX", label: "Formats indexed" },
+  { value: "Page-level", label: "Citations by page and section" },
+  { value: "EN · ID", label: "Interface languages" },
+  { value: "MD · JSONL", label: "Full corpus export" },
 ];
 
 function Stats() {
@@ -514,7 +515,9 @@ function Stats() {
         <div className="grid gap-8 md:grid-cols-4">
           {stats.map((stat, i) => (
             <FadeIn key={stat.label} delay={i * 0.1} className="text-center">
-              <div className="mb-2 text-5xl font-bold text-ink md:text-6xl">{stat.value}</div>
+              <div className="mb-2 text-[26px] font-bold tracking-tight text-ink md:text-[34px]">
+                {stat.value}
+              </div>
               <div className="text-sm text-ink-muted">{stat.label}</div>
             </FadeIn>
           ))}
@@ -524,63 +527,35 @@ function Stats() {
   );
 }
 
-const pricingTiers = [
-  {
-    name: "Free",
-    price: "$0",
-    period: "forever",
-    description: "Perfect for trying out Contexta",
-    features: [
-      "10 documents",
-      "100 MB storage",
-      "2 API keys",
-      "100 API requests/day",
-      "50 chat messages/day",
-      "Community support",
-    ],
-    cta: "Get started free",
-    href: "/register",
-    popular: false,
-  },
-  {
-    name: "Pro",
-    price: "$29",
-    period: "/month",
-    description: "For professionals and growing teams",
-    features: [
-      "500 documents",
-      "10 GB storage",
-      "10 API keys",
-      "10,000 API requests/day",
-      "1,000 chat messages/day",
-      "Priority support",
-      "Advanced analytics",
-      "Custom integrations",
-    ],
-    cta: "Start Pro trial",
-    href: "/register?plan=pro",
-    popular: true,
-  },
-  {
-    name: "Enterprise",
-    price: "$99",
-    period: "/month",
-    description: "For organizations at scale",
-    features: [
-      "10,000 documents",
-      "100 GB storage",
-      "100 API keys",
-      "100,000 API requests/day",
-      "10,000 chat messages/day",
-      "Dedicated support",
-      "Advanced analytics",
-      "SSO & audit logs",
-    ],
-    cta: "Contact sales",
-    href: "/register?plan=enterprise",
-    popular: false,
-  },
-];
+// Built from lib/pricing so the landing can only show limits apps/api actually enforces,
+// and so a plan the server refuses to sell has no clickable href.
+const pricingTiers = PRICING_TIERS.map((tier) => ({
+  name: tier.tier === "free" ? "Free" : tier.tier === "pro" ? "Pro" : "Enterprise",
+  price: tier.priceMonthly === 0 ? "$0" : formatUsd(tier.priceMonthly),
+  period: tier.priceMonthly === 0 ? "forever" : "/month",
+  sellable: tier.sellable,
+  description:
+    tier.tier === "free"
+      ? "Everything Contexta does, at beta limits"
+      : tier.tier === "pro"
+        ? "For professionals and growing teams"
+        : "For organizations at scale",
+  features: [
+    `${formatCount(tier.limits.documents)} documents`,
+    `${formatStorage(tier.limits.storageBytes)} storage`,
+    `${formatCount(tier.limits.apiKeys)} API keys`,
+    `${formatCount(tier.limits.apiRequestsPerDay)} API requests/day`,
+    `${formatCount(tier.limits.chatMessagesPerDay)} chat messages/day`,
+  ],
+  cta:
+    tier.tier === "free"
+      ? "Get started free"
+      : tier.sellable
+        ? "Choose in Billing"
+        : "Coming soon",
+  href: tier.tier === "free" ? "/register" : tier.sellable ? "/billing" : null,
+  popular: tier.tier === "pro" && tier.sellable,
+}));
 
 function Pricing() {
   return (
@@ -592,7 +567,8 @@ function Pricing() {
             Pricing.
           </h2>
           <p className="mx-auto max-w-2xl text-lg text-ink-muted">
-            Start free and scale as you grow. No hidden fees, no surprises.
+            Contexta is in beta. Free is the only plan open for signup, and no card is taken —
+            the paid tiers arrive once their limits are enforced end to end.
           </p>
         </FadeIn>
 
@@ -604,11 +580,16 @@ function Pricing() {
                   tier.popular
                     ? "border-ink bg-paper shadow-card"
                     : "border-paper-line bg-paper-card hover:border-paper-edge hover:shadow-card"
-                }`}
+                } ${tier.sellable ? "" : "opacity-80"}`}
               >
                 {tier.popular && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-accent px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-accent-ink">
                     Most popular
+                  </div>
+                )}
+                {!tier.sellable && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full border border-paper-line bg-paper px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-ink-muted">
+                    Soon
                   </div>
                 )}
                 <div className="mb-6">
@@ -627,16 +608,27 @@ function Pricing() {
                     </li>
                   ))}
                 </ul>
-                <Link
-                  href={tier.href}
-                  className={`block rounded-full py-3 text-center text-sm font-semibold transition-all ${
-                    tier.popular
-                      ? "bg-accent text-accent-ink hover:bg-accent-deep"
-                      : "border border-paper-line bg-paper-soft text-ink hover:bg-paper-card"
-                  }`}
-                >
-                  {tier.cta}
-                </Link>
+                {tier.href ? (
+                  <Link
+                    href={tier.href}
+                    className={`block rounded-full py-3 text-center text-sm font-semibold transition-all ${
+                      tier.popular
+                        ? "bg-accent text-accent-ink hover:bg-accent-deep"
+                        : "border border-paper-line bg-paper-soft text-ink hover:bg-paper-card"
+                    }`}
+                  >
+                    {tier.cta}
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    aria-disabled="true"
+                    className="block cursor-not-allowed rounded-full border border-dashed border-paper-edge py-3 text-center text-sm font-semibold text-ink-faint"
+                  >
+                    {tier.cta}
+                  </button>
+                )}
               </div>
             </FadeIn>
           ))}
@@ -656,7 +648,7 @@ function CTA() {
             Ready?
           </h2>
           <p className="mb-8 text-lg text-paper/70">
-            Start free today. Upgrade when you need more.
+            Start free today. Nothing is billed while Contexta is in beta.
           </p>
           <Link
             href="/register"

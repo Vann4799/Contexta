@@ -1,8 +1,12 @@
 // The limits below are the ones apps/api/app/billing/repository.py actually enforces (documents,
 // storage bytes, key count, API requests/day, chat messages/day). Nothing else is gated per tier,
 // so a pricing page built from this file must not add feature rows that no code checks.
+// `sellable` mirrors Plan.sellable in apps/api: checkout refuses every other tier, so a
+// price here must never look clickable. Flip it once a Stripe webhook writes `subscriptions`
+// and the limits below are enforced in the service.
 export type PricingTier = {
   tier: "free" | "pro" | "enterprise";
+  sellable: boolean;
   priceMonthly: number;
   priceYearly: number;
   limits: {
@@ -17,6 +21,7 @@ export type PricingTier = {
 export const PRICING_TIERS: PricingTier[] = [
   {
     tier: "free",
+    sellable: true,
     priceMonthly: 0,
     priceYearly: 0,
     limits: {
@@ -29,6 +34,7 @@ export const PRICING_TIERS: PricingTier[] = [
   },
   {
     tier: "pro",
+    sellable: false,
     priceMonthly: 29,
     priceYearly: 290,
     limits: {
@@ -41,6 +47,7 @@ export const PRICING_TIERS: PricingTier[] = [
   },
   {
     tier: "enterprise",
+    sellable: false,
     priceMonthly: 99,
     priceYearly: 990,
     limits: {

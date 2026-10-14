@@ -17,15 +17,15 @@ export function PaywallOverlay({
   const messages: Record<string, { title: string; body: string }> = {
     documents: {
       title: t.paywall?.documentsTitle ?? "Document limit reached",
-      body: t.paywall?.documentsBody ?? "Upgrade to add more documents to your workspace.",
+      body: t.paywall?.documentsBody ?? "Free holds 10 documents during the beta.",
     },
     api_keys: {
       title: t.paywall?.apiKeysTitle ?? "API key limit reached",
-      body: t.paywall?.apiKeysBody ?? "Upgrade to create more API keys.",
+      body: t.paywall?.apiKeysBody ?? "Free issues 2 API keys during the beta.",
     },
     chat_messages: {
       title: t.paywall?.chatTitle ?? "Daily chat limit reached",
-      body: t.paywall?.chatBody ?? "Your daily chat message limit has been reached. Upgrade for more.",
+      body: t.paywall?.chatBody ?? "Your daily chat message limit has been reached. It resets at midnight UTC.",
     },
   };
 

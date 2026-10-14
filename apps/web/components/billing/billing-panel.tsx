@@ -114,6 +114,10 @@ function PlanCard({
           <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
             {t.billing.current}
           </span>
+        ) : !plan.sellable ? (
+          <span className="rounded-full border border-ink-border bg-paper-soft px-2 py-0.5 text-[10px] font-semibold text-ink-muted">
+            {t.billing.soon}
+          </span>
         ) : null}
       </div>
 
@@ -143,18 +147,26 @@ function PlanCard({
       <button
         type="button"
         onClick={() => onSelect(plan)}
-        disabled={isCurrent}
+        disabled={isCurrent || !plan.sellable}
         className={`focus-ring w-full rounded-control px-3 py-2 text-[13px] font-medium transition-colors ${
           isCurrent
             ? "cursor-default border border-ink-border bg-paper-soft text-ink-muted"
-            : isFree
-              ? "border border-ink-border text-ink hover:bg-paper-soft"
-              : isEnterprise
-                ? "bg-ink text-paper hover:bg-ink/90"
-                : "bg-accent text-night hover:bg-accent/90"
+            : !plan.sellable
+              ? "cursor-not-allowed border border-dashed border-ink-border text-ink-faint"
+              : isFree
+                ? "border border-ink-border text-ink hover:bg-paper-soft"
+                : isEnterprise
+                  ? "bg-ink text-paper hover:bg-ink/90"
+                  : "bg-accent text-night hover:bg-accent/90"
         }`}
       >
-        {isCurrent ? t.billing.current : isFree ? t.billing.downgrade : t.billing.upgrade}
+        {isCurrent
+          ? t.billing.current
+          : !plan.sellable
+            ? t.billing.ctaSoon
+            : isFree
+              ? t.billing.downgrade
+              : t.billing.upgrade}
       </button>
     </div>
   );
@@ -200,7 +212,7 @@ export function BillingPanel() {
   }, [load]);
 
   const handlePlanSelect = async (plan: Plan) => {
-    if (plan.tier === "free") return;
+    if (plan.tier === "free" || !plan.sellable) return;
     try {
       const token = await getAccessToken();
       if (!token) return;
@@ -262,7 +274,7 @@ export function BillingPanel() {
           <div className="mb-5 flex items-center gap-3 rounded-control border border-amber-300 bg-amber-50 p-3">
             <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" strokeWidth={2} />
             <p className="text-[12px] text-amber-900">
-              {t.billing.overLimit} — upgrade your plan to increase limits.
+              {t.billing.overLimit}. {t.billing.overLimitHint}
             </p>
           </div>
         ) : null}

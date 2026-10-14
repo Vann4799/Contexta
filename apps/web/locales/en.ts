@@ -43,9 +43,9 @@ export const en = {
     recentDocs: "Recent documents",
     noRecentDocs: "No recent documents",
     viewAllDocs: "View all",
-    upgradeTitle: "Upgrade to Pro",
-    upgradeBody: "Unlock unlimited documents, priority indexing, and team workspaces.",
-    upgradeCta: "Upgrade now",
+    upgradeTitle: "Contexta is in beta",
+    upgradeBody: "Free is the only plan open for signup today. Pro and Enterprise arrive after the beta.",
+    upgradeCta: "See plans",
     secondaryNav: "Secondary",
     nav: {
       dashboard: "Dashboard",
@@ -1106,7 +1106,11 @@ export const en = {
     overLimit: "Over limit",
     ofLimit: (used: number, max: number) => `${used} / ${max}`,
     plansTitle: "Available plans",
-    plansSubtitle: "Upgrade anytime to increase your limits",
+    plansSubtitle: "Contexta is in beta — Free is the only plan open for signup today",
+    soon: "Soon",
+    ctaSoon: "Not open yet",
+    overLimitHint:
+      "Free is the only plan open during the beta, so removing documents is what frees room today.",
     priceMonthly: (price: number) => price === 0 ? "Free" : `$${price}/mo`,
     priceYearly: (price: number) => price === 0 ? "Free" : `$${price}/yr`,
     perMonth: "/mo",
@@ -1124,7 +1128,7 @@ export const en = {
     limitApiRequests: (n: number) => `${n.toLocaleString()} API req/day`,
     limitChatMessages: (n: number) => `${n.toLocaleString()} chat msgs/day`,
     comingSoon: "Stripe checkout coming soon",
-    securePayment: "Secure payment powered by Stripe",
+    securePayment: "No card is taken while Contexta is in beta",
     errors: {
       signIn: "Sign in to view billing.",
       loadFailed: "Unable to load billing status.",
@@ -1133,12 +1137,12 @@ export const en = {
   },
   paywall: {
     documentsTitle: "Document limit reached",
-    documentsBody: "Upgrade your plan to add more documents to your workspace.",
+    documentsBody: "Free holds 10 documents during the beta. Removing one is what lets you upload again today.",
     apiKeysTitle: "API key limit reached",
-    apiKeysBody: "Upgrade your plan to create more API keys.",
+    apiKeysBody: "Free issues 2 API keys during the beta. Revoke one you no longer use to create another.",
     chatTitle: "Daily chat limit reached",
-    chatBody: "You've reached your daily chat message limit. Upgrade for unlimited access.",
-    cta: "Upgrade plan",
+    chatBody: "You've used the day's chat messages. The allowance resets at midnight UTC.",
+    cta: "See plans",
     currentPlan: "Current plan",
     usage: "Usage",
     close: "Close",
@@ -1351,6 +1355,10 @@ export const en = {
       popularBadge: "Most chosen",
       ctaFree: "Create an account",
       ctaPaid: "Choose in Billing",
+      soonBadge: "Soon",
+      ctaSoon: "Not open yet",
+      betaNote:
+        "Contexta is in beta: Free is the only plan open for signup, and no card is taken. The prices below are what the paid plans will cost when they ship.",
       includedTitle: "In every plan",
       included: [
         "Chat grounded in your own documents, citing document, page and section",
@@ -1367,17 +1375,17 @@ export const en = {
         {
           question: "What happens when I hit a limit?",
           answer:
-            "The gate stops the new action — an upload, a key creation, a chat message — and tells you which limit you reached. Nothing you already uploaded is deleted, so removing documents or upgrading is what gets you moving again."
+            "The gate stops the new action — an upload, a key creation, a chat message — and tells you which limit you reached. Nothing you already uploaded is deleted, so removing documents is what gets you moving again while the paid plans are still closed."
         },
         {
           question: "Can I change plans later?",
           answer:
-            "Yes. Plan changes happen on the Billing page through Stripe Checkout, and the new limits apply as soon as the subscription is active."
+            "Not yet. Free is the only plan open during the beta, and checkout refuses the others instead of taking money for nothing. Pro and Enterprise open once the limits above are enforced by the server and billing actually maps a payment to them."
         },
         {
           question: "Do you store my card?",
           answer:
-            "No. Card details stay with Stripe; Contexta only keeps the subscription status and the plan it maps to."
+            "No card is taken today, because Free is the only plan open. When the paid plans ship, card details stay with Stripe and Contexta keeps only the subscription status and its plan."
         }
       ]
     },
@@ -1386,6 +1394,12 @@ export const en = {
       title: "What changed",
       lede: "Written from the commits that shipped, newest first. Dates are deployment dates, not plan dates.",
       entries: [
+        {
+          date: "2026-10-14",
+          title: "Pro and Enterprise moved to Soon",
+          body:
+            "An audit asked what each advertised limit actually does, and found checkout could take money while nothing wrote a subscription and no server enforced the plan ceilings. /billing/checkout now answers 409 plan_not_available for a tier it cannot deliver, every pricing surface labels those tiers Soon, and the invented metrics came off the landing page. Contexta runs as a beta on Free until payment and limits are wired end to end."
+        },
         {
           date: "2026-10-14",
           title: "Charts you can use with a thumb",
@@ -1418,9 +1432,9 @@ export const en = {
         },
         {
           date: "2026-10-11",
-          title: "Paid plans went live",
+          title: "Billing wiring landed",
           body:
-            "Stripe checkout wired to real plan tiers, a paywall that appears at the gate instead of a decorative banner, email verification, and a first-run onboarding flow."
+            "Stripe checkout wired to the plan tiers and a paywall that appears at the gate instead of a decorative banner, alongside email verification and a first-run onboarding flow. The limits themselves were still checked only in the browser — the entry above closes that gap."
         },
         {
           date: "2026-10-10",
@@ -1545,7 +1559,7 @@ export const en = {
         },
         {
           title: "Plan, billing and invoices",
-          body: "Change plan or manage the Stripe subscription from the billing screen in your workspace.",
+          body: "The billing screen shows your current plan and how much of each limit you have used. Free is the only plan open during the beta.",
           cta: "Open Billing",
           href: "/billing"
         },
@@ -1779,7 +1793,7 @@ export const en = {
         { name: "Qdrant", role: "Vector index, running on our own server" },
         { name: "OpenRouter", role: "Embedding model calls for indexing and search" },
         { name: "DeepSeek", role: "Answer and brief generation from retrieved context" },
-        { name: "Stripe", role: "Payment processing and subscription records" }
+        { name: "Stripe", role: "Payment processing, for the plans that open after the beta" }
       ],
       note:
         "This page describes how the product works today. Where it differs from the Privacy Policy, the Policy is the legal document and this page is the operational one."

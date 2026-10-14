@@ -43,9 +43,9 @@ export const id: Dictionary = {
     recentDocs: "Dokumen terbaru",
     noRecentDocs: "Belum ada dokumen terbaru",
     viewAllDocs: "Lihat semua",
-    upgradeTitle: "Upgrade ke Pro",
-    upgradeBody: "Buka dokumen tanpa batas, prioritas indeks, dan workspace tim.",
-    upgradeCta: "Upgrade sekarang",
+    upgradeTitle: "Contexta masih beta",
+    upgradeBody: "Free satu-satunya paket yang dibuka hari ini. Pro dan Enterprise menyusul setelah beta.",
+    upgradeCta: "Lihat paket",
     secondaryNav: "Sekunder",
     nav: {
       dashboard: "Dashboard",
@@ -1103,7 +1103,11 @@ export const id: Dictionary = {
     overLimit: "Melebihi batas",
     ofLimit: (used: number, max: number) => `${used} / ${max}`,
     plansTitle: "Paket tersedia",
-    plansSubtitle: "Upgrade kapan saja untuk menambah batas",
+    plansSubtitle: "Contexta masih beta — Free satu-satunya paket yang dibuka untuk pendaftaran",
+    soon: "Segera",
+    ctaSoon: "Belum dibuka",
+    overLimitHint:
+      "Free satu-satunya paket yang dibuka selama beta, jadi menghapus dokumen adalah cara membebaskan ruang hari ini.",
     priceMonthly: (price: number) => price === 0 ? "Gratis" : `$${price}/bln`,
     priceYearly: (price: number) => price === 0 ? "Gratis" : `$${price}/thn`,
     perMonth: "/bln",
@@ -1121,7 +1125,7 @@ export const id: Dictionary = {
     limitApiRequests: (n: number) => `${n.toLocaleString()} req API/hari`,
     limitChatMessages: (n: number) => `${n.toLocaleString()} pesan chat/hari`,
     comingSoon: "Stripe checkout segera hadir",
-    securePayment: "Pembayaran aman melalui Stripe",
+    securePayment: "Tidak ada kartu yang diambil selama Contexta berada dalam beta",
     errors: {
       signIn: "Masuk dulu untuk melihat penagihan.",
       loadFailed: "Tidak bisa memuat status penagihan.",
@@ -1130,12 +1134,12 @@ export const id: Dictionary = {
   },
   paywall: {
     documentsTitle: "Batas dokumen tercapai",
-    documentsBody: "Upgrade paket untuk menambah lebih banyak dokumen ke workspace kamu.",
+    documentsBody: "Free menampung 10 dokumen selama beta. Menghapus salah satunya adalah cara bisa mengunggah lagi hari ini.",
     apiKeysTitle: "Batas API key tercapai",
-    apiKeysBody: "Upgrade paket untuk membuat lebih banyak API key.",
+    apiKeysBody: "Free menerbitkan 2 API key selama beta. Cabut yang tidak kamu pakai untuk membuat yang baru.",
     chatTitle: "Batas chat harian tercapai",
-    chatBody: "Batas chat harian kamu sudah tercapai. Upgrade untuk akses lebih banyak.",
-    cta: "Upgrade paket",
+    chatBody: "Jatah chat harian kamu sudah terpakai. Jatahnya reset setiap tengah malam UTC.",
+    cta: "Lihat paket",
     currentPlan: "Paket saat ini",
     usage: "Pemakaian",
     close: "Tutup",
@@ -1348,6 +1352,10 @@ export const id: Dictionary = {
       popularBadge: "Paling dipilih",
       ctaFree: "Buat akun",
       ctaPaid: "Pilih di Billing",
+      soonBadge: "Segera",
+      ctaSoon: "Belum dibuka",
+      betaNote:
+        "Contexta sedang dalam beta: Free adalah satu-satunya paket yang dibuka untuk pendaftaran, dan kartu tidak diambil. Harga di bawah adalah harga paket berbayar saat rilis nanti.",
       includedTitle: "Ada di semua paket",
       included: [
         "Chat yang berpijak pada dokumen Anda sendiri, dengan sitasi dokumen, halaman, dan bagian",
@@ -1364,17 +1372,17 @@ export const id: Dictionary = {
         {
           question: "Apa yang terjadi saat saya menabrak batas?",
           answer:
-            "Gerbangnya menghentikan aksi baru — unggahan, pembuatan key, atau pesan chat — dan memberi tahu batas mana yang tercapai. Tidak ada dokumen yang sudah Anda unggah ikut terhapus, jadi menghapus dokumen atau upgrade yang membuat Anda bergerak lagi."
+            "Gerbangnya menghentikan aksi baru — unggahan, pembuatan key, atau pesan chat — dan memberi tahu batas mana yang tercapai. Tidak ada dokumen yang sudah Anda unggah ikut terhapus, jadi menghapus dokumen adalah cara untuk bergerak lagi saat paket berbayar belum dibuka."
         },
         {
           question: "Bisakah saya ganti paket nanti?",
           answer:
-            "Bisa. Perubahan paket dilakukan di halaman Billing lewat Stripe Checkout, dan batas baru berlaku begitu langganannya aktif."
+            "Belum. Free adalah satu-satunya paket yang dibuka selama beta, dan checkout menolak paket lain supaya tidak mengambil uang tanpa memberi apa pun. Pro dan Enterprise dibuka setelah batas di atas ditegakkan server dan billing benar-benar memetakan pembayaran ke paket itu."
         },
         {
           question: "Apakah kartu saya disimpan?",
           answer:
-            "Tidak. Detail kartu tetap di Stripe; Contexta hanya menyimpan status langganan dan paket yang dipetakannya."
+            "Tidak ada kartu yang diambil hari ini, karena Free satu-satunya paket yang dibuka. Saat paket berbayar rilis, detail kartu tetap di Stripe dan Contexta hanya menyimpan status langganan beserta paketnya."
         }
       ]
     },
@@ -1383,6 +1391,12 @@ export const id: Dictionary = {
       title: "Yang berubah",
       lede: "Ditulis dari commit yang benar-benar dikirim, terbaru lebih dulu. Tanggalnya adalah tanggal deploy, bukan tanggal rencana.",
       entries: [
+        {
+          date: "2026-10-14",
+          title: "Pro dan Enterprise berpindah ke Soon",
+          body:
+            "Sebuah audit menanyakan apa yang sebenarnya dilakukan tiap batas yang diiklankan, dan menemukan checkout bisa mengambil uang sementara tidak ada yang menulis langganan dan tidak ada server yang menegakkan plafon paket. /billing/checkout kini menjawab 409 plan_not_available untuk tier yang tidak bisa dipenuhi, seluruh halaman harga melabeli tier itu Soon, dan angka-angka karangan di landing page dihapus. Contexta berjalan sebagai beta di Free sampai pembayaran dan batas terhubung penuh."
+        },
         {
           date: "2026-10-14",
           title: "Chart yang bisa dipakai dengan jempol",
@@ -1415,9 +1429,9 @@ export const id: Dictionary = {
         },
         {
           date: "2026-10-11",
-          title: "Paket berbayar goes live",
+          title: "Perangkat billing mendarat",
           body:
-            "Stripe checkout disambungkan ke tier paket yang nyata, paywall yang muncul di gerbang alih-alih banner dekoratif, verifikasi email, dan alur onboarding untuk pengguna baru."
+            "Stripe checkout disambungkan ke tier paket dan paywall yang muncul di gerbang alih-alih banner dekoratif, bersama verifikasi email dan alur onboarding untuk pengguna baru. Batasnya sendiri masih hanya diperiksa di browser — entri di atas menutup celah itu."
         },
         {
           date: "2026-10-10",
@@ -1542,7 +1556,7 @@ export const id: Dictionary = {
         },
         {
           title: "Paket, billing, dan invoice",
-          body: "Ganti paket atau kelola langganan Stripe dari layar billing di workspace Anda.",
+          body: "Layar billing menampilkan paket Anda saat ini dan pemakaian tiap batas. Free satu-satunya paket yang dibuka selama beta.",
           cta: "Buka Billing",
           href: "/billing"
         },
@@ -1776,7 +1790,7 @@ export const id: Dictionary = {
         { name: "Qdrant", role: "Indeks vektor, berjalan di server kami sendiri" },
         { name: "OpenRouter", role: "Panggilan model embedding untuk indeksing dan pencarian" },
         { name: "DeepSeek", role: "Pembuatan jawaban dan brief dari konteks yang retrieved" },
-        { name: "Stripe", role: "Pemrosesan pembayaran dan catatan langganan" }
+        { name: "Stripe", role: "Pemrosesan pembayaran, untuk paket yang dibuka setelah beta" }
       ],
       note:
         "Halaman ini menggambarkan cara produk bekerja hari ini. Bila berbeda dengan Kebijakan Privasi, Kebijakan itulah dokumen legalnya dan halaman ini adalah dokumen operasionalnya."

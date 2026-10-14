@@ -25,10 +25,13 @@ PLANS: dict[PlanTier, Plan] = {
         ),
     ),
     "pro": Plan(
+        # Flip to True once a Stripe webhook writes `subscriptions` and the limits below
+        # are enforced in the service — until then checkout takes money for nothing.
         tier="pro",
         name="Pro",
         price_monthly=29,
         price_yearly=290,
+        sellable=False,
         limits=PlanLimits(
             max_documents=500,
             max_storage_bytes=10 * 1024 * 1024 * 1024,
@@ -38,10 +41,13 @@ PLANS: dict[PlanTier, Plan] = {
         ),
     ),
     "enterprise": Plan(
+        # Not sellable either: 100 GB of files and a ~5M-chunk index do not fit the
+        # single VPS everything else shares.
         tier="enterprise",
         name="Enterprise",
         price_monthly=99,
         price_yearly=990,
+        sellable=False,
         limits=PlanLimits(
             max_documents=10000,
             max_storage_bytes=100 * 1024 * 1024 * 1024,

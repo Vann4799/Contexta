@@ -22,6 +22,7 @@ class Plan(BaseModel):
     price_monthly: int
     price_yearly: int
     limits: PlanLimits
+    sellable: bool = True
 
 
 class Subscription(BaseModel):
