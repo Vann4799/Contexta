@@ -104,12 +104,26 @@ https://web-hazel-beta-36.vercel.app
 ## Retiring the raw-IP hostname (Cloudflare cutover)
 
 The API is currently published as `api.<VPS-IP>.sslip.io`. The hostname carries the origin IP, so
-anyone can connect to `https://<VPS-IP>` directly and bypass whatever edge protection sits in front
-of the domain. Until this section is done, treat the VPS IP as public knowledge.
+anyone who reads it can reach the origin directly and skip whatever edge protection sits in front of
+the domain. Until this section is done, treat the VPS IP as public knowledge.
 
-Steps 1, 2 and 7 need Cloudflare and registrar access, so they are the owner's to run.
+Measured on 2026-10-14, which narrows what this cutover actually has to fix:
 
-1. Add `contexta.my.id` as a zone in Cloudflare and move the nameservers at the registrar.
+- `ss -tlnp` shows only `22`, `80` and `443` bound on the host. `api` (8001), `embeddings` (8070),
+  `mcp` (8080) and `qdrant` (6333-6334) are published to the docker network only, with no host port,
+  so there is no extra service to lock down — Caddy is the entire public surface.
+- `https://<VPS-IP>/health` does **not** serve the API today. The one site block is `{$API_DOMAIN}`,
+  so a handshake for the bare IP or for any other Host has no certificate to offer and fails. Port 80
+  answers `308` and redirects to the sslip name. So the bypass to close is the sslip *hostname*, not
+  a working IP-address endpoint.
+- `contexta.my.id` is already a Cloudflare zone (`arely`/`mitchell.ns.cloudflare.com`, apex `A`
+  `76.76.21.21` -> Vercel, DNS only). Step 1 is done. `api.contexta.my.id` does not exist yet.
+- The `DOCKER-USER` chain is empty and present, which is the hook Docker leaves for exactly this:
+  step 7 can be enforced on the box, so it does not need the AWS console.
+
+Step 2 needs the zone; everything else can be run from the VPS or the repo.
+
+1. Done — the zone exists and the nameservers are already on Cloudflare.
 2. Create an `A` record `api` pointing at the VPS IP as **DNS only** for now (grey cloud).
    Keep ports `80`/`443` reachable as the Requirements section asks for.
 3. On the VPS, swap the hostname the stack answers for, in `.env.production`:
@@ -141,18 +155,47 @@ Steps 1, 2 and 7 need Cloudflare and registrar access, so they are the owner's t
 
 6. In Supabase → Authentication → URL Configuration, replace every sslip.io entry in Site URL and
    Redirect URLs with `https://api.contexta.my.id`.
-7. Close the origin. In the AWS security group, replace `0.0.0.0/0` on ports 80/443 with the
-   published Cloudflare IPv4 ranges (<https://www.cloudflare.com/ips/>), and keep port 22 limited
-   to your own IP. This is the step that actually removes the direct-IP bypass.
+7. Close the origin so only Cloudflare can reach `80`/`443`. Do it on the box, in `DOCKER-USER`,
+   which Docker evaluates before its own published-port rules and which survives `docker compose up`:
+
+   ```bash
+   sudo iptables -N CONTEXTA-ORIGIN 2>/dev/null
+   sudo iptables -I DOCKER-USER 1 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+   for p in $(curl -s --max-time 15 https://api.cloudflare.com/client/v4/ips | \
+              python3 -c 'import sys,json;print(*json.load(sys.stdin)["result"]["ipv4_cidrs"])'); do
+     sudo iptables -I CONTEXTA-ORIGIN -s "$p" -j ACCEPT
+   done
+   sudo iptables -I DOCKER-USER 2 -p tcp -m multiport --dports 80,443 -j CONTEXTA-ORIGIN
+   sudo iptables -A DOCKER-USER -p tcp -m multiport --dports 80,443 -j DROP
+   ```
+
+   Port 22 is untouched, so SSH keeps working. `docker compose up` leaves `DOCKER-USER` alone, but a
+   **Docker daemon or host restart empties it**, so re-run the block above (or boot it from a systemd
+   unit and `netfilter-persistent save`) after any restart of the daemon. The AWS security group is
+   the belt-and-braces version of the same rule and is worth narrowing to the Cloudflare ranges too,
+   because it does not depend on anything running inside the instance — but it is no longer the only
+   way to close this.
 
 Verify:
 
 ```bash
-curl -i https://api.contexta.my.id/health         # 200
-curl -i --max-time 10 -k https://<VPS-IP>/health  # must time out or refuse
+# the hostname must work
+curl -i https://api.contexta.my.id/health                                  # 200
+
+# the origin must no longer answer for anyone off the Cloudflare ranges. Send the real
+# hostname as SNI + Host to the raw IP: this succeeds before the lockdown and must be
+# refused after it.
+curl -i --max-time 10 --resolve api.contexta.my.id:443:<VPS-IP> https://api.contexta.my.id/health
 ```
 
-If the second command still answers, the security group change did not land.
+Run both from **off the box**. This host has no NAT hairpinning, so a request to its own public IP
+from inside it fails no matter what the firewall does, and a failure there is not evidence.
+
+The last command answering `200` after step 7 means the lockdown did not land. It is also the reason
+step 7 comes last: while the record is proxied, real traffic arrives from Cloudflare's ranges and this
+direct request is only ever made by you. Note that `curl -k https://<VPS-IP>/health` is **not** a valid
+test — Caddy has no certificate for the bare IP, so that handshake fails whether or not the firewall
+rule is in place.
 
 **On the proxy-side rate limit.** The stock `caddy:2.8-alpine` image has no `rate_limit` directive —
 it ships as a plugin build, so the "at minimum, rate-limit at Caddy" fallback is not available here
