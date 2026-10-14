@@ -153,6 +153,12 @@ curl -i --max-time 10 -k https://<VPS-IP>/health  # must time out or refuse
 
 If the second command still answers, the security group change did not land.
 
+**On the proxy-side rate limit.** The stock `caddy:2.8-alpine` image has no `rate_limit` directive —
+it ships as a plugin build, so the "at minimum, rate-limit at Caddy" fallback is not available here
+without swapping the image. Today the only limiters in the stack are the API's own: 60 requests per
+minute per API key and the daily LLM budgets, both of which key on a credential. A flood that never
+presents one reaches the origin unchecked, which is the concrete reason Cloudflare belongs in front.
+
 **On the "one instance, no load balancer" observation.** That is a capacity decision, not a
 misconfiguration: `api` is stateless (Postgres, Qdrant and the object store all run outside the
 container), so a second replica behind a load balancer is the scaling path when measured load
