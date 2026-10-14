@@ -29,6 +29,7 @@ import type { Dictionary } from "@/locales/en";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/status-pill";
 import { PaywallModal } from "@/components/ui/paywall-modal";
+import { TableScrollHint } from "@/components/ui/table-scroll-hint";
 import { cn } from "@/lib/utils";
 
 type UploadCopy = Dictionary["documents"]["upload"];
@@ -813,6 +814,7 @@ export function DocumentUploadPanel() {
             </div>
           </div>
         </div>
+        <TableScrollHint className="lg:hidden" />
 
         {filteredDocuments.length > recentActivityLimit ? (
           <p className="nums mt-3 border-t border-paper-line pt-3 text-[12px] text-ink-muted">

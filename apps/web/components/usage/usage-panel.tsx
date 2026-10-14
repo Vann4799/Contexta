@@ -20,6 +20,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { useLocale, useT } from "@/lib/i18n";
 import { useServerError } from "@/lib/server-errors";
 import { Button } from "@/components/ui/button";
+import { TableScrollHint } from "@/components/ui/table-scroll-hint";
 import { cn } from "@/lib/utils";
 import ApiActivityChart from "@/components/usage/api-activity-chart";
 
@@ -314,6 +315,7 @@ export function UsagePanel() {
                 </tbody>
               </table>
             </div>
+            <TableScrollHint />
           </article>
         </>
       ) : null}

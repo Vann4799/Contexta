@@ -6,6 +6,7 @@ import { CHUNK_PAGE_SIZE, listDocumentChunks, type DocumentChunksPage } from "@/
 import { useT } from "@/lib/i18n";
 import { useServerError } from "@/lib/server-errors";
 import { cn } from "@/lib/utils";
+import { TableScrollHint } from "@/components/ui/table-scroll-hint";
 
 type DocumentChunksTableProps = {
   documentId: string;
@@ -161,6 +162,7 @@ export function DocumentChunksTable({ documentId, getAccessToken }: DocumentChun
           </tbody>
         </table>
       </div>
+      <TableScrollHint />
 
       <nav aria-label={t.pages} className="mt-4 flex items-center justify-center gap-1.5">
         <button

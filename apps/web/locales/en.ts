@@ -3,6 +3,7 @@ import type { DocumentType } from "@/lib/api";
 export const en = {
   common: {
     language: "Language",
+    scrollHint: "Swipe the table sideways to see every column",
     status: {
       ready: "Ready",
       processing: "Processing",

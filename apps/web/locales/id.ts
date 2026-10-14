@@ -3,6 +3,7 @@ import type { Dictionary } from "@/locales/en";
 export const id: Dictionary = {
   common: {
     language: "Bahasa",
+    scrollHint: "Geser tabel ke samping untuk melihat semua kolom",
     status: {
       ready: "Siap",
       processing: "Memproses",

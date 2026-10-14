@@ -40,6 +40,7 @@ import { useServerError } from "@/lib/server-errors";
 import type { Dictionary } from "@/locales/en";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/status-pill";
+import { TableScrollHint } from "@/components/ui/table-scroll-hint";
 import { cn } from "@/lib/utils";
 
 type DashboardCopy = Dictionary["dashboard"];
@@ -578,6 +579,7 @@ export function DashboardInsights() {
               </tbody>
             </table>
           </div>
+          <TableScrollHint className="md:hidden" />
 
           <div className="mt-3 flex items-center justify-between border-t border-paper-line pt-3 text-[12.5px] text-ink-muted">
             <span className="nums">
