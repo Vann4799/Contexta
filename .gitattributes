@@ -1,0 +1,6 @@
+# Files that are executed on the Linux VPS must never be checked out with CRLF: a trailing \r
+# breaks a bash shebang line and makes systemd reject a unit directive.
+*.sh text eol=lf
+*.service text eol=lf
+*.timer text eol=lf
+Caddyfile text eol=lf
