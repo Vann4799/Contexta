@@ -26,7 +26,7 @@ jobs:
       API_BASE: https://api.3.27.119.26.sslip.io
       WEB_PROBE: https://contexta.my.id/robots.txt
       ALERT_AFTER_RUNS: 2
-      RESULTS: ${{ runner.temp }}/probe-results.txt
+      RESULTS: /tmp/contexta-probe-results.txt
     steps:
       - name: Probe endpoints
         id: probe
