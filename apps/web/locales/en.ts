@@ -1208,7 +1208,7 @@ export const en = {
         },
         billing: {
           title: "7. Billing & Plans",
-          body: "The Service offers free and paid plans. Paid plans are billed monthly or annually as displayed at the time of purchase. All fees are non-refundable unless required by law. We may change pricing with at least 30 days notice before the change takes effect. Failure to pay may result in suspension or termination of your account."
+          body: "The Service is currently provided free of charge while it is in beta, and no paid plan is offered for purchase yet — paid plans will be available soon. When they become available, they will be billed monthly or annually as displayed at the time of purchase, and fees will be non-refundable unless required by law. We may change pricing with at least 30 days notice before the change takes effect. Failure to pay may result in suspension or termination of your account."
         },
         termination: {
           title: "8. Termination",

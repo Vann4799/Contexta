@@ -1205,7 +1205,7 @@ export const id: Dictionary = {
         },
         billing: {
           title: "7. Penagihan & Paket",
-          body: "Layanan ini menawarkan paket gratis dan berbayar. Paket berbayar ditagihkan bulanan atau tahunan seperti yang ditampilkan pada saat pembelian. Semua biaya tidak dapat dikembalikan kecuali diwajibkan oleh hukum. Kami dapat mengubah harga dengan pemberitahuan minimal 30 hari sebelum perubahan berlaku. Kegagalan membayar dapat mengakibatkan penangguhan atau penghentian akun Anda."
+          body: "Layanan ini saat ini diberikan gratis selama masa beta, dan belum ada paket berbayar yang bisa dibeli — paket berbayar segera hadir. Saat paket berbayar tersedia, penagihannya bulanan atau tahunan seperti yang ditampilkan pada saat pembelian, dan biaya tidak dapat dikembalikan kecuali diwajibkan oleh hukum. Kami dapat mengubah harga dengan pemberitahuan minimal 30 hari sebelum perubahan berlaku. Kegagalan membayar dapat mengakibatkan penangguhan atau penghentian akun Anda."
         },
         termination: {
           title: "8. Penghentian",
