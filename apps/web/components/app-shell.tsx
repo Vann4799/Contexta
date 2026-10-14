@@ -77,7 +77,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-paper text-ink">
       <Sidebar email={email} />
-      <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-3 px-3 pb-10 pt-5 sm:px-4 lg:pl-72 lg:pr-8">
+      <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-3 px-3 pb-10 pt-[68px] sm:px-4 lg:pl-72 lg:pr-8 lg:pt-5">
         <main className="mt-2">{children}</main>
       </div>
     </div>

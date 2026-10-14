@@ -165,3 +165,14 @@ a {
     transform: scale(1.05);
   }
 }
+
+/* iOS zooms the whole page when a focused control renders under 16px, and every field here sits
+   at 12.5-13.5px. Needs !important to beat the text-[13px] utilities on the elements themselves;
+   max() keeps any control already sized above the floor intact. */
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: max(16px, 1em) !important;
+  }
+}
