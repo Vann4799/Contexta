@@ -275,19 +275,30 @@ not the API answering. Two endpoints are left alone on purpose: `/health/indexin
 `get_current_user` and answers 401 to an anonymous caller, so paging on it would page on a healthy
 system, and `/docs`, `/redoc` and `/openapi.json` are 404 in production by design.
 
-### Secrets to add
+### Secrets
 
-GitHub -> `Vann4799/Contexta` -> Settings -> Secrets and variables -> Actions -> Repository secrets,
-Add a new secret, twice:
+GitHub -> `Vann4799/Contexta` -> Settings -> Secrets and variables -> Actions -> Repository secrets:
 
 ```text
 TELEGRAM_BOT_TOKEN   the token @BotFather gives you for /newbot
 TELEGRAM_CHAT_ID     numeric id of the chat to page; negative for a channel
 ```
 
-To read the chat id, send any message to the bot, then open
-`https://api.telegram.org/bot<token>/getUpdates` in a browser and copy `chat.id`. To page a channel,
-create it, then add the bot as an administrator, otherwise Telegram answers `403`.
+Both are set. To make (or re-make) a bot: @BotFather -> `/newbot`, then send any message to it and
+open `https://api.telegram.org/bot<token>/getUpdates` to read `chat.id`. To page a channel, create
+it and add the bot as an administrator, otherwise Telegram answers `403`. Replacing a revoked token
+only means overwriting the secret; the workflow reads it per run and needs no redeploy.
+
+To prove the whole page path without an outage: Actions -> Uptime -> **Run workflow** -> tick
+`send_test`. That dispatches a real probe run and replaces the message body with a clearly-labelled
+"Contexta monitor TEST", so the channel can be trusted later when it says DOWN. A run in this mode
+cannot page on its own: if Telegram returns anything but 200 the step emits its `::error::`
+annotation exactly as it would during an incident.
+
+Careful when sending the same text by hand from a Windows shell: `curl --data-urlencode` there can
+produce `Bad Request: text must be encoded in UTF-8` for the `•` and `—` characters, which says
+nothing about the workflow. The runner is Linux and posts the same body as UTF-8 without complaint;
+reproduce it with `--data-binary @file.json` and a JSON body written as UTF-8.
 
 With either secret missing the workflow still runs and still reports: it writes the probe table to the
 run summary and emits a `::error::` annotation saying which secret is absent, and exits without
