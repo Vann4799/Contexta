@@ -7,7 +7,12 @@ name: Uptime
 on:
   schedule:
     - cron: "*/5 * * * *"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      send_test:
+        description: Send a test message to Telegram (no fake outage, no paging decision)
+        type: boolean
+        default: false
 
 permissions:
   actions: read
@@ -128,48 +133,57 @@ jobs:
           echo "event=$event streak=$streak prev=$prev"
 
       - name: Notify
-        if: steps.decide.outputs.event != 'ok'
+        if: steps.decide.outputs.event != 'ok' || github.event.inputs.send_test == 'true'
         shell: bash
         env:
           EVENT: ${{ steps.decide.outputs.event }}
           STREAK: ${{ steps.decide.outputs.streak }}
+          SEND_TEST: ${{ github.event.inputs.send_test }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           set +e
-          # A blip is one dead run only. The 3-minute incident this exists for survived
-          # more than two 5-minute probes, so two consecutive failed runs is the floor;
-          # anything less stays an annotation and does not page.
-          # An empty EVENT means the Decide step never produced a decision; silence beats
-          # inventing one, because "Contexta UP" sent by a broken run is a lie either way.
-          case "$EVENT" in
-            blip)
-              echo "::warning::Probe failed (1 of $ALERT_AFTER_RUNS consecutive runs needed to alert). Not paging yet."
-              exit 0
-              ;;
-            down)
-              echo "::error::Still down; already paged when the streak reached the threshold."
-              exit 0
-              ;;
-            alert | recover) ;;
-            *) exit 0 ;;
-          esac
-
-          if [ "$EVENT" = "alert" ]; then
-            subject="Contexta DOWN"
+          # A dispatched test page is the only way to prove these secrets reach the runner
+          # without breaking production first. It says what it is, because a message that reads
+          # like a recovery when nothing went down teaches nobody to trust the channel.
+          if [ "$SEND_TEST" = "true" ]; then
+            subject="Contexta monitor TEST"
+            message="*$subject*"$'\n'"Sent by hand from Actions to verify the notification path. Not an outage, not a recovery."
           else
-            subject="Contexta RECOVERED"
-          fi
+            # A blip is one dead run only. The 3-minute incident this exists for survived
+            # more than two 5-minute probes, so two consecutive failed runs is the floor;
+            # anything less stays an annotation and does not page.
+            # An empty EVENT means the Decide step never produced a decision; silence beats
+            # inventing one, because "Contexta UP" sent by a broken run is a lie either way.
+            case "$EVENT" in
+              blip)
+                echo "::warning::Probe failed (1 of $ALERT_AFTER_RUNS consecutive runs needed to alert). Not paging yet."
+                exit 0
+                ;;
+              down)
+                echo "::error::Still down; already paged when the streak reached the threshold."
+                exit 0
+                ;;
+              alert | recover) ;;
+              *) exit 0 ;;
+            esac
 
-          # parse_mode=Markdown only survives because every line below is our own fixed
-          # label text; a remote response body dropped in here could contain unbalanced
-          # underscores and make Telegram reject the whole message.
-          message="*$subject*"$'\n'"$(cat "$RESULTS" 2>/dev/null | sed 's/^/• /')"
-          if [ "$EVENT" = "alert" ]; then
-            message+=$'\n'"Down across $STREAK consecutive 5-minute probes (~$((STREAK * 5)) min)."
-            message+=$'\n'"Both API probes dead points at Caddy: a crash loop still lists the container, with Restarting where Up would be."
-          elif [ "$EVENT" = "recover" ]; then
-            message+=$'\n'"Recovered after the last failing probe. Confirm the real cause in docker logs contexta-caddy."
+            if [ "$EVENT" = "alert" ]; then
+              subject="Contexta DOWN"
+            else
+              subject="Contexta RECOVERED"
+            fi
+
+            # parse_mode=Markdown only survives because every line below is our own fixed
+            # label text; a remote response body dropped in here could contain unbalanced
+            # underscores and make Telegram reject the whole message.
+            message="*$subject*"$'\n'"$(cat "$RESULTS" 2>/dev/null | sed 's/^/• /')"
+            if [ "$EVENT" = "alert" ]; then
+              message+=$'\n'"Down across $STREAK consecutive 5-minute probes (~$((STREAK * 5)) min)."
+              message+=$'\n'"Both API probes dead points at Caddy: a crash loop still lists the container, with Restarting where Up would be."
+            elif [ "$EVENT" = "recover" ]; then
+              message+=$'\n'"Recovered after the last failing probe. Confirm the real cause in docker logs contexta-caddy."
+            fi
           fi
 
           if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
