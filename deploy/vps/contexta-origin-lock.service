@@ -1,0 +1,16 @@
+[Unit]
+Description=Keep the Contexta origin reachable only through Cloudflare (80/443)
+# Docker recreates DOCKER-USER when the daemon starts and empties it, so this has to run after it
+# and re-run whenever the daemon restarts mid-session.
+Documentation=file:///opt/contexta/docs/VPS_DEPLOYMENT.md
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/opt/contexta/deploy/vps/origin-lock.sh
+
+[Install]
+WantedBy=multi-user.target

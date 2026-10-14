@@ -1,0 +1,13 @@
+[Unit]
+Description=Re-apply the Contexta origin lock periodically
+# A bare `systemctl restart docker` empties DOCKER-USER without a host reboot, which the boot unit
+# alone would not catch. The script is idempotent, so re-applying on a timer is harmless.
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+AccuracySec=1min
+Unit=contexta-origin-lock.service
+
+[Install]
+WantedBy=timers.target
