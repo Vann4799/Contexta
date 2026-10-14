@@ -188,7 +188,7 @@ export function AuthForm({ mode }: AuthFormProps) {
   }
 
   return (
-    <form className="mt-5 space-y-3" onSubmit={handleSubmit}>
+    <form className="mt-5 space-y-3" noValidate onSubmit={handleSubmit}>
       {isRegister ? (
         <div className="space-y-1.5">
           <label className="eyebrow" htmlFor="register-name">
