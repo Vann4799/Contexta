@@ -137,7 +137,7 @@ export default function OnboardingPage() {
 
       {isWelcome && (
         <button
-          className="mt-3 w-full text-center text-[12px] text-ink-faint underline underline-offset-4 hover:text-ink"
+          className="-mt-1 w-full py-4 text-center text-[12px] text-ink-faint underline underline-offset-4 hover:text-ink"
           type="button"
           onClick={handleSkip}
         >

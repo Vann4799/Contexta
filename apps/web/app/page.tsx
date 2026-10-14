@@ -754,7 +754,7 @@ function Footer() {
                 <li key={link.label}>
                   <Link
                     href={link.href}
-                    className="text-sm text-paper/60 transition-colors hover:text-paper"
+                    className="block py-1 text-sm text-paper/60 transition-colors hover:text-paper"
                   >
                     {link.label}
                   </Link>
@@ -772,7 +772,7 @@ function Footer() {
                 <li key={link.label}>
                   <Link
                     href={link.href}
-                    className="text-sm text-paper/60 transition-colors hover:text-paper"
+                    className="block py-1 text-sm text-paper/60 transition-colors hover:text-paper"
                   >
                     {link.label}
                   </Link>
@@ -790,7 +790,7 @@ function Footer() {
                 <li key={link.label}>
                   <Link
                     href={link.href}
-                    className="text-sm text-paper/60 transition-colors hover:text-paper"
+                    className="block py-1 text-sm text-paper/60 transition-colors hover:text-paper"
                   >
                     {link.label}
                   </Link>
@@ -808,7 +808,7 @@ function Footer() {
                 <li key={link.label}>
                   <Link
                     href={link.href}
-                    className="text-sm text-paper/60 transition-colors hover:text-paper"
+                    className="block py-1 text-sm text-paper/60 transition-colors hover:text-paper"
                   >
                     {link.label}
                   </Link>

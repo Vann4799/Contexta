@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { axisScale } from "@/lib/chart-scale";
+import { useScrub } from "@/lib/use-scrub";
 
 export interface ActivityBucket {
   date: string;
@@ -31,6 +32,7 @@ export function ActivityChart({
   const hostRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
   const [active, setActive] = useState<number | null>(null);
+  const { scrubProps, consumeScrub } = useScrub(hostRef, buckets.length, setActive);
 
   useLayoutEffect(() => {
     const el = hostRef.current;
@@ -95,7 +97,7 @@ export function ActivityChart({
         ))}
       </div>
       <div className="ml-6 min-w-0">
-        <div ref={hostRef} className="relative h-[190px] w-full">
+        <div ref={hostRef} {...scrubProps} className="relative h-[190px] w-full touch-pan-y">
           {count === 0 || width === 0 ? null : (
             <>
               <svg
@@ -165,7 +167,10 @@ export function ActivityChart({
                     fill="transparent"
                     className="cursor-pointer"
                     onMouseEnter={() => setActive(i)}
-                    onClick={() => setActive(i === active ? null : i)}
+                    onClick={() => {
+                      if (consumeScrub()) return;
+                      setActive(i === active ? null : i);
+                    }}
                   />
                 ))}
               </svg>

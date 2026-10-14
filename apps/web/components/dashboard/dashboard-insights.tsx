@@ -218,7 +218,7 @@ function DashboardNotifications() {
         aria-label={t.shell.notifications}
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="focus-ring relative grid h-9 w-9 place-items-center rounded-control border border-paper-line bg-paper-card text-ink-muted transition-colors hover:bg-paper-soft hover:text-ink"
+        className="focus-ring relative grid h-10 w-10 place-items-center rounded-control border border-paper-line bg-paper-card text-ink-muted transition-colors hover:bg-paper-soft hover:text-ink"
       >
         <Bell className="h-4 w-4" strokeWidth={2} aria-hidden="true" />
         {unreadCount > 0 ? (
@@ -559,7 +559,7 @@ export function DashboardInsights() {
                       <td className="nums px-3 py-3 text-ink-muted">{formatDate(doc.created_at, locale)}</td>
                       <td className="px-3 py-3"><StatusPill status={statusForPill(doc.status)} /></td>
                       <td className="px-3 py-3 text-right">
-                        <Link className="inline-flex items-center gap-1 font-medium text-ink hover:underline" href={`/documents/${doc.id}`}>
+                        <Link className="inline-flex items-center gap-1 py-1 font-medium text-ink hover:underline" href={`/documents/${doc.id}`}>
                           {copy.open}<ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
                         </Link>
                       </td>
@@ -583,7 +583,7 @@ export function DashboardInsights() {
             <span className="nums">
               {isLoading ? copy.showingLoading : copy.showing(libraryDocuments.length, filteredDocuments.length)}
             </span>
-            <Link className="inline-flex items-center gap-1 font-medium text-ink hover:underline" href="/documents">
+            <Link className="inline-flex items-center gap-1 py-2 font-medium text-ink hover:underline" href="/documents">
               {copy.viewAll}<ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
             </Link>
           </div>

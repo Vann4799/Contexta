@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { axisScale } from "@/lib/chart-scale";
+import { useScrub } from "@/lib/use-scrub";
 import { cn } from "@/lib/utils";
 
 export type UsageDayPoint = { date: string; label: string; allowed: number; rejected: number };
@@ -33,7 +34,9 @@ export default function ApiActivityChart({
   rejectedLabel: string;
   tapHint: string;
 }) {
+  const hostRef = useRef<HTMLDivElement>(null);
   const [selected, setSelected] = useState<number | null>(null);
+  const { scrubProps, consumeScrub } = useScrub(hostRef, data.length, setSelected);
   const peak = data.reduce((m, d) => Math.max(m, d.allowed + d.rejected), 0);
   const { top, ticks } = axisScale(peak);
   const mobileLabels = labelSet(data.length, 3);
@@ -65,14 +68,21 @@ export default function ApiActivityChart({
               />
             ))}
           </div>
-          <div className="absolute inset-0 flex items-end gap-[3px]">
+          <div
+            ref={hostRef}
+            {...scrubProps}
+            className="absolute inset-0 flex touch-pan-y items-end gap-[3px]"
+          >
             {data.map((d, i) => {
               const total = d.allowed + d.rejected;
               return (
                 <button
                   key={d.date}
                   type="button"
-                  onClick={() => setSelected(i === selected ? null : i)}
+                  onClick={() => {
+                    if (consumeScrub()) return;
+                    setSelected(i === selected ? null : i);
+                  }}
                   aria-label={`${d.label}: ${allowedLabel} ${d.allowed}, ${rejectedLabel} ${d.rejected}`}
                   aria-pressed={i === selected}
                   className={cn(
