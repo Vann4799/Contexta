@@ -8,8 +8,9 @@ Wants=network-online.target
 Requires=docker.service
 
 [Service]
+# No RemainAfterExit: with it the unit stays active after ExecStart, and the timer's periodic
+# `start` becomes a no-op, so the lock would never be re-applied.
 Type=oneshot
-RemainAfterExit=yes
 ExecStart=/opt/contexta/deploy/vps/origin-lock.sh
 
 [Install]
