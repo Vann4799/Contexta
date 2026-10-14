@@ -12,6 +12,18 @@
     max_size 60MB
   }
 
+  # Stopgap for the missing CDN/WAF: a per-IP ceiling a flood tool trips in one second while no
+  # real client reaches it. The API already limits 60 req/min per key, ten times below this, so
+  # legitimate traffic is always stopped by the API's own limiter and its headers, not here.
+  # Drop this block once Cloudflare fronts the origin.
+  rate_limit {
+    zone per_ip {
+      key {remote_host}
+      events 600
+      window 60s
+    }
+  }
+
   # uvicorn announces itself on every response. Two Server headers tell a prober the exact
   # stack behind the reverse proxy, which is free information to give away.
   # MCP clients talk to a separate adapter process; the browser API keeps the rest.
