@@ -5,6 +5,8 @@ import { siteUrl } from "@/lib/site";
 // Only the signed-out surface is worth crawling; everything below it answers with a sign-in
 // wall, which is exactly what a crawler should not index.
 const PRIVATE_PATHS = [
+  // The same reference /docs/api serves, rendered inside the app shell.
+  "api-docs",
   "activity",
   "api-keys",
   "auth",

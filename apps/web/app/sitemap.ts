@@ -1,33 +1,18 @@
 import type { MetadataRoute } from "next";
 
+import { PUBLIC_PATHS } from "@/lib/seo";
 import { siteUrl } from "@/lib/site";
-
-// The signed-out surface only. A workspace URL in a sitemap would hand crawlers a sign-in wall.
-const PUBLIC_PATHS = [
-  "",
-  "/about",
-  "/blog",
-  "/careers",
-  "/changelog",
-  "/contact",
-  "/docs",
-  "/docs/api",
-  "/gdpr",
-  "/guides",
-  "/pricing",
-  "/privacy",
-  "/security",
-  "/terms",
-];
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const origin = siteUrl();
-  const lastModified = new Date();
 
+  // No lastModified: a date stamped per request would claim every page changed today, and an
+  // inaccurate lastmod teaches the crawler to distrust the field.
   return PUBLIC_PATHS.map((path) => ({
-    url: `${origin}${path}`,
-    lastModified,
+    // The home page's canonical is rendered without a trailing slash; a `/` here would make the
+    // two files disagree about which URL the page is.
+    url: path === "/" ? origin : `${origin}${path}`,
     changeFrequency: path === "/changelog" ? "weekly" : "monthly",
-    priority: path === "" ? 1 : 0.6,
+    priority: path === "/" ? 1 : 0.6,
   }));
 }

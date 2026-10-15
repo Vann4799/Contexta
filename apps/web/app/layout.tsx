@@ -4,6 +4,8 @@ import { Inter, JetBrains_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import { AuthCallbackForwarder } from "@/components/auth/auth-callback-forwarder";
 import { CookieConsent } from "@/components/ui/cookie-consent";
 import { I18nProvider } from "@/lib/i18n";
+import { SITE_NAME } from "@/lib/seo";
+import { siteUrl } from "@/lib/site";
 import "./globals.css";
 
 const sans = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
@@ -78,9 +80,19 @@ function bootPrefetchSource(): string | null {
 
 const bootPrefetch = bootPrefetchSource();
 
+// Only the pages listed in lib/seo.ts opt into indexing, so a new internal route is private by
+// default instead of relying on robots.txt alone to keep it out of the index.
+const googleSiteVerification = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION;
+
 export const metadata: Metadata = {
-  title: "Contexta",
-  description: "Chat with PDF and DOCX documents using grounded citations."
+  metadataBase: new URL(siteUrl()),
+  title: {
+    default: `${SITE_NAME} — Chat with your PDF and DOCX documents`,
+    template: `%s — ${SITE_NAME}`
+  },
+  description: "Chat with PDF and DOCX documents using grounded citations.",
+  robots: { index: false, follow: true },
+  verification: googleSiteVerification ? { google: googleSiteVerification } : undefined
 };
 
 export const viewport: Viewport = {
