@@ -326,33 +326,18 @@ function Hero() {
         style={{ opacity }}
         className="relative mx-auto max-w-5xl translate-y-10 px-6 text-center"
       >
-        <motion.h1
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-          className="mb-6 text-5xl font-bold tracking-tight text-ink md:text-7xl"
-        >
+        <h1 className="hero-rise mb-6 text-5xl font-bold tracking-tight text-ink md:text-7xl">
           Your documents,
           <br />
           <span className="text-ink-muted">understood by AI</span>
-        </motion.h1>
+        </h1>
 
-        <motion.p
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
-          className="mx-auto mb-10 max-w-2xl text-lg text-ink-muted md:text-xl"
-        >
+        <p className="hero-rise hero-rise-1 mx-auto mb-10 max-w-2xl text-lg text-ink-muted md:text-xl">
           Upload, convert, and chat with your documents. Contexta uses advanced AI to extract
           insights, answer questions, and connect your knowledge.
-        </motion.p>
+        </p>
 
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="flex flex-col items-center justify-center gap-4 sm:flex-row"
-        >
+        <div className="hero-rise hero-rise-2 flex flex-col items-center justify-center gap-4 sm:flex-row">
           <Link
             href="/register"
             className="group flex items-center gap-2 rounded-full bg-accent px-6 py-3 text-base font-semibold text-accent-ink transition-all hover:bg-accent-deep"
@@ -366,19 +351,14 @@ function Hero() {
           >
             Sign in
           </Link>
-        </motion.div>
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1, delay: 0.8 }}
-          className="mt-16 flex items-center justify-center gap-8 text-sm text-ink-muted"
-        >
+        <div className="hero-rise hero-rise-3 mt-16 flex items-center justify-center gap-8 text-sm text-ink-muted">
           <div className="flex items-center gap-2">
             <Zap className="h-4 w-4" />
             <span>Free tier available</span>
           </div>
-        </motion.div>
+        </div>
       </motion.div>
 
     </section>

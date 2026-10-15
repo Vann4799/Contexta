@@ -166,6 +166,43 @@ a {
   }
 }
 
+/* The landing hero's entrance. Deliberately CSS rather than a JS animation: the headline is the
+   page's LCP element, and waiting for the bundle to hydrate before painting it cost 2.5 s on a
+   throttled phone. No delay on the base class — the first element has to be animating from the
+   very first frame. */
+@keyframes hero-rise {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.hero-rise {
+  animation: hero-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.hero-rise-1 {
+  animation-delay: 0.12s;
+}
+
+.hero-rise-2 {
+  animation-delay: 0.24s;
+}
+
+.hero-rise-3 {
+  animation-delay: 0.36s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-rise {
+    animation: none;
+  }
+}
+
 /* iOS zooms the whole page when a focused control renders under 16px, and every field here sits
    at 12.5-13.5px. Needs !important to beat the text-[13px] utilities on the elements themselves;
    max() keeps any control already sized above the floor intact. */
