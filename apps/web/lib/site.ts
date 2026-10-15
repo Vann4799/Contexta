@@ -13,3 +13,32 @@ export function siteUrl(): string {
 
   return process.env.NODE_ENV === "production" ? "https://contexta.my.id" : "http://localhost:3000";
 }
+
+/**
+ * The whole indexable surface, in one list, because four things have to agree on it: the SEO copy
+ * table, the sitemap, the Indonesian route guard, and every link that needs a locale prefix.
+ * The tuple type is what makes lib/seo.ts fail the build if a path here has no copy for some
+ * locale, so a dangling hreflang link cannot be shipped by accident.
+ */
+export const PUBLIC_PATHS = [
+  "/",
+  "/about",
+  "/blog",
+  "/careers",
+  "/changelog",
+  "/contact",
+  "/docs",
+  "/docs/api",
+  "/gdpr",
+  "/guides",
+  "/pricing",
+  "/privacy",
+  "/security",
+  "/terms"
+] as const;
+
+export type PublicPath = (typeof PUBLIC_PATHS)[number];
+
+export function isPublicPath(path: string): path is PublicPath {
+  return (PUBLIC_PATHS as readonly string[]).includes(path);
+}

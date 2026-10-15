@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { SiteIntro, SiteList, SiteSection } from "@/components/public/public-shell";
-import { useT } from "@/lib/i18n";
+import { useHref, useT } from "@/lib/i18n";
 
 export default function SecurityPage() {
   const t = useT();
+  const localeHref = useHref();
   const copy = t.site.security;
 
   return (
@@ -30,7 +31,7 @@ export default function SecurityPage() {
       <SiteSection title={copy.disclosureTitle}>
         <p className="max-w-3xl text-[14.5px] leading-relaxed text-ink-muted">{copy.disclosureBody}</p>
         <Link
-          href="/contact"
+          href={localeHref("/contact")}
           className="focus-ring mt-5 inline-flex items-center rounded-control bg-night px-4 py-2.5 text-[13.5px] font-semibold text-paper transition-colors hover:bg-night-raised"
         >
           {copy.cta}

@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { SiteCard, SiteIntro, SiteSection } from "@/components/public/public-shell";
-import { useT } from "@/lib/i18n";
+import { useHref, useT } from "@/lib/i18n";
 
 export default function GuidesPage() {
   const t = useT();
+  const localeHref = useHref();
   const copy = t.site.guides;
 
   return (
@@ -27,7 +28,7 @@ export default function GuidesPage() {
                 ))}
               </ol>
               <Link
-                href={guide.href}
+                href={localeHref(guide.href)}
                 className="focus-ring mt-4 inline-flex items-center rounded-control border border-paper-line bg-paper px-3.5 py-2 text-[13px] font-semibold text-ink transition-colors hover:bg-paper-soft"
               >
                 {guide.cta}

@@ -4,23 +4,25 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { ContextaLogo } from "@/components/contexta-logo";
 import { SiteFooter } from "@/components/public/site-footer";
-import { useT } from "@/lib/i18n";
+import { LocaleSwitch } from "@/components/public/locale-switch";
+import { useHref, useT } from "@/lib/i18n";
 
 export function PublicShell({ children }: { children: ReactNode }) {
   const t = useT();
+  const localeHref = useHref();
 
   return (
     <div className="min-h-screen bg-paper text-ink">
       <nav className="fixed left-0 right-0 top-0 z-50 border-b border-paper-line bg-paper/80 backdrop-blur-sm">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-          <Link href="/" className="flex items-center gap-2">
+          <Link href={localeHref("/")} className="flex items-center gap-2">
             <ContextaLogo variant="light" size={152} />
           </Link>
           <div className="hidden items-center gap-8 md:flex">
             {t.site.nav.links.map((link) => (
               <Link
                 key={link.href}
-                href={link.href}
+                href={localeHref(link.href)}
                 className="text-sm text-ink-muted transition-colors hover:text-ink"
               >
                 {link.label}
@@ -28,6 +30,7 @@ export function PublicShell({ children }: { children: ReactNode }) {
             ))}
           </div>
           <div className="flex items-center gap-3">
+            <LocaleSwitch />
             <Link href="/login" className="text-sm font-medium text-ink transition-colors hover:text-ink-muted">
               {t.site.nav.signIn}
             </Link>
@@ -108,9 +111,14 @@ export function SiteLinkCard({
   href: string;
   cta: string;
 }) {
+  const localeHref = useHref();
+
   return (
     <SiteCard title={title} description={description}>
-      <Link href={href} className="text-[13.5px] font-medium text-ink underline underline-offset-4 hover:text-ink-muted">
+      <Link
+        href={localeHref(href)}
+        className="text-[13.5px] font-medium text-ink underline underline-offset-4 hover:text-ink-muted"
+      >
         {cta}
       </Link>
     </SiteCard>

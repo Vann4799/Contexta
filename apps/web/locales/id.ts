@@ -1288,6 +1288,7 @@ export const id: Dictionary = {
       }
     },
     backToHome: "Kembali ke beranda",
+    homeAria: "Beranda Contexta",
     readTerms: "Syarat Layanan",
     readPrivacy: "Kebijakan Privasi"
   },
@@ -1800,6 +1801,113 @@ export const id: Dictionary = {
       ],
       note:
         "Halaman ini menggambarkan cara produk bekerja hari ini. Bila berbeda dengan Kebijakan Privasi, Kebijakan itulah dokumen legalnya dan halaman ini adalah dokumen operasionalnya."
+    }
+  },
+  landing: {
+    nav: {
+      features: "Fitur",
+      howItWorks: "Cara kerja",
+      pricing: "Harga",
+      signIn: "Masuk",
+      getStarted: "Mulai"
+    },
+    hero: {
+      title: "Dokumen Anda,",
+      titleAccent: "dipahami oleh AI",
+      lede: "Unggah, konversi, dan chat dengan dokumen Anda. Contexta memakai AI untuk mengambil intisari, menjawab pertanyaan, dan menghubungkan pengetahuan Anda.",
+      startFree: "Mulai gratis",
+      signIn: "Masuk",
+      freeTier: "Paket gratis tersedia"
+    },
+    features: {
+      title: "Semua yang Anda butuhkan untuk mengolah dokumen",
+      lede: "Alat AI yang memahami dokumen Anda dan membantu Anda mengambil nilai darinya.",
+      items: [
+        {
+          title: "Pemrosesan dokumen yang rapi",
+          description:
+            "Dokumen PDF dan Word — hanya itu daftarnya saat ini. Contexta mengekstrak teks, tabel, dan struktur heading, lalu menyimpan halaman serta bagian pada setiap chunk."
+        },
+        {
+          title: "Chat dengan dokumen Anda",
+          description:
+            "Ajukan pertanyaan dalam bahasa alami. Setiap jawaban membawa sitasi yang menyebut halaman dan bagian sumbernya, jadi Anda bisa memeriksanya."
+        },
+        {
+          title: "Insight dari AI",
+          description:
+            "Satu proses atas dokumen menghasilkan ringkasan, poin penting, orang, tanggal, dan angka yang tampil di halaman Intelligence-nya, dalam bahasa dokumen itu sendiri."
+        },
+        {
+          title: "Terindeks sambil Anda lihat",
+          description:
+            "Unggahan melaporkan progres yang nyata, bukan ticker hiasan. PDF 750 KB menjadi 576 chunk yang bisa dicari dalam sekitar 100 detik di perangkat keras kami."
+        }
+      ]
+    },
+    steps: {
+      title: "Cara kerja",
+      lede: "Tiga langkah sederhana untuk mengubah dokumen Anda menjadi basis pengetahuan berbantuan AI.",
+      items: [
+        {
+          title: "Unggah dokumen Anda",
+          description: "Seret dan lepaskan PDF atau dokumen Word. Hanya dua format itu yang dibaca Contexta."
+        },
+        {
+          title: "AI memproses dan mengindeks",
+          description: "AI kami mengekstrak konten, membuat embedding, dan membangun indeks yang bisa dicari."
+        },
+        {
+          title: "Chat dan temukan insight",
+          description: "Ajukan pertanyaan, dapatkan ringkasan, dan jelajahi dokumen Anda dengan bantuan AI."
+        }
+      ]
+    },
+    stats: {
+      items: [
+        { value: "PDF · DOCX", label: "Format yang diindeks" },
+        { value: "Per halaman", label: "Sitasi per halaman dan bagian" },
+        { value: "EN · ID", label: "Bahasa antarmuka" },
+        { value: "MD · JSONL", label: "Ekspor korpus penuh" }
+      ]
+    },
+    pricing: {
+      title: "Harga.",
+      lede: "Contexta masih dalam masa beta. Gratis adalah satu-satunya paket yang terbuka untuk pendaftaran, dan kartu tidak ditarik — paket berbayar datang setelah batasnya ditegakkan dari ujung ke ujung.",
+      mostPopular: "Paling populer",
+      soon: "Segera",
+      priceFree: "$0",
+      periodForever: "selamanya",
+      periodMonth: "/bulan",
+      tiers: {
+        free: {
+          name: "Gratis",
+          description: "Semua yang Contexta lakukan, dengan batas beta"
+        },
+        pro: {
+          name: "Pro",
+          description: "Untuk profesional dan tim yang berkembang"
+        },
+        enterprise: {
+          name: "Enterprise",
+          description: "Untuk organisasi berskala besar"
+        }
+      },
+      ctaFree: "Mulai gratis",
+      ctaSellable: "Pilih di Billing",
+      ctaSoon: "Segera hadir",
+      units: {
+        documents: "{count} dokumen",
+        storage: "penyimpanan {count}",
+        apiKeys: "{count} API key",
+        apiRequestsPerDay: "{count} request API/hari",
+        chatMessagesPerDay: "{count} pesan chat/hari"
+      }
+    },
+    cta: {
+      title: "Siap mulai?",
+      lede: "Mulai gratis hari ini. Tidak ada tagihan selama Contexta masih beta.",
+      button: "Mulai gratis"
     }
   },
   cookieConsent: {

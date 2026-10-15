@@ -1291,6 +1291,7 @@ export const en = {
       }
     },
     backToHome: "Back to home",
+    homeAria: "Contexta home",
     readTerms: "Terms of Service",
     readPrivacy: "Privacy Policy"
   },
@@ -1803,6 +1804,113 @@ export const en = {
       ],
       note:
         "This page describes how the product works today. Where it differs from the Privacy Policy, the Policy is the legal document and this page is the operational one."
+    }
+  },
+  landing: {
+    nav: {
+      features: "Features",
+      howItWorks: "How it works",
+      pricing: "Pricing",
+      signIn: "Sign in",
+      getStarted: "Get started"
+    },
+    hero: {
+      title: "Your documents,",
+      titleAccent: "understood by AI",
+      lede: "Upload, convert, and chat with your documents. Contexta uses advanced AI to extract insights, answer questions, and connect your knowledge.",
+      startFree: "Start for free",
+      signIn: "Sign in",
+      freeTier: "Free tier available"
+    },
+    features: {
+      title: "Everything you need to work with documents",
+      lede: "Powerful AI tools that understand your documents and help you extract value from them.",
+      items: [
+        {
+          title: "Smart Document Processing",
+          description:
+            "PDF and Word documents — that is the whole list today. Contexta extracts text, tables and heading structure, and keeps the page and section with every chunk."
+        },
+        {
+          title: "Chat with Your Documents",
+          description:
+            "Ask questions in natural language. Each answer carries citations naming the page and section it was drawn from, so you can check it."
+        },
+        {
+          title: "AI-Powered Insights",
+          description:
+            "One pass over the document produces the summary, key points, people, dates and figures shown on its Intelligence page, in the document's own language."
+        },
+        {
+          title: "Indexed While You Watch",
+          description:
+            "Uploads report real progress, not a decorative ticker. A 750 KB PDF becomes 576 searchable chunks in about 100 seconds on our hardware."
+        }
+      ]
+    },
+    steps: {
+      title: "How it works",
+      lede: "Three simple steps to transform your documents into an AI-powered knowledge base.",
+      items: [
+        {
+          title: "Upload your documents",
+          description: "Drag and drop a PDF or a Word document. Those are the two formats Contexta reads."
+        },
+        {
+          title: "AI processes and indexes",
+          description: "Our AI extracts content, creates embeddings, and builds a searchable index."
+        },
+        {
+          title: "Chat and discover insights",
+          description: "Ask questions, get summaries, and explore your documents with AI assistance."
+        }
+      ]
+    },
+    stats: {
+      items: [
+        { value: "PDF · DOCX", label: "Formats indexed" },
+        { value: "Page-level", label: "Citations by page and section" },
+        { value: "EN · ID", label: "Interface languages" },
+        { value: "MD · JSONL", label: "Full corpus export" }
+      ]
+    },
+    pricing: {
+      title: "Pricing.",
+      lede: "Contexta is in beta. Free is the only plan open for signup, and no card is taken — the paid tiers arrive once their limits are enforced end to end.",
+      mostPopular: "Most popular",
+      soon: "Soon",
+      priceFree: "$0",
+      periodForever: "forever",
+      periodMonth: "/month",
+      tiers: {
+        free: {
+          name: "Free",
+          description: "Everything Contexta does, at beta limits"
+        },
+        pro: {
+          name: "Pro",
+          description: "For professionals and growing teams"
+        },
+        enterprise: {
+          name: "Enterprise",
+          description: "For organizations at scale"
+        }
+      },
+      ctaFree: "Get started free",
+      ctaSellable: "Choose in Billing",
+      ctaSoon: "Coming soon",
+      units: {
+        documents: "{count} documents",
+        storage: "{count} storage",
+        apiKeys: "{count} API keys",
+        apiRequestsPerDay: "{count} API requests/day",
+        chatMessagesPerDay: "{count} chat messages/day"
+      }
+    },
+    cta: {
+      title: "Ready?",
+      lede: "Start free today. Nothing is billed while Contexta is in beta.",
+      button: "Get started for free"
     }
   },
   cookieConsent: {

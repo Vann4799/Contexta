@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { SiteCard, SiteIntro, SiteSection } from "@/components/public/public-shell";
-import { useT } from "@/lib/i18n";
+import { useHref, useT } from "@/lib/i18n";
 
 export default function ContactPage() {
   const t = useT();
+  const localeHref = useHref();
   const copy = t.site.contact;
 
   return (
@@ -17,7 +18,7 @@ export default function ContactPage() {
           {copy.channels.map((channel) => (
             <SiteCard key={channel.title} title={channel.title} description={channel.body}>
               <Link
-                href={channel.href}
+                href={localeHref(channel.href)}
                 className="focus-ring inline-flex items-center rounded-control border border-paper-line bg-paper px-3.5 py-2 text-[13px] font-semibold text-ink transition-colors hover:bg-paper-soft"
               >
                 {channel.cta}
@@ -30,7 +31,7 @@ export default function ContactPage() {
       <SiteSection title={copy.securityTitle}>
         <p className="max-w-3xl text-[14.5px] leading-relaxed text-ink-muted">{copy.securityBody}</p>
         <Link
-          href="/security"
+          href={localeHref("/security")}
           className="focus-ring mt-5 inline-flex items-center rounded-control bg-night px-4 py-2.5 text-[13.5px] font-semibold text-paper transition-colors hover:bg-night-raised"
         >
           {copy.securityCta}

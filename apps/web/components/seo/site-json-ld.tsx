@@ -32,7 +32,8 @@ function webSite(url: string) {
     "@id": `${url}/#website`,
     url,
     name: SITE_NAME,
-    inLanguage: "en",
+    // Both languages of the public site, so this one graph stays true on / and on /id.
+    inLanguage: ["en", "id"],
     publisher: { "@id": `${url}/#organization` }
   };
 }

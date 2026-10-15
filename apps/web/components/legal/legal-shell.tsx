@@ -1,19 +1,25 @@
+"use client";
+
 import Link from "next/link";
 import { ContextaLogo } from "@/components/contexta-logo";
+import { useHref, useT } from "@/lib/i18n";
 
 export function LegalShell({ children }: { children: React.ReactNode }) {
+  const t = useT();
+  const localeHref = useHref();
+
   return (
     <main className="min-h-screen bg-paper text-ink">
       <div className="mx-auto max-w-2xl px-5 py-10 sm:px-6 sm:py-14">
         <div className="mb-10 flex items-center justify-between">
-          <Link href="/" className="focus-ring rounded-control" aria-label="Contexta home">
+          <Link href={localeHref("/")} className="focus-ring rounded-control" aria-label={t.legal.homeAria}>
             <ContextaLogo />
           </Link>
           <Link
-            href="/"
+            href={localeHref("/")}
             className="text-[12.5px] font-medium text-ink-muted transition-colors hover:text-ink"
           >
-            Back to app
+            {t.legal.backToHome}
           </Link>
         </div>
         {children}
