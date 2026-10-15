@@ -44,7 +44,7 @@ const PAGES: Record<PublicPath, Record<Locale, { title: string; description: str
     en: {
       title: "Blog: engineering notes from building Contexta",
       description:
-        "Short write-ups about decisions we actually made, with the measurement that forced them: a deleted chart library, token budgets, a paywall the server agrees with."
+        "Short write-ups about decisions we made, with the measurement that forced them: a deleted chart library, token budgets, a paywall the server agrees with."
     },
     id: {
       title: "Blog: catatan teknik membangun Contexta",
@@ -119,7 +119,7 @@ const PAGES: Record<PublicPath, Record<Locale, { title: string; description: str
         "What we hold, for how long, and the exact screens you can use to exercise each right: controller, processors, export, deletion, and the 90-day log window."
     },
     id: {
-      title: "GDPR: data Anda dalam istilah operasional yang jelas",
+      title: "GDPR: data Anda dalam istilah operasional",
       description:
         "Apa yang kami simpan, berapa lama, dan layar mana yang Anda pakai untuk tiap hak: controller, processor, ekspor, penghapusan, jendela log 90 hari."
     }
@@ -131,7 +131,7 @@ const PAGES: Record<PublicPath, Record<Locale, { title: string; description: str
         "Four short, ordered steps, each ending on a screen you can open right now: upload to first answer, reading a citation, using an API key, exporting your data."
     },
     id: {
-      title: "Panduan: dari unggah ke jawaban pertama dan sitasi",
+      title: "Panduan: dari unggah ke jawaban pertama",
       description:
         "Empat langkah singkat dan berurutan, masing-masing berakhir di layar yang bisa Anda buka sekarang: unggah ke jawaban, membaca sitasi, API key, ekspor."
     }
@@ -150,12 +150,12 @@ const PAGES: Record<PublicPath, Record<Locale, { title: string; description: str
   },
   "/privacy": {
     en: {
-      title: "Privacy Policy",
+      title: "Privacy Policy: what we collect and keep",
       description:
         "What Contexta collects and why, who processes your text, how long it is kept, cookies, international transfers, and how to export or delete your data."
     },
     id: {
-      title: "Kebijakan Privasi",
+      title: "Kebijakan Privasi: data yang disimpan",
       description:
         "Data apa yang Contexta kumpulkan dan mengapa, siapa yang memproses teks Anda, berapa lama disimpan, cookie, transfer internasional, hak ekspor dan hapus."
     }
@@ -174,12 +174,12 @@ const PAGES: Record<PublicPath, Record<Locale, { title: string; description: str
   },
   "/terms": {
     en: {
-      title: "Terms of Service",
+      title: "Terms of Service: what an account covers",
       description:
         "The agreement for a Contexta account: acceptable use, ownership of your documents, how generated answers are treated, billing, termination and liability."
     },
     id: {
-      title: "Syarat Layanan",
+      title: "Syarat Layanan: yang Anda setujui",
       description:
         "Perjanjian untuk akun Contexta: penggunaan wajar, kepemilikan dokumen, perlakuan jawaban hasil AI, penagihan, pengakhiran akun, dan batas tanggung jawab."
     }
