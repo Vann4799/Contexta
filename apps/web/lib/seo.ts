@@ -126,14 +126,62 @@ const PAGES: Record<PublicPath, Record<Locale, { title: string; description: str
   },
   "/guides": {
     en: {
-      title: "Guides: upload to first answer and citations",
+      title: "Guides: how Contexta works, step by step",
       description:
         "Four short, ordered steps, each ending on a screen you can open right now: upload to first answer, reading a citation, using an API key, exporting your data."
     },
     id: {
-      title: "Panduan: dari unggah ke jawaban pertama",
+      title: "Panduan langkah demi langkah memakai Contexta",
       description:
         "Empat langkah singkat dan berurutan, masing-masing berakhir di layar yang bisa Anda buka sekarang: unggah ke jawaban, membaca sitasi, API key, ekspor."
+    }
+  },
+  "/guides/upload-to-first-answer": {
+    en: {
+      title: "How to chat with your PDF or DOCX documents",
+      description:
+        "Upload a file, wait for Ready, pick the document, then ask something specific. Four steps, with what the screen actually shows at each one."
+    },
+    id: {
+      title: "Cara chat dengan PDF, dari unggah ke jawaban",
+      description:
+        "Unggah berkas, tunggu sampai Ready, pilih dokumennya, lalu tanyakan sesuatu yang spesifik. Empat langkah, beserta tampilan layarnya tiap langkah."
+    }
+  },
+  "/guides/reading-a-citation": {
+    en: {
+      title: "How to read a Contexta citation and check it",
+      description:
+        "What the numbered source chip opens, how relevance is scored against the retrieval ceiling, and how to verify an exact number at its page."
+    },
+    id: {
+      title: "Cara membaca sitasi dan memeriksa jawabannya",
+      description:
+        "Apa yang dibuka chip sumber bernomor, bagaimana relevansi dinilai terhadap plafon retrieval, dan cara memeriksa angka persis di halamannya."
+    }
+  },
+  "/guides/using-an-api-key": {
+    en: {
+      title: "How to create and use a Contexta API key",
+      description:
+        "Create a key, copy it before it disappears, send it as a bearer token to /v1 retrieval, and read allowed versus rejected calls on the usage page."
+    },
+    id: {
+      title: "Cara membuat dan memakai API key Contexta",
+      description:
+        "Buat key, salin sebelum hilang, kirim sebagai bearer token ke retrieval /v1, dan baca panggilan yang lolos versus ditolak di halaman usage."
+    }
+  },
+  "/guides/exporting-your-data": {
+    en: {
+      title: "How to export or delete your Contexta data",
+      description:
+        "Markdown conversion, a corpus export that keeps chunk boundaries, what deleting one document removes, and what deleting the whole account removes."
+    },
+    id: {
+      title: "Cara mengekspor atau menghapus data Anda",
+      description:
+        "Konversi Markdown, ekspor korpus yang mempertahankan batas chunk, apa yang hilang saat menghapus satu dokumen, dan saat menghapus seluruh akun."
     }
   },
   "/pricing": {

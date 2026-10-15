@@ -1647,10 +1647,14 @@ export const id: Dictionary = {
     },
     guides: {
       eyebrow: "Panduan",
-      title: "Empat hal yang layak diketahui",
+      title: "Memakai Contexta, langkah demi langkah",
       lede: "Langkah singkat dan berurutan. Setiap panduan berakhir di layar yang bisa Anda buka sekarang juga.",
+      readGuide: "Baca panduannya",
+      backToHub: "Semua panduan",
+      otherGuides: "Panduan lainnya",
       guides: [
         {
+          slug: "upload-to-first-answer",
           title: "Dari unggah ke jawaban pertama",
           description: "Yang terjadi antara memilih berkas dan bertanya tentangnya.",
           steps: [
@@ -1663,6 +1667,7 @@ export const id: Dictionary = {
           href: "/documents"
         },
         {
+          slug: "reading-a-citation",
           title: "Membaca sebuah sitasi",
           description: "Cara memeriksa jawaban alih-alih mempercayainya.",
           steps: [
@@ -1675,6 +1680,7 @@ export const id: Dictionary = {
           href: "/chat"
         },
         {
+          slug: "using-an-api-key",
           title: "Memakai API key Anda",
           description: "Key dibuat sekali, ditampilkan sekali, dan disimpan sebagai hash.",
           steps: [
@@ -1687,6 +1693,7 @@ export const id: Dictionary = {
           href: "/api-keys"
         },
         {
+          slug: "exporting-your-data",
           title: "Mengambil kembali data Anda",
           description: "Ekspor sebelum menghapus, dan periksa apa yang tersisa.",
           steps: [

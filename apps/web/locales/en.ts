@@ -1650,10 +1650,14 @@ export const en = {
     },
     guides: {
       eyebrow: "Guides",
-      title: "Four things worth knowing",
+      title: "How Contexta works, step by step",
       lede: "Short, ordered steps. Each one ends on a screen you can open right now.",
+      readGuide: "Read the guide",
+      backToHub: "All guides",
+      otherGuides: "Other guides",
       guides: [
         {
+          slug: "upload-to-first-answer",
           title: "From upload to first answer",
           description: "What happens between picking a file and asking about it.",
           steps: [
@@ -1666,6 +1670,7 @@ export const en = {
           href: "/documents"
         },
         {
+          slug: "reading-a-citation",
           title: "Reading a citation",
           description: "How to check an answer instead of trusting it.",
           steps: [
@@ -1678,6 +1683,7 @@ export const en = {
           href: "/chat"
         },
         {
+          slug: "using-an-api-key",
           title: "Using your API key",
           description: "The key is created once, shown once, and stored hashed.",
           steps: [
@@ -1690,6 +1696,7 @@ export const en = {
           href: "/api-keys"
         },
         {
+          slug: "exporting-your-data",
           title: "Getting your data back out",
           description: "Export before you delete, and check what is left.",
           steps: [

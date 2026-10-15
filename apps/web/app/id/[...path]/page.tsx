@@ -14,6 +14,7 @@ import SecurityPage from "@/app/(site)/security/page";
 import PrivacyPage from "@/app/privacy/page";
 import TermsPage from "@/app/terms/page";
 import { PublicShell } from "@/components/public/public-shell";
+import type { GuidePath } from "@/lib/guides";
 import { pageMeta } from "@/lib/seo";
 import type { PublicPath } from "@/lib/site";
 
@@ -26,8 +27,11 @@ import type { PublicPath } from "@/lib/site";
  * `shell` is the only per-page difference: the (site) group gets its navigation from a layout this
  * route does not sit under, so it is applied here, while the legal pages already render their own
  * LegalShell and must not be wrapped twice.
+ *
+ * Guide children are excluded: a per-slug page cannot be one module import in a map, so they have
+ * their own route at app/id/guides/[slug].
  */
-const ROUTES: Record<Exclude<PublicPath, "/">, { page: ComponentType; shell: boolean }> = {
+const ROUTES: Record<Exclude<PublicPath, "/" | GuidePath>, { page: ComponentType; shell: boolean }> = {
   "/about": { page: AboutPage, shell: true },
   "/blog": { page: BlogPage, shell: true },
   "/careers": { page: CareersPage, shell: true },
