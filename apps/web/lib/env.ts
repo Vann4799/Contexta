@@ -14,3 +14,13 @@ export function getRequiredPublicEnv(
 
   return value;
 }
+
+// Empty means "no captcha configured", not "misconfigured": the auth forms must stay usable
+// until GoTrue actually demands a token.
+export function getOptionalPublicEnv(name: "NEXT_PUBLIC_TURNSTILE_SITE_KEY") {
+  const values = {
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
+  };
+
+  return values[name];
+}

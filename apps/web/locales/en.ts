@@ -79,7 +79,14 @@ export const en = {
       name: "Enter your full name.",
       emailRequired: "Enter your email address.",
       emailInvalid: "That is not a valid email address.",
-      passwordRequired: "Enter your password."
+      passwordRequired: "Enter your password.",
+      terms: "Confirm your age and accept the terms to continue."
+    },
+    terms: {
+      confirm: "I am at least 16 years old and I accept the",
+      termsLabel: "Terms of Service",
+      and: "and",
+      privacyLabel: "Privacy Policy"
     },
     oauth: {
       divider: "or",
@@ -1186,7 +1193,7 @@ export const en = {
       eyebrow: "Legal",
       title: "Terms of Service",
       effectiveDate: "Effective: October 10, 2026",
-      lastUpdated: "Last updated: October 10, 2026",
+      lastUpdated: "Last updated: October 16, 2026",
       sections: {
         acceptance: {
           title: "1. Acceptance of Terms",
@@ -1198,7 +1205,7 @@ export const en = {
         },
         accounts: {
           title: "3. Accounts & Authentication",
-          body: "You are responsible for maintaining the security of your account credentials. You must not share your API keys or authentication tokens with unauthorized parties. You must provide accurate registration information. You may not create accounts for the purpose of violating these terms or applicable law."
+          body: "You must be at least 16 years old to create an account. During registration you declare your age and accept these Terms, and we record the date of that acceptance together with the version of these Terms you accepted. You are responsible for maintaining the security of your account credentials. You must not share your API keys or authentication tokens with unauthorized parties. You must provide accurate registration information. You may not create accounts for the purpose of violating these terms or applicable law."
         },
         acceptableUse: {
           title: "4. Acceptable Use",
@@ -1238,7 +1245,7 @@ export const en = {
       eyebrow: "Legal",
       title: "Privacy Policy",
       effectiveDate: "Effective: October 10, 2026",
-      lastUpdated: "Last updated: October 10, 2026",
+      lastUpdated: "Last updated: October 16, 2026",
       sections: {
         overview: {
           title: "1. Overview",
@@ -1246,7 +1253,7 @@ export const en = {
         },
         dataCollected: {
           title: "2. Data We Collect",
-          body: "Account data: email address, display name, authentication provider. Document data: files you upload (PDF, DOCX), extracted text, vector embeddings, and metadata. Usage data: chat messages, API requests, timestamps, and interaction logs. Technical data: IP address, browser type, device information, and cookies."
+          body: "Account data: email address, display name, authentication provider, and the date and version of these terms you accepted. Document data: files you upload (PDF, DOCX), extracted text, vector embeddings, and metadata. Usage data: chat messages, API requests, timestamps, and interaction logs. Technical data: IP address, browser type, device information, and cookies."
         },
         dataUse: {
           title: "3. How We Use Your Data",
@@ -1278,7 +1285,7 @@ export const en = {
         },
         children: {
           title: "10. Children's Privacy",
-          body: "The Service is not intended for users under 16 years of age. We do not knowingly collect personal data from children. If you believe a child has provided us with personal data, please contact us and we will delete it."
+          body: "The Service is not intended for users under 16 years of age. Registration requires you to declare that you are at least 16, and it is protected by a bot check; we do not collect a date of birth or any other age data beyond that declaration. We do not knowingly collect personal data from children. If you believe a child has provided us with personal data, contact us through the Service and we will delete their account and data."
         },
         changes: {
           title: "11. Changes to This Policy",

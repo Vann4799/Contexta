@@ -1,12 +1,18 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getRequiredPublicEnv } from "@/lib/env";
-import { useT } from "@/lib/i18n";
+import { useHref, useT } from "@/lib/i18n";
 import { useServerError } from "@/lib/server-errors";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { Turnstile } from "@/components/auth/turnstile";
 import { Button } from "@/components/ui/button";
+
+// Recorded with each account so a later terms change cannot silently rewrite what was agreed
+// to. Must match the "Last updated" date on /terms.
+const TERMS_VERSION = "2026-10-16";
 
 type AuthMode = "login" | "register" | "reset";
 
@@ -21,13 +27,14 @@ type MessageKind = "error" | "success" | "fallback";
 // key so a language switch re-translates a live message.
 type AuthMessage = { type: "success" | "error"; kind: MessageKind } | { type: "error"; text: string };
 
-type FieldErrors = { name?: string; email?: string; password?: string };
+type FieldErrors = { name?: string; email?: string; password?: string; terms?: string };
 
 // Shape only. Whether the address exists is Supabase's answer to give, not ours.
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function AuthForm({ mode }: AuthFormProps) {
   const t = useT();
+  const localeHref = useHref();
   const serverError = useServerError();
   const router = useRouter();
   const [fullName, setFullName] = useState("");
@@ -36,6 +43,9 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState<AuthMessage | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
 
   const isRegister = mode === "register";
   const needsPassword = mode !== "reset";
@@ -59,6 +69,10 @@ export function AuthForm({ mode }: AuthFormProps) {
 
     if (needsPassword && !password) {
       errors.password = t.auth.fieldErrors.passwordRequired;
+    }
+
+    if (isRegister && !termsAccepted) {
+      errors.terms = t.auth.fieldErrors.terms;
     }
 
     return errors;
@@ -92,7 +106,7 @@ export function AuthForm({ mode }: AuthFormProps) {
     const errors = validateFields(trimmedName, trimmedEmail);
     setFieldErrors(errors);
 
-    if (errors.name || errors.email || errors.password) {
+    if (errors.name || errors.email || errors.password || errors.terms) {
       return;
     }
 
@@ -104,7 +118,8 @@ export function AuthForm({ mode }: AuthFormProps) {
       if (mode === "login") {
         const { error } = await supabase.auth.signInWithPassword({
           email: trimmedEmail,
-          password
+          password,
+          options: { captchaToken: captchaToken ?? undefined }
         });
 
         if (error) {
@@ -125,8 +140,11 @@ export function AuthForm({ mode }: AuthFormProps) {
           password,
           options: {
             emailRedirectTo: redirectTo,
+            captchaToken: captchaToken ?? undefined,
             data: {
-              full_name: trimmedName
+              full_name: trimmedName,
+              terms_accepted_at: new Date().toISOString(),
+              terms_version: TERMS_VERSION
             }
           }
         });
@@ -141,7 +159,8 @@ export function AuthForm({ mode }: AuthFormProps) {
       }
 
       const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
-        redirectTo
+        redirectTo,
+        captchaToken: captchaToken ?? undefined
       });
 
       if (error) {
@@ -155,6 +174,9 @@ export function AuthForm({ mode }: AuthFormProps) {
           ? { type: "error", text: error.message }
           : { type: "error", kind: "fallback" }
       );
+      // A rejected request has now spent its token, so the next attempt needs a new challenge.
+      setCaptchaToken(null);
+      setCaptchaResetKey((current) => current + 1);
     } finally {
       setIsSubmitting(false);
     }
@@ -183,6 +205,8 @@ export function AuthForm({ mode }: AuthFormProps) {
           ? { type: "error", text: error.message }
           : { type: "error", kind: "fallback" }
       );
+      setCaptchaToken(null);
+      setCaptchaResetKey((current) => current + 1);
       setIsSubmitting(false);
     }
   }
@@ -280,6 +304,44 @@ export function AuthForm({ mode }: AuthFormProps) {
           ) : null}
         </div>
       ) : null}
+      {isRegister ? (
+        <div className="space-y-1.5">
+          <div className="flex items-start gap-2.5">
+            <input
+              id="register-terms"
+              aria-describedby={fieldErrors.terms ? "register-terms-error" : undefined}
+              aria-invalid={fieldErrors.terms ? true : undefined}
+              checked={termsAccepted}
+              className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer"
+              type="checkbox"
+              onChange={(event) => {
+                setTermsAccepted(event.target.checked);
+                if (fieldErrors.terms) {
+                  setFieldErrors((current) => ({ ...current, terms: undefined }));
+                }
+              }}
+            />
+            <span className="text-[13px] leading-5 text-ink-muted">
+              <label className="cursor-pointer" htmlFor="register-terms">
+                {t.auth.terms.confirm}
+              </label>{" "}
+              <Link className="underline decoration-paper-line underline-offset-2 hover:text-ink" href={localeHref("/terms")}>
+                {t.auth.terms.termsLabel}
+              </Link>{" "}
+              {t.auth.terms.and}{" "}
+              <Link className="underline decoration-paper-line underline-offset-2 hover:text-ink" href={localeHref("/privacy")}>
+                {t.auth.terms.privacyLabel}
+              </Link>
+            </span>
+          </div>
+          {fieldErrors.terms ? (
+            <p id="register-terms-error" className="text-[12px] leading-5 text-danger" role="alert">
+              {fieldErrors.terms}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+      <Turnstile onToken={setCaptchaToken} resetKey={captchaResetKey} />
       {message ? (
         <p
           className={`rounded-control px-3 py-2 text-[13px] leading-5 ${

@@ -40,24 +40,30 @@ function connectSrcOrigins(): string[] {
   return [...origins];
 }
 
-function buildConnectSrc(): string {
+function buildConnectSrc(extra: string[]): string {
   const origins = connectSrcOrigins();
   if (origins.length === 0) {
+    // This fallback already permits every https origin.
     return "'self' https: wss:";
   }
-  return ["'self'", ...origins, "wss:"].join(" ");
+  return ["'self'", ...origins, ...extra, "wss:"].join(" ");
 }
+
+// Turnstile runs its own script and solves the challenge inside an iframe, both served from
+// this origin. Allowed only when a site key is configured, same rule as the endpoints above.
+const TURNSTILE_ORIGIN = "https://challenges.cloudflare.com";
+const turnstile = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ? [TURNSTILE_ORIGIN] : [];
 
 const CSP = [
   "default-src 'self'",
   // Next ships its navigation payload as inline script tags, so 'unsafe-inline' is required
   // here. What this policy is for is everything else: framing, external origins, objects.
-  "script-src 'self' 'unsafe-inline'",
+  ["script-src", "'self'", "'unsafe-inline'", ...turnstile].join(" "),
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self'",
-  `connect-src ${buildConnectSrc()}`,
-  "frame-src 'none'",
+  `connect-src ${buildConnectSrc(turnstile)}`,
+  turnstile.length > 0 ? `frame-src ${turnstile.join(" ")}` : "frame-src 'none'",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

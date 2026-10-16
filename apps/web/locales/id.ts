@@ -79,7 +79,14 @@ export const id: Dictionary = {
       name: "Isi nama lengkap Anda.",
       emailRequired: "Isi alamat email Anda.",
       emailInvalid: "Itu bukan format alamat email yang valid.",
-      passwordRequired: "Isi kata sandi Anda."
+      passwordRequired: "Isi kata sandi Anda.",
+      terms: "Konfirmasi usia Anda dan setujui ketentuan untuk melanjutkan."
+    },
+    terms: {
+      confirm: "Usia saya minimal 16 tahun dan saya menerima",
+      termsLabel: "Syarat Layanan",
+      and: "dan",
+      privacyLabel: "Kebijakan Privasi"
     },
     oauth: {
       divider: "atau",
@@ -1183,7 +1190,7 @@ export const id: Dictionary = {
       eyebrow: "Legal",
       title: "Syarat Layanan",
       effectiveDate: "Berlaku: 10 Oktober 2026",
-      lastUpdated: "Terakhir diperbarui: 10 Oktober 2026",
+      lastUpdated: "Terakhir diperbarui: 16 Oktober 2026",
       sections: {
         acceptance: {
           title: "1. Penerimaan Syarat",
@@ -1195,7 +1202,7 @@ export const id: Dictionary = {
         },
         accounts: {
           title: "3. Akun & Autentikasi",
-          body: "Anda bertanggung jawab menjaga keamanan kredensial akun Anda. Anda tidak boleh membagikan API key atau token autentikasi kepada pihak yang tidak berwenang. Anda harus memberikan informasi pendaftaran yang akurat. Anda tidak boleh membuat akun untuk tujuan melanggar syarat ini atau hukum yang berlaku."
+          body: "Anda harus berusia minimal 16 tahun untuk membuat akun. Saat pendaftaran, Anda menyatakan usia Anda dan menerima Syarat ini, dan kami mencatat tanggal penerimaan tersebut beserta versi Syarat yang Anda terima. Anda bertanggung jawab menjaga keamanan kredensial akun Anda. Anda tidak boleh membagikan API key atau token autentikasi kepada pihak yang tidak berwenang. Anda harus memberikan informasi pendaftaran yang akurat. Anda tidak boleh membuat akun untuk tujuan melanggar syarat ini atau hukum yang berlaku."
         },
         acceptableUse: {
           title: "4. Penggunaan yang Dapat Diterima",
@@ -1235,7 +1242,7 @@ export const id: Dictionary = {
       eyebrow: "Legal",
       title: "Kebijakan Privasi",
       effectiveDate: "Berlaku: 10 Oktober 2026",
-      lastUpdated: "Terakhir diperbarui: 10 Oktober 2026",
+      lastUpdated: "Terakhir diperbarui: 16 Oktober 2026",
       sections: {
         overview: {
           title: "1. Gambaran Umum",
@@ -1243,7 +1250,7 @@ export const id: Dictionary = {
         },
         dataCollected: {
           title: "2. Data yang Kami Kumpulkan",
-          body: "Data akun: alamat email, nama tampilan, penyedia autentikasi. Data dokumen: file yang Anda unggah (PDF, DOCX), teks yang diekstrak, vector embedding, dan metadata. Data penggunaan: pesan chat, permintaan API, timestamp, dan log interaksi. Data teknis: alamat IP, jenis browser, informasi perangkat, dan cookie."
+          body: "Data akun: alamat email, nama tampilan, penyedia autentikasi, serta tanggal dan versi syarat yang Anda terima. Data dokumen: file yang Anda unggah (PDF, DOCX), teks yang diekstrak, vector embedding, dan metadata. Data penggunaan: pesan chat, permintaan API, timestamp, dan log interaksi. Data teknis: alamat IP, jenis browser, informasi perangkat, dan cookie."
         },
         dataUse: {
           title: "3. Bagaimana Kami Menggunakan Data Anda",
@@ -1275,7 +1282,7 @@ export const id: Dictionary = {
         },
         children: {
           title: "10. Privasi Anak",
-          body: "Layanan ini tidak ditujukan untuk pengguna di bawah 16 tahun. Kami tidak dengan sengaja mengumpulkan data pribadi dari anak-anak. Jika Anda yakin seorang anak telah memberikan data pribadi kepada kami, silakan hubungi kami dan kami akan menghapusnya."
+          body: "Layanan ini tidak ditujukan untuk pengguna di bawah 16 tahun. Pendaftaran mengharuskan Anda menyatakan bahwa usia Anda minimal 16 tahun, dan pendaftaran dilindungi pemeriksaan bot; kami tidak mengumpulkan tanggal lahir atau data usia lain selain pernyataan tersebut. Kami tidak dengan sengaja mengumpulkan data pribadi dari anak-anak. Jika Anda yakin seorang anak telah memberikan data pribadi kepada kami, hubungi kami melalui Layanan dan kami akan menghapus akun serta data mereka."
         },
         changes: {
           title: "11. Perubahan Kebijakan Ini",
